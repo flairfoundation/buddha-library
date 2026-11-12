@@ -3,740 +3,800 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buddha Library - Management System</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Buddha Library - Live Cloud Management System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            --theme-orange: #E8533F; /* Exact Coral/Orange-Red from your screenshot */
-            --theme-dark: #8B261D;
-            --primary-gold: #D4AF37;
-            --bg-light: #F4F6F9;
+            --maroon: #7A0016;
+            --maroon-dark: #4D000E;
+            --gold: #F4C430;
+            --gold-dark: #C59B27;
+            --bg-page: #EDF1F5;
             --white: #FFFFFF;
-            --text-dark: #222222;
-            --text-muted: #666666;
-            --success: #28A745;
-            --danger: #DC3545;
-            --warning: #FFC107;
+            --black: #000000;
+            --text-main: #111111;
+            --border-strong: #B0BEC5;
+            --green: #0F7B32;
+            --red: #C62828;
+            --blue: #0D47A1;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Poppins', sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
         }
 
         body {
-            background-color: var(--bg-light);
-            color: var(--text-dark);
-            min-height: 100vh;
+            background-color: var(--bg-page);
+            color: var(--text-main);
             padding-bottom: 40px;
         }
 
-        /* Top App Bar */
+        /* High Contrast Top Header */
         .app-header {
-            background: var(--theme-orange);
+            background: linear-gradient(135deg, var(--maroon-dark), var(--maroon));
             color: var(--white);
-            padding: 15px 20px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+            padding: 12px 16px;
+            border-bottom: 4px solid var(--gold);
             position: sticky;
             top: 0;
             z-index: 100;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.25);
         }
 
-        .header-top {
-            max-width: 1200px;
+        .header-inner {
+            max-width: 1240px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
         }
 
-        .brand {
+        .brand-box {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .brand img {
-            width: 55px;
-            height: 55px;
+        .logo-circle {
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
-            border: 2px solid var(--primary-gold);
+            border: 2px solid var(--gold);
             background: var(--white);
             object-fit: cover;
+            flex-shrink: 0;
         }
 
-        .brand-text h1 {
+        .brand-title h1 {
             font-size: 20px;
-            font-weight: 700;
+            font-weight: 900;
             letter-spacing: 0.5px;
+            color: var(--gold);
+            text-shadow: 1px 1px 2px #000;
         }
 
-        .brand-text p {
-            font-size: 11px;
-            opacity: 0.9;
-        }
-
-        /* Top Search Bar inside Header */
-        .search-container {
-            max-width: 1200px;
-            margin: 12px auto 0 auto;
-            background: var(--white);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            padding: 8px 15px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        .search-container i {
-            color: var(--theme-orange);
-            font-size: 18px;
-            margin-right: 12px;
-        }
-
-        .search-container input {
-            flex: 1;
-            border: none;
-            outline: none;
-            font-size: 15px;
-            color: var(--text-dark);
-        }
-
-        .search-container .clear-btn {
-            color: #999;
-            cursor: pointer;
-            font-size: 18px;
-            display: none;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 15px auto;
-            padding: 0 15px;
-        }
-
-        /* Dashboard Stats Strip */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .stat-card {
-            background: var(--white);
-            padding: 12px;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            text-align: center;
-            cursor: pointer;
-            border-bottom: 3px solid var(--theme-orange);
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .stat-card h3 {
-            font-size: 18px;
-            color: var(--theme-orange);
-            font-weight: 700;
-        }
-
-        .stat-card p {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        /* Promise Date Alert Banner */
-        .promise-banner {
-            background: linear-gradient(90deg, #8B261D, #E8533F);
-            color: var(--white);
-            padding: 12px 18px;
-            border-radius: 10px;
-            margin-bottom: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            box-shadow: 0 3px 8px rgba(232, 83, 63, 0.25);
-        }
-
-        /* App Tabs (All Member / Live Member / Expired Member) */
-        .member-tabs {
-            display: flex;
-            background: var(--white);
-            border-radius: 10px;
-            padding: 5px;
-            border: 1px solid #DDD;
-            margin-bottom: 15px;
-        }
-
-        .tab-btn {
-            flex: 1;
-            text-align: center;
-            padding: 9px 10px;
-            border-radius: 7px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            cursor: pointer;
-            border: none;
-            background: transparent;
-            transition: all 0.2s;
-        }
-
-        .tab-btn.active {
-            background: var(--theme-orange);
-            color: var(--white);
-        }
-
-        /* Main Layout */
-        .main-layout {
-            display: grid;
-            grid-template-columns: 380px 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 900px) {
-            .main-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .box-panel {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .panel-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--theme-orange);
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #F0F0F0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        /* Form Controls */
-        .form-group {
-            margin-bottom: 12px;
-        }
-
-        .form-group label {
-            display: block;
+        .brand-title p {
             font-size: 12px;
-            font-weight: 600;
-            color: #444;
-            margin-bottom: 4px;
+            font-weight: 700;
+            color: var(--white);
         }
 
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 9px 11px;
-            border: 1px solid #CCC;
-            border-radius: 7px;
-            font-size: 13px;
-            outline: none;
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            border-color: var(--theme-orange);
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .addon-box {
-            background: #FFF9F5;
-            border: 1px dashed var(--theme-orange);
-            padding: 8px 12px;
-            border-radius: 7px;
-            margin-bottom: 10px;
+        .top-actions {
             display: flex;
-            align-items: center;
             gap: 8px;
-            font-size: 13px;
-            font-weight: 500;
+            flex-wrap: wrap;
         }
 
-        .addon-box input {
-            width: 16px;
-            height: 16px;
-            accent-color: var(--theme-orange);
-        }
-
-        .btn-submit {
-            background: var(--theme-orange);
-            color: var(--white);
-            border: none;
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
+        .top-btn {
+            background: var(--gold);
+            color: var(--black);
+            border: 1px solid #fff;
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 800;
             cursor: pointer;
-            margin-top: 10px;
-        }
-
-        .btn-submit:hover {
-            background: var(--theme-dark);
-        }
-
-        /* Student Card Style (Matching Image 2) */
-        .student-card {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            border: 1px solid #EEE;
-        }
-
-        .st-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-        }
-
-        .st-profile-info {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .st-thumb {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 1px solid #DDD;
-            cursor: pointer;
-        }
-
-        .st-name-block h4 {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-dark);
-        }
-
-        .st-name-block p {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        .st-name-block a {
-            color: var(--theme-orange);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 12px;
-        }
-
-        .id-pill {
-            background: var(--theme-orange);
-            color: var(--white);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 5px;
         }
 
-        .st-details-box {
-            border: 1px solid #EAEAEA;
-            border-radius: 10px;
-            padding: 12px;
-            background: #FAFAFA;
+        .top-btn:hover {
+            background: #ffda66;
+        }
+
+        /* Search Bar right under header */
+        .search-bar-wrap {
+            max-width: 1240px;
+            margin: 10px auto 0 auto;
+            background: var(--white);
+            border: 2px solid var(--gold);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+        }
+
+        .search-bar-wrap i {
+            color: var(--maroon);
+            font-size: 18px;
+            margin-right: 10px;
+        }
+
+        .search-bar-wrap input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--black);
+        }
+
+        .container {
+            max-width: 1240px;
+            margin: 14px auto;
+            padding: 0 12px;
+        }
+
+        /* Dashboard Clickable Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+            gap: 10px;
             margin-bottom: 12px;
         }
 
-        .details-row {
-            display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 10px;
-            margin-bottom: 8px;
+        .stat-box {
+            background: var(--white);
+            border: 2px solid var(--border-strong);
+            border-left: 6px solid var(--maroon);
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
         }
 
-        .details-money {
+        .stat-box:hover {
+            border-color: var(--maroon);
+            background: #FFFDF7;
+        }
+
+        .stat-box h3 {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--black);
+        }
+
+        .stat-box p {
+            font-size: 12px;
+            font-weight: 800;
+            color: #333;
+            margin-top: 2px;
+        }
+
+        /* Promise Alert Strip */
+        .alert-strip {
+            background: #FFF3CD;
+            border: 2px solid #FF9800;
+            color: var(--black);
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 800;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 370px 1fr;
+            gap: 18px;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--white);
+            border: 2px solid var(--border-strong);
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .panel-header {
+            background: var(--maroon);
+            color: var(--white);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--black);
+            margin-bottom: 4px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 2px solid #888;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--black);
+            background: var(--white);
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--maroon);
+            outline: none;
+        }
+
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .row-3 {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-            border-top: 1px solid #EAEAEA;
-            padding-top: 8px;
+            gap: 6px;
         }
 
-        .detail-item small {
-            display: block;
-            font-size: 11px;
-            color: #888;
-        }
-
-        .detail-item span {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-dark);
-        }
-
-        /* Card Action Bar */
-        .st-card-actions {
+        .check-pill {
+            background: #FFF9E6;
+            border: 2px solid var(--gold-dark);
+            padding: 7px 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
             display: flex;
-            justify-content: space-around;
-            border-top: 1px solid #F0F0F0;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--black);
+        }
+
+        .check-pill input {
+            width: 17px;
+            height: 17px;
+        }
+
+        .save-btn {
+            background: var(--maroon);
+            color: var(--white);
+            border: 2px solid var(--gold);
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .save-btn:hover {
+            background: var(--maroon-dark);
+        }
+
+        /* Filter Tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .f-tab {
+            flex: 1;
+            min-width: 90px;
+            padding: 9px 10px;
+            background: var(--white);
+            border: 2px solid #888;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--black);
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .f-tab.active {
+            background: var(--maroon);
+            color: var(--white);
+            border-color: var(--maroon);
+        }
+
+        /* Student Directory Card - High Contrast */
+        .st-card {
+            background: var(--white);
+            border: 2px solid #999;
+            border-left: 6px solid var(--maroon);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .st-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .st-user {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .st-user img {
+            width: 58px;
+            height: 58px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid var(--maroon);
+            cursor: pointer;
+        }
+
+        .st-user-info h4 {
+            font-size: 16px;
+            font-weight: 900;
+            color: var(--black);
+        }
+
+        .st-user-info p {
+            font-size: 12px;
+            font-weight: 700;
+            color: #222;
+            margin-top: 2px;
+        }
+
+        .call-link {
+            display: inline-block;
+            margin-top: 3px;
+            color: var(--blue);
+            font-weight: 900;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .id-badge-top {
+            background: var(--maroon);
+            color: var(--gold);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 900;
+            border: 1px solid var(--gold);
+        }
+
+        .st-mid-grid {
+            background: #F8F9FA;
+            border: 1px solid #CCC;
+            border-radius: 6px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .st-mid-grid div strong {
+            display: block;
+            color: #444;
+            font-size: 11px;
+        }
+
+        .st-mid-grid div span {
+            font-weight: 900;
+            color: var(--black);
+            font-size: 13px;
+        }
+
+        .st-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            border-top: 1px solid #DDD;
             padding-top: 10px;
         }
 
-        .act-btn {
-            background: none;
-            border: none;
+        .s-btn {
+            flex: 1;
+            min-width: 75px;
+            padding: 7px 6px;
+            border: 1px solid #888;
+            border-radius: 5px;
+            background: #FFF;
+            color: var(--black);
+            font-size: 12px;
+            font-weight: 800;
             cursor: pointer;
-            text-align: center;
-            color: var(--theme-orange);
-            font-size: 11px;
-            font-weight: 500;
             display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 4px;
         }
 
-        .act-btn i {
-            font-size: 16px;
+        .s-btn:hover {
+            background: #EEE;
         }
 
-        /* Compact ID Card Modal (Matching Image 1) */
+        /* Modal Overlay */
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 2000;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.65);
+            background: rgba(0,0,0,0.8);
             justify-content: center;
             align-items: center;
-            padding: 15px;
+            padding: 10px;
         }
 
-        .id-modal-wrapper {
+        .modal-box {
             background: var(--white);
-            border-radius: 18px;
-            width: 100%;
-            max-width: 340px; /* Compact width just like sample screenshot */
-            overflow: hidden;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.35);
-            animation: fadeIn 0.2s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .id-card-box {
-            padding: 14px;
-            background: var(--white);
-        }
-
-        .id-top-banner {
-            background: var(--theme-orange);
-            color: var(--white);
             border-radius: 12px;
-            padding: 15px 10px;
-            text-align: center;
+            width: 100%;
+            max-width: 350px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-height: 96vh;
+            overflow-y: auto;
         }
 
-        .id-top-banner img {
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            background: var(--white);
-            padding: 2px;
-            margin-bottom: 6px;
-            object-fit: cover;
+        /* COMPACT LINED PREMIUM ID CARD (Fits any mobile screen) */
+        .compact-id-card {
+            background: #FFFFFF;
+            border: 3px solid var(--maroon);
+            outline: 2px solid var(--gold);
+            outline-offset: -6px;
+            border-radius: 10px;
+            overflow: hidden;
+            color: #000000;
         }
 
-        .id-top-banner h3 {
-            font-size: 16px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
-        }
-
-        .id-top-banner p {
-            font-size: 10px;
-            line-height: 1.35;
-            opacity: 0.95;
-        }
-
-        .id-avatar-wrap {
-            position: relative;
-            width: 86px;
-            height: 86px;
-            margin: 12px auto 8px auto;
-        }
-
-        .id-avatar-wrap img {
-            width: 86px;
-            height: 86px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #EEE;
-            cursor: pointer;
-        }
-
-        .id-floating-badge {
-            position: absolute;
-            top: -4px;
-            right: -25px;
-            background: var(--theme-orange);
-            color: var(--white);
-            font-size: 11px;
-            font-weight: 700;
-            padding: 3px 9px;
-            border-radius: 14px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        .id-header {
+            background: var(--maroon);
+            color: #FFFFFF;
+            padding: 8px 10px;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 10px;
+            border-bottom: 3px solid var(--gold);
         }
 
-        .id-student-name {
-            text-align: center;
-            color: var(--theme-orange);
-            font-size: 16px;
+        .id-header img {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 2px solid var(--gold);
+            background: #FFF;
+            flex-shrink: 0;
+            object-fit: cover;
+        }
+
+        .id-header-text {
+            text-align: left;
+        }
+
+        .id-header-text h3 {
+            font-size: 15px;
+            font-weight: 900;
+            color: var(--gold);
+            letter-spacing: 0.5px;
+            line-height: 1.1;
+        }
+
+        .id-header-text p {
+            font-size: 9.5px;
             font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 12px;
+            color: #FFFFFF;
+            line-height: 1.25;
+            margin-top: 2px;
         }
 
-        .id-info-table {
-            width: 100%;
-            font-size: 12px;
-            border-collapse: collapse;
+        .id-body {
+            padding: 10px 12px;
+            background: repeating-linear-gradient(
+                0deg,
+                #FFFFFF,
+                #FFFFFF 22px,
+                #F9FBFD 22px,
+                #F9FBFD 44px
+            );
         }
 
-        .id-info-table td {
-            padding: 4px 6px;
-            vertical-align: top;
-        }
-
-        .id-info-table td.lbl {
-            font-weight: 600;
-            color: #333;
-            width: 38%;
-        }
-
-        .id-info-table td.val {
-            color: #444;
-            font-weight: 500;
-        }
-
-        .valid-highlight {
-            background: #FFEBEE;
-            color: #C62828;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: 700;
-            display: inline-block;
-        }
-
-        .due-highlight {
-            background: #FFF3CD;
-            color: #856404;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: 700;
-            display: inline-block;
-        }
-
-        .id-modal-footer {
+        .id-photo-row {
             display: flex;
-            justify-content: flex-end;
-            gap: 15px;
-            padding: 10px 18px 14px 18px;
-            border-top: 1px solid #EEE;
-            background: #FAFAFA;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--maroon);
         }
 
-        .id-footer-btn {
-            background: none;
-            border: none;
-            color: #1976D2;
-            font-weight: 600;
-            font-size: 13px;
+        .id-photo-row img {
+            width: 68px;
+            height: 76px;
+            border-radius: 6px;
+            border: 2px solid var(--maroon);
+            object-fit: cover;
+            flex-shrink: 0;
             cursor: pointer;
+        }
+
+        .id-title-block {
+            flex: 1;
+        }
+
+        .id-pill-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .id-tag {
+            background: var(--maroon);
+            color: #FFF;
+            font-size: 11px;
+            font-weight: 900;
+            padding: 2px 7px;
+            border-radius: 4px;
+        }
+
+        .seat-tag {
+            background: var(--gold);
+            color: #000;
+            font-size: 11px;
+            font-weight: 900;
+            padding: 2px 7px;
+            border-radius: 4px;
+            border: 1px solid #000;
+        }
+
+        .id-st-name {
+            font-size: 15px;
+            font-weight: 900;
+            color: var(--maroon);
             text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .id-st-mob {
+            font-size: 12px;
+            font-weight: 900;
+            color: #000;
+            margin-top: 2px;
+        }
+
+        .id-grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+        }
+
+        .id-grid-table td {
+            padding: 4px 5px;
+            border: 1px solid #B0BEC5;
+            font-weight: 800;
+            color: #000000;
+        }
+
+        .id-grid-table td.k {
+            background: #EFEFEF;
+            width: 36%;
+            color: #222;
+        }
+
+        .id-footer-strip {
+            background: var(--maroon-dark);
+            color: var(--gold);
+            text-align: center;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 5px;
+            letter-spacing: 0.3px;
+        }
+
+        .modal-btn-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .m-btn {
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 11.5px;
+            font-weight: 900;
+            cursor: pointer;
+            color: #FFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
         }
 
         /* Lightbox */
         #lightbox {
             display: none;
             position: fixed;
-            z-index: 3000;
+            z-index: 4000;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.9);
             justify-content: center;
             align-items: center;
         }
         #lightbox img {
-            max-width: 92%;
-            max-height: 92%;
-            border-radius: 8px;
+            max-width: 94%;
+            max-height: 94%;
+            border: 3px solid #FFF;
+            border-radius: 6px;
         }
 
-        /* Print Media for GST Bill / ID Card */
         @media print {
             body * { visibility: hidden; }
-            #printableArea, #printableArea * { visibility: visible; }
-            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+            #idCardCaptureArea, #idCardCaptureArea * { visibility: visible; }
+            #idCardCaptureArea { position: fixed; left: 10px; top: 10px; width: 320px; }
         }
     </style>
 </head>
 <body>
 
-<!-- Top Header & Instant Search -->
 <div class="app-header">
-    <div class="header-top">
-        <div class="brand">
-            <img src="1000038642.png" alt="Logo" onerror="this.src='https://via.placeholder.com/60?text=BL'">
-            <div class="brand-text">
+    <div class="header-inner">
+        <div class="brand-box">
+            <img id="mainHeaderLogo" class="logo-circle" alt="Buddha Library">
+            <div class="brand-title">
                 <h1>BUDDHA LIBRARY</h1>
-                <p>Kachchi Dargah, Near Durga Mandir, Patna | 7050668855</p>
+                <p>A Unit of Flair Foundation | Kachchi Dargah, Patna | 7050668855</p>
             </div>
         </div>
-        <div style="display:flex; gap:8px;">
-            <button onclick="exportData()" style="background:#fff; color:var(--theme-orange); border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">
-                <i class="fa-solid fa-cloud-arrow-down"></i> Backup
-            </button>
-            <button onclick="document.getElementById('importFile').click()" style="background:#fff; color:var(--theme-orange); border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Restore
-            </button>
-            <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+        <div class="top-actions">
+            <button class="top-btn" onclick="openCloudSetup()"><i class="fa-solid fa-cloud"></i> Live Cloud Sync</button>
+            <button class="top-btn" onclick="exportBackup()"><i class="fa-solid fa-download"></i> Drive Backup</button>
+            <button class="top-btn" onclick="document.getElementById('restoreInput').click()"><i class="fa-solid fa-upload"></i> Restore</button>
+            <input type="file" id="restoreInput" style="display:none" onchange="importBackup(event)">
         </div>
     </div>
 
-    <!-- Front Search Bar -->
-    <div class="search-container">
+    <div class="search-bar-wrap">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="frontSearchInput" placeholder="Search by ID (e.g. 193), Student Name, Mobile, Seat No, or Parent..." oninput="handleSearch()">
-        <i class="fa-solid fa-xmark clear-btn" id="clearSearchBtn" onclick="clearSearch()"></i>
+        <input type="text" id="searchInput" placeholder="Search by Student Name, Exact ID (1-1000), Mobile, Seat No, or Parent..." oninput="renderDirectory()">
+        <button onclick="document.getElementById('searchInput').value=''; renderDirectory();" style="background:none; border:none; font-size:16px; font-weight:900; color:var(--maroon); cursor:pointer;">✕</button>
     </div>
 </div>
 
 <div class="container">
-    <!-- Clickable Summary Cards -->
-    <div class="stats-grid">
-        <div class="stat-card" onclick="setFilter('all')">
-            <h3 id="statTotal">0</h3>
-            <p>All Registered</p>
+    <!-- Clickable Dashboard Summary -->
+    <div class="stats-row">
+        <div class="stat-box" onclick="setTab('all')">
+            <h3 id="stTotal">0</h3>
+            <p>Total Registered</p>
         </div>
-        <div class="stat-card" onclick="setFilter('live')">
-            <h3 id="statLive" style="color:var(--success);">0</h3>
-            <p>Live Students</p>
+        <div class="stat-box" onclick="setTab('live')" style="border-left-color:var(--green);">
+            <h3 id="stLive" style="color:var(--green);">0</h3>
+            <p>Live / Active</p>
         </div>
-        <div class="stat-card" onclick="setFilter('expired')">
-            <h3 id="statExpired" style="color:var(--danger);">0</h3>
+        <div class="stat-box" onclick="setTab('expired')" style="border-left-color:var(--red);">
+            <h3 id="stExpired" style="color:var(--red);">0</h3>
             <p>Expired / Left</p>
         </div>
-        <div class="stat-card" onclick="setFilter('paid')">
-            <h3 id="statCollection" style="color:#155724;">₹0</h3>
+        <div class="stat-box" onclick="setTab('paid')" style="border-left-color:var(--blue);">
+            <h3 id="stPaid" style="color:var(--blue);">₹0</h3>
             <p>Total Collection</p>
         </div>
-        <div class="stat-card" onclick="setFilter('due')">
-            <h3 id="statDues" style="color:#C62828;">₹0</h3>
-            <p>Remaining Dues</p>
+        <div class="stat-box" onclick="setTab('due')" style="border-left-color:#E65100;">
+            <h3 id="stDue" style="color:var(--red);">₹0</h3>
+            <p>Total Dues</p>
         </div>
     </div>
 
-    <!-- Promise Date Alert Bar -->
-    <div class="promise-banner" onclick="setFilter('promise')">
+    <!-- Promise Alert Banner -->
+    <div class="alert-strip" onclick="setTab('promise')">
         <div>
-            <i class="fa-solid fa-bell"></i>
-            <strong style="margin-left:6px;">Payment Promise Alert:</strong>
-            <span id="promiseAlertText" style="font-size:13px; margin-left:5px;">Checking scheduled recovery dates...</span>
+            <i class="fa-solid fa-bell" style="color:var(--maroon);"></i>
+            <span id="promiseBannerText">Checking today's promised fee recoveries...</span>
         </div>
-        <span style="font-size:11px; text-decoration:underline;">View Recovery List</span>
+        <span style="color:var(--maroon); text-decoration:underline;">Click to Filter List</span>
     </div>
 
-    <div class="main-layout">
-        <!-- Left: Admission & Edit Form -->
-        <div class="box-panel">
-            <div class="panel-title">
-                <span id="formHeading"><i class="fa-solid fa-user-plus"></i> Admission / Fee Entry</span>
-                <button type="button" onclick="resetForm()" style="background:none; border:none; color:#666; font-size:12px; cursor:pointer;">Reset</button>
+    <div class="main-grid">
+        <!-- Left Form -->
+        <div class="panel">
+            <div class="panel-header">
+                <span id="formTitle"><i class="fa-solid fa-user-plus"></i> Student Admission / Edit</span>
+                <button type="button" onclick="resetForm()" style="background:var(--gold); border:none; padding:3px 8px; border-radius:4px; font-weight:800; cursor:pointer;">New</button>
             </div>
 
-            <form id="studentForm" onsubmit="saveStudent(event)">
-                <input type="hidden" id="editIndex" value="">
+            <form id="studentForm" onsubmit="saveRecord(event)">
+                <input type="hidden" id="editIdx" value="">
 
-                <div class="grid-2">
+                <div class="row-2">
                     <div class="form-group">
-                        <label>Unique ID No (1-1000) *</label>
-                        <input type="number" id="idNo" required min="1" max="1000">
+                        <label>Unique ID (1-1000) *</label>
+                        <input type="number" id="idNo" required min="1" max="2000">
                     </div>
                     <div class="form-group">
                         <label>Seat No *</label>
-                        <input type="text" id="seatNo" required placeholder="e.g. B-12">
+                        <input type="text" id="seatNo" required placeholder="e.g. 12">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Student Full Name *</label>
-                    <input type="text" id="name" required placeholder="e.g. Nitish Kumar">
+                    <input type="text" id="name" required placeholder="Enter full name">
                 </div>
 
-                <div class="grid-2">
+                <div class="row-2">
                     <div class="form-group">
                         <label>Student Mobile *</label>
                         <input type="tel" id="mobile" required placeholder="10-digit mobile" pattern="[0-9]{10}">
                     </div>
                     <div class="form-group">
-                        <label>Parent Name & Mobile (Internal)</label>
-                        <input type="text" id="parentInfo" placeholder="Hidden on ID Card">
+                        <label>Guardian Name/Mobile (Office Use)</label>
+                        <input type="text" id="parentInfo" placeholder="Hidden from ID Card">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Address / Village *</label>
-                    <input type="text" id="address" required placeholder="e.g. Bahrampur, Patna">
+                    <input type="text" id="address" required placeholder="e.g. Kachchi Dargah, Patna">
                 </div>
 
                 <div class="form-group">
-                    <label>Select Shift & Timing *</label>
-                    <select id="shiftPlan" onchange="onPlanChange()" required>
-                        <option value="">-- Choose Shift Plan --</option>
-                        <option value="Morning Plan (06AM-10AM)|299">Morning Plan (06AM-10AM) - ₹299</option>
-                        <option value="Afternoon Plan (10AM-02PM)|399">Afternoon Plan (10AM-02PM) - ₹399</option>
-                        <option value="Evening Plan (02PM-06PM)|399">Evening Plan (02PM-06PM) - ₹399</option>
-                        <option value="Night Shift (10PM-05AM)|399">Night Shift (10PM-05AM) - ₹399</option>
-                        <option value="12 Hours Full Day (06AM-06PM)|499">12 Hours Full Day (06AM-06PM) - ₹499</option>
-                        <option value="24 Hours Full Day (06AM-06AM)|799">24 Hours Full Day (06AM-06AM) - ₹799</option>
+                    <label>Shift & Timing Plan *</label>
+                    <select id="shiftPlan" onchange="recalcFromPlan()" required>
+                        <option value="">-- Select Shift --</option>
+                        <option value="Morning (06AM - 10AM)|299">Morning (06AM - 10AM) - ₹299</option>
+                        <option value="Afternoon (10AM - 02PM)|399">Afternoon (10AM - 02PM) - ₹399</option>
+                        <option value="Evening (02PM - 06PM)|399">Evening (02PM - 06PM) - ₹399</option>
+                        <option value="Night (10PM - 05AM)|399">Night (10PM - 05AM) - ₹399</option>
+                        <option value="12 Hours Full Day (06AM - 06PM)|499">12 Hours Full Day (06AM - 06PM) - ₹499</option>
+                        <option value="24 Hours Full Day (06AM - 06AM)|799">24 Hours Full Day (06AM - 06AM) - ₹799</option>
                     </select>
                 </div>
 
-                <div class="grid-2">
+                <div class="row-2">
                     <div class="form-group">
-                        <label>Start / Joining Date *</label>
-                        <input type="date" id="startDate" required onchange="updateValidity()">
+                        <label>Start Date *</label>
+                        <input type="date" id="startDate" required onchange="autoSetEndDate()">
                     </div>
                     <div class="form-group">
                         <label>Valid Upto (End Date) *</label>
@@ -744,42 +804,41 @@
                     </div>
                 </div>
 
-                <div class="addon-box">
-                    <input type="checkbox" id="newAdmCheck" onchange="onPlanChange()">
-                    <label for="newAdmCheck" style="cursor:pointer;">Include New Admission Fee (+₹199)</label>
+                <div class="check-pill">
+                    <input type="checkbox" id="admFeeCheck" onchange="recalcFromPlan()">
+                    <label for="admFeeCheck" style="margin:0; cursor:pointer;">Add Admission Fee (+₹199)</label>
                 </div>
 
-                <div class="addon-box">
-                    <input type="checkbox" id="lockerCheck" onchange="onPlanChange()">
-                    <label for="lockerCheck" style="cursor:pointer;">Include Locker (+₹250)</label>
+                <div class="check-pill">
+                    <input type="checkbox" id="lockerCheck" onchange="recalcFromPlan()">
+                    <label for="lockerCheck" style="margin:0; cursor:pointer;">Add Locker Fee (+₹250)</label>
                 </div>
 
-                <!-- Fully Editable Bill, Paid, and Automatic Due Calculation -->
-                <div style="background:#FFF5F3; padding:12px; border-radius:8px; border:1px solid #F5C6CB; margin-bottom:12px;">
-                    <div class="grid-2">
-                        <div class="form-group" style="margin-bottom:8px;">
+                <!-- Manual Editable Bill & Paid Box -->
+                <div style="background:#F4F6F9; border:2px solid var(--maroon); padding:10px; border-radius:8px; margin-bottom:10px;">
+                    <div class="row-2">
+                        <div class="form-group">
                             <label>Discount (₹)</label>
-                            <input type="number" id="discountAmt" value="0" min="0" oninput="onPlanChange()">
+                            <input type="number" id="discountAmt" value="0" min="0" oninput="recalcFromPlan()">
                         </div>
-                        <div class="form-group" style="margin-bottom:8px;">
-                            <label>Total Payable Bill (Editable) *</label>
-                            <input type="number" id="totalBillAmt" required min="0" oninput="updateDueOnly()" style="font-weight:700; color:var(--theme-dark); background:#FFF;">
+                        <div class="form-group">
+                            <label>Total Bill (Editable) *</label>
+                            <input type="number" id="totalBill" required min="0" oninput="calcRemainingDue()" style="border-color:var(--maroon); font-weight:900;">
                         </div>
                     </div>
-
-                    <div class="grid-2">
+                    <div class="row-2">
                         <div class="form-group" style="margin-bottom:0;">
-                            <label>Amount Paid Now (₹) *</label>
-                            <input type="number" id="paidAmt" required min="0" oninput="updateDueOnly()" style="font-weight:700; color:var(--success); background:#FFF;">
+                            <label>Paid Now (Editable) *</label>
+                            <input type="number" id="paidNow" required min="0" oninput="calcRemainingDue()" style="border-color:var(--green); color:var(--green); font-weight:900;">
                         </div>
                         <div class="form-group" style="margin-bottom:0;">
                             <label>Remaining Due (₹)</label>
-                            <input type="number" id="dueAmt" readonly value="0" style="font-weight:700; color:var(--danger); background:#EFEFEF;">
+                            <input type="number" id="dueAmount" readonly value="0" style="background:#FFEBEE; color:var(--red); font-weight:900;">
                         </div>
                     </div>
                 </div>
 
-                <div class="grid-2">
+                <div class="row-2">
                     <div class="form-group">
                         <label>Due Promise Date</label>
                         <input type="date" id="promiseDate">
@@ -793,136 +852,205 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Student Photo</label>
-                    <input type="file" id="photoInput" accept="image/*">
+                <div class="row-3">
+                    <div class="form-group">
+                        <label style="font-size:11px;">Student Photo</label>
+                        <input type="file" id="stPhoto" accept="image/*" style="font-size:11px; padding:4px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:11px;">Aadhaar Front</label>
+                        <input type="file" id="aadhaarF" accept="image/*" style="font-size:11px; padding:4px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:11px;">Aadhaar Back</label>
+                        <input type="file" id="aadhaarB" accept="image/*" style="font-size:11px; padding:4px;">
+                    </div>
                 </div>
 
-                <button type="submit" class="btn-submit" id="saveBtn"><i class="fa-solid fa-floppy-disk"></i> Save Student Record</button>
+                <button type="submit" class="save-btn" id="saveBtn"><i class="fa-solid fa-floppy-disk"></i> Save & Sync Student</button>
             </form>
         </div>
 
-        <!-- Right: Member Tabs & Student Cards List -->
+        <!-- Right Directory -->
         <div>
-            <div class="member-tabs">
-                <button class="tab-btn active" id="tab-all" onclick="setFilter('all')">All Member</button>
-                <button class="tab-btn" id="tab-live" onclick="setFilter('live')">Live Member</button>
-                <button class="tab-btn" id="tab-expired" onclick="setFilter('expired')">Expired Member</button>
-                <button class="tab-btn" id="tab-due" onclick="setFilter('due')">Due List</button>
+            <div class="filter-tabs">
+                <button class="f-tab active" id="tab-all" onclick="setTab('all')">All Members</button>
+                <button class="f-tab" id="tab-live" onclick="setTab('live')">Live Members</button>
+                <button class="f-tab" id="tab-expired" onclick="setTab('expired')">Expired</button>
+                <button class="f-tab" id="tab-due" onclick="setTab('due')">Dues Pending</button>
+                <button class="f-tab" id="tab-promise" onclick="setTab('promise')">Promise Today</button>
             </div>
 
-            <div id="studentCardsContainer">
-                <!-- Student Cards injected here -->
-            </div>
+            <div id="directoryList"></div>
         </div>
     </div>
 </div>
 
-<!-- Compact ID Card & Bill Modal (Matches Image 1) -->
+<!-- Compact ID Card Modal -->
 <div id="idModal" class="modal">
-    <div class="id-modal-wrapper">
-        <div id="printableArea" class="id-card-box">
-            <!-- Dynamically filled -->
+    <div class="modal-box">
+        <div id="idCardCaptureArea" class="compact-id-card">
+            <!-- Injected dynamically -->
         </div>
-        <div class="id-modal-footer">
-            <button class="id-footer-btn" onclick="printCardOrBill()"><i class="fa-solid fa-print"></i> PDF / PRINT</button>
-            <button class="id-footer-btn" style="color:#25D366;" onclick="shareIdWhatsApp()"><i class="fa-brands fa-whatsapp"></i> SHARE</button>
-            <button class="id-footer-btn" style="color:#666;" onclick="closeIdModal()">CLOSE</button>
+
+        <div class="modal-btn-bar">
+            <button class="m-btn" style="background:#25D366;" onclick="shareIdCardImage()"><i class="fa-brands fa-whatsapp"></i> WhatsApp ID</button>
+            <button class="m-btn" style="background:var(--blue);" onclick="window.print()"><i class="fa-solid fa-print"></i> Print / PDF</button>
+            <button class="m-btn" style="background:#444;" onclick="document.getElementById('idModal').style.display='none'">Close</button>
         </div>
     </div>
 </div>
 
-<!-- Lightbox for zooming student photo -->
+<!-- Full Details & Aadhaar Viewer Modal -->
+<div id="docsModal" class="modal">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="panel-header" style="margin-bottom:10px;">
+            <span id="docsModalTitle">Student Complete Record & Docs</span>
+            <button onclick="document.getElementById('docsModal').style.display='none'" style="background:none; border:none; color:#FFF; font-size:16px; cursor:pointer;">✕</button>
+        </div>
+        <div id="docsModalBody" style="font-size:13px; font-weight:700; line-height:1.6;"></div>
+    </div>
+</div>
+
+<!-- Cloud Sync Modal -->
+<div id="cloudModal" class="modal">
+    <div class="modal-box" style="max-width:420px; padding:18px;">
+        <div class="panel-header">
+            <span><i class="fa-solid fa-cloud"></i> Live Cloud Sync (Mobile + Laptop + TV)</span>
+            <button onclick="document.getElementById('cloudModal').style.display='none'" style="background:none; border:none; color:#FFF; cursor:pointer;">✕</button>
+        </div>
+        <p style="font-size:12px; font-weight:700; color:#333; margin-bottom:10px;">
+            Paste a free <b>Firebase Realtime Database URL</b> (e.g. <code>https://your-project-default-rtdb.firebaseio.com</code>) below on both your Mobile and Laptop to keep data 100% live across all devices automatically!
+        </p>
+        <div class="form-group">
+            <label>Cloud Database URL</label>
+            <input type="url" id="cloudUrlInput" placeholder="https://buddha-library-default-rtdb.firebaseio.com">
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="save-btn" style="margin:0;" onclick="saveCloudConfig()">Save & Sync Now</button>
+            <button class="save-btn" style="margin:0; background:#555;" onclick="pullFromCloud(true)">Pull Latest Data</button>
+        </div>
+    </div>
+</div>
+
 <div id="lightbox" onclick="this.style.display='none'">
     <img id="lightboxImg" src="">
 </div>
 
 <script>
+    // Built-in SVG fallback logo matching Buddha Library Golden & Maroon Emblem
+    const EMBEDDED_LOGO = "data:image/svg+xml;utf8," + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="96" fill="#F4C430" stroke="#7A0016" stroke-width="6"/>
+        <circle cx="100" cy="100" r="64" fill="#FFFFFF" stroke="#7A0016" stroke-width="3"/>
+        <text x="100" y="34" font-family="Arial" font-size="16" font-weight="900" fill="#7A0016" text-anchor="middle">BUDDHA LIBRARY</text>
+        <circle cx="100" cy="82" r="14" fill="#F4C430" opacity="0.5"/>
+        <path d="M85 120 C85 95, 115 95, 115 120 Z" fill="#37474F"/>
+        <circle cx="100" cy="82" r="9" fill="#37474F"/>
+        <rect x="64" y="96" width="16" height="26" fill="#8D6E63"/>
+        <rect x="120" y="96" width="16" height="26" fill="#8D6E63"/>
+        <text x="100" y="138" font-family="Arial" font-size="10" font-weight="bold" fill="#7A0016" text-anchor="middle">बुद्धं शरणं गच्छामि</text>
+        <text x="100" y="182" font-family="Arial" font-size="11" font-weight="900" fill="#000000" text-anchor="middle">FLAIR FOUNDATION</text>
+    </svg>`);
+
+    let LOGO_SRC = "1000038642.png";
+    const headerLogoEl = document.getElementById('mainHeaderLogo');
+    headerLogoEl.src = LOGO_SRC;
+    headerLogoEl.onerror = function() {
+        LOGO_SRC = EMBEDDED_LOGO;
+        this.src = EMBEDDED_LOGO;
+    };
+
     let students = JSON.parse(localStorage.getItem('buddha_library_students')) || [];
-    let activeFilter = 'all';
-    let currentModalIdx = null;
+    let currentTab = 'all';
+    let activeCardIndex = null;
 
-    // Initialize defaults
     document.getElementById('startDate').valueAsDate = new Date();
-    updateValidity();
-    assignNextId();
+    autoSetEndDate();
+    setNextAvailableId();
 
-    function assignNextId() {
-        if (document.getElementById('editIndex').value !== "") return;
-        let usedIds = students.map(s => parseInt(s.idNo)).filter(n => !isNaN(n));
+    function setNextAvailableId() {
+        if (document.getElementById('editIdx').value !== "") return;
+        let used = students.map(s => parseInt(s.idNo)).filter(n => !isNaN(n));
         let next = 1;
-        while (usedIds.includes(next) && next <= 1000) {
-            next++;
-        }
+        while (used.includes(next)) next++;
         document.getElementById('idNo').value = next;
     }
 
-    function updateValidity() {
-        let startVal = document.getElementById('startDate').value;
-        if (!startVal) return;
-        let d = new Date(startVal);
+    function autoSetEndDate() {
+        let s = document.getElementById('startDate').value;
+        if (!s) return;
+        let d = new Date(s);
         d.setDate(d.getDate() + 30);
         document.getElementById('endDate').value = d.toISOString().split('T')[0];
     }
 
-    // Triggered only when Plan, Checkboxes, or Discount changes
-    function onPlanChange() {
-        let planVal = document.getElementById('shiftPlan').value;
-        if (!planVal) {
-            document.getElementById('totalBillAmt').value = 0;
-            document.getElementById('paidAmt').value = 0;
-            document.getElementById('dueAmt').value = 0;
-            return;
-        }
-        let base = parseInt(planVal.split('|')[1]) || 0;
-        if (document.getElementById('newAdmCheck').checked) base += 199;
+    function recalcFromPlan() {
+        let val = document.getElementById('shiftPlan').value;
+        if (!val) return;
+        let base = parseInt(val.split('|')[1]) || 0;
+        if (document.getElementById('admFeeCheck').checked) base += 199;
         if (document.getElementById('lockerCheck').checked) base += 250;
-
         let disc = parseInt(document.getElementById('discountAmt').value) || 0;
-        let taxable = Math.max(0, base - disc);
-        let totalWithGst = Math.round(taxable * 1.05); // 5% GST
+        let net = Math.max(0, base - disc);
+        let totalWithGst = Math.round(net * 1.05);
 
-        document.getElementById('totalBillAmt').value = totalWithGst;
-        document.getElementById('paidAmt').value = totalWithGst;
-        updateDueOnly();
+        document.getElementById('totalBill').value = totalWithGst;
+        document.getElementById('paidNow').value = totalWithGst;
+        calcRemainingDue();
     }
 
-    // Triggered when user manually edits Total Bill or Paid Amount
-    function updateDueOnly() {
-        let total = parseInt(document.getElementById('totalBillAmt').value) || 0;
-        let paid = parseInt(document.getElementById('paidAmt').value) || 0;
-        let due = Math.max(0, total - paid);
-        document.getElementById('dueAmt').value = due;
+    function calcRemainingDue() {
+        let tot = parseInt(document.getElementById('totalBill').value) || 0;
+        let paid = parseInt(document.getElementById('paidNow').value) || 0;
+        document.getElementById('dueAmount').value = Math.max(0, tot - paid);
     }
 
-    function saveStudent(e) {
+    // Ultra-light Image Compressor (35KB per photo so 2000 students take <60MB)
+    function compressImage(file, maxW = 360, quality = 0.65) {
+        return new Promise((resolve) => {
+            if (!file) { resolve(""); return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function saveRecord(e) {
         e.preventDefault();
-        let editIdx = document.getElementById('editIndex').value;
+        let editIdx = document.getElementById('editIdx').value;
         let idNo = document.getElementById('idNo').value.trim();
 
-        // Check unique ID
-        let duplicate = students.some((s, idx) => s.idNo == idNo && idx.toString() !== editIdx.toString());
-        if (duplicate) {
-            alert("ID No " + idNo + " is already assigned to another student! Please enter a different ID.");
+        let dup = students.some((s, i) => s.idNo.toString() === idNo && i.toString() !== editIdx.toString());
+        if (dup) {
+            alert("ID No " + idNo + " already exists! Please choose another ID.");
             return;
         }
 
-        let photoFile = document.getElementById('photoInput').files[0];
-        if (photoFile) {
-            let reader = new FileReader();
-            reader.onload = function(evt) {
-                finalizeSave(evt.target.result, editIdx);
-            };
-            reader.readAsDataURL(photoFile);
-        } else {
-            let existingPhoto = (editIdx !== "" && students[editIdx]) ? students[editIdx].photo : "";
-            finalizeSave(existingPhoto, editIdx);
-        }
-    }
+        let fPhoto = document.getElementById('stPhoto').files[0];
+        let fAadhaarF = document.getElementById('aadhaarF').files[0];
+        let fAadhaarB = document.getElementById('aadhaarB').files[0];
 
-    function finalizeSave(photoData, editIdx) {
-        let obj = {
-            idNo: document.getElementById('idNo').value.trim(),
+        let old = (editIdx !== "" && students[editIdx]) ? students[editIdx] : {};
+
+        let photoData = fPhoto ? await compressImage(fPhoto, 300, 0.7) : (old.photo || "");
+        let aadhaarFront = fAadhaarF ? await compressImage(fAadhaarF, 600, 0.65) : (old.aadhaarFront || "");
+        let aadhaarBack = fAadhaarB ? await compressImage(fAadhaarB, 600, 0.65) : (old.aadhaarBack || "");
+
+        let record = {
+            idNo,
             seatNo: document.getElementById('seatNo').value.trim(),
             name: document.getElementById('name').value.trim(),
             mobile: document.getElementById('mobile').value.trim(),
@@ -931,271 +1059,286 @@
             shiftPlan: document.getElementById('shiftPlan').value,
             startDate: document.getElementById('startDate').value,
             endDate: document.getElementById('endDate').value,
-            newAdmCheck: document.getElementById('newAdmCheck').checked,
+            admFeeCheck: document.getElementById('admFeeCheck').checked,
             lockerCheck: document.getElementById('lockerCheck').checked,
             discountAmt: parseInt(document.getElementById('discountAmt').value) || 0,
-            totalAmount: parseInt(document.getElementById('totalBillAmt').value) || 0,
-            amountPaid: parseInt(document.getElementById('paidAmt').value) || 0,
-            remainingDue: parseInt(document.getElementById('dueAmt').value) || 0,
+            totalAmount: parseInt(document.getElementById('totalBill').value) || 0,
+            amountPaid: parseInt(document.getElementById('paidNow').value) || 0,
+            remainingDue: parseInt(document.getElementById('dueAmount').value) || 0,
             promiseDate: document.getElementById('promiseDate').value,
             payMode: document.getElementById('payMode').value,
-            photo: photoData
+            photo: photoData,
+            aadhaarFront,
+            aadhaarBack
         };
 
         if (editIdx === "") {
-            students.unshift(obj);
+            students.unshift(record);
         } else {
-            students[parseInt(editIdx)] = obj;
+            students[parseInt(editIdx)] = record;
         }
 
         localStorage.setItem('buddha_library_students', JSON.stringify(students));
+        pushToCloud();
         resetForm();
-        renderList();
+        renderDirectory();
     }
 
     function resetForm() {
         document.getElementById('studentForm').reset();
-        document.getElementById('editIndex').value = "";
-        document.getElementById('formHeading').innerHTML = `<i class="fa-solid fa-user-plus"></i> Admission / Fee Entry`;
-        document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Save Student Record`;
+        document.getElementById('editIdx').value = "";
+        document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-user-plus"></i> Student Admission / Edit`;
+        document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Save & Sync Student`;
         document.getElementById('startDate').valueAsDate = new Date();
-        updateValidity();
-        assignNextId();
+        autoSetEndDate();
+        setNextAvailableId();
     }
 
-    function formatDateDMY(dateStr) {
-        if (!dateStr) return "N/A";
-        let parts = dateStr.split('-');
-        if (parts.length !== 3) return dateStr;
-        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    function fmtDate(d) {
+        if (!d) return "N/A";
+        let p = d.split('-');
+        return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : d;
     }
 
-    function handleSearch() {
-        let val = document.getElementById('frontSearchInput').value;
-        document.getElementById('clearSearchBtn').style.display = val.length > 0 ? 'block' : 'none';
-        renderList();
+    function setTab(t) {
+        currentTab = t;
+        document.querySelectorAll('.f-tab').forEach(b => b.classList.remove('active'));
+        let btn = document.getElementById('tab-' + t);
+        if (btn) btn.classList.add('active');
+        renderDirectory();
     }
 
-    function clearSearch() {
-        document.getElementById('frontSearchInput').value = '';
-        document.getElementById('clearSearchBtn').style.display = 'none';
-        renderList();
-    }
+    function renderDirectory() {
+        let list = document.getElementById('directoryList');
+        list.innerHTML = '';
 
-    function setFilter(mode) {
-        activeFilter = mode;
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        if (document.getElementById('tab-' + mode)) {
-            document.getElementById('tab-' + mode).classList.add('active');
-        }
-        renderList();
-    }
-
-    function renderList() {
-        let container = document.getElementById('studentCardsContainer');
-        container.innerHTML = '';
-
-        let query = document.getElementById('frontSearchInput').value.toLowerCase().trim();
+        let q = document.getElementById('searchInput').value.toLowerCase().trim();
         let today = new Date().toISOString().split('T')[0];
 
-        let totalReg = students.length;
-        let liveCount = 0;
-        let expiredCount = 0;
-        let totalColl = 0;
-        let totalDues = 0;
-        let promiseList = [];
+        let total = students.length, live = 0, exp = 0, coll = 0, dues = 0;
+        let promiseMatches = [];
 
         students.forEach((st, idx) => {
             let isLive = st.endDate >= today;
-            if (isLive) liveCount++; else expiredCount++;
+            if (isLive) live++; else exp++;
 
             let paid = parseInt(st.amountPaid) || 0;
             let due = parseInt(st.remainingDue) || 0;
-            totalColl += paid;
-            totalDues += due;
+            coll += paid;
+            dues += due;
 
             if (due > 0 && st.promiseDate && st.promiseDate <= today) {
-                promiseList.push(`${st.name} (ID:${st.idNo}, Due:₹${due})`);
+                promiseMatches.push(`${st.name} (#${st.idNo}: ₹${due})`);
             }
 
-            // Tab filtering
-            if (activeFilter === 'live' && !isLive) return;
-            if (activeFilter === 'expired' && isLive) return;
-            if (activeFilter === 'due' && due <= 0) return;
-            if (activeFilter === 'paid' && paid <= 0) return;
-            if (activeFilter === 'promise' && !(due > 0 && st.promiseDate && st.promiseDate <= today)) return;
+            if (currentTab === 'live' && !isLive) return;
+            if (currentTab === 'expired' && isLive) return;
+            if (currentTab === 'due' && due <= 0) return;
+            if (currentTab === 'paid' && paid <= 0) return;
+            if (currentTab === 'promise' && !(due > 0 && st.promiseDate && st.promiseDate <= today)) return;
 
-            // Search Bar filtering
-            if (query) {
-                let matchId = st.idNo.toString().toLowerCase() === query || st.idNo.toString().toLowerCase().includes(query);
-                let matchName = st.name.toLowerCase().includes(query);
-                let matchMob = st.mobile.includes(query);
-                let matchSeat = st.seatNo.toLowerCase().includes(query);
-                let matchParent = (st.parentInfo || '').toLowerCase().includes(query);
-                let matchAddr = (st.address || '').toLowerCase().includes(query);
-                if (!matchId && !matchName && !matchMob && !matchSeat && !matchParent && !matchAddr) return;
+            if (q) {
+                let mId = st.idNo.toString().toLowerCase().includes(q);
+                let mName = st.name.toLowerCase().includes(q);
+                let mMob = st.mobile.includes(q);
+                let mSeat = st.seatNo.toLowerCase().includes(q);
+                let mPar = (st.parentInfo || '').toLowerCase().includes(q);
+                if (!mId && !mName && !mMob && !mSeat && !mPar) return;
             }
 
-            let planTitle = st.shiftPlan ? st.shiftPlan.split('|')[0] : 'Standard Shift';
-            let avatar = st.photo || 'https://via.placeholder.com/80?text=Photo';
+            let shiftName = st.shiftPlan ? st.shiftPlan.split('|')[0] : 'Standard Shift';
+            let imgSrc = st.photo || EMBEDDED_LOGO;
 
             let card = document.createElement('div');
-            card.className = 'student-card';
+            card.className = 'st-card';
             card.innerHTML = `
-                <div class="st-card-header">
-                    <div class="st-profile-info">
-                        <img src="${avatar}" class="st-thumb" onclick="zoomImage('${avatar}')" title="Click to zoom">
-                        <div class="st-name-block">
+                <div class="st-top">
+                    <div class="st-user">
+                        <img src="${imgSrc}" onclick="zoomImg('${imgSrc}')">
+                        <div class="st-user-info">
                             <h4>${st.name}</h4>
                             <p><i class="fa-solid fa-location-dot"></i> ${st.address || 'Patna'} | <b>Seat: ${st.seatNo}</b></p>
-                            <a href="tel:+91${st.mobile}"><i class="fa-solid fa-phone"></i> +91 ${st.mobile}</a>
-                            ${st.parentInfo ? `<span style="font-size:11px; color:#777; margin-left:6px;">(Guardian: ${st.parentInfo})</span>` : ''}
+                            <a class="call-link" href="tel:+91${st.mobile}"><i class="fa-solid fa-phone"></i> +91 ${st.mobile}</a>
+                            ${st.parentInfo ? `<span style="font-size:12px; font-weight:800; color:#444; margin-left:6px;">| Guardian: ${st.parentInfo}</span>` : ''}
                         </div>
                     </div>
-                    <div class="id-pill">
-                        <i class="fa-solid fa-id-badge"></i> ${st.idNo}
+                    <div class="id-badge-top">ID #${st.idNo}</div>
+                </div>
+
+                <div class="st-mid-grid">
+                    <div>
+                        <strong>Shift & Time</strong>
+                        <span>${shiftName}</span>
+                    </div>
+                    <div>
+                        <strong>Start / Valid Upto</strong>
+                        <span>${fmtDate(st.startDate)} to <b style="color:var(--red);">${fmtDate(st.endDate)}</b></span>
+                    </div>
+                    <div>
+                        <strong>Bill / Paid</strong>
+                        <span>₹${st.totalAmount} / <b style="color:var(--green);">₹${paid}</b></span>
+                    </div>
+                    <div>
+                        <strong>Remaining Due</strong>
+                        <span style="color:${due > 0 ? 'var(--red)' : 'var(--green)'};">₹${due} ${st.promiseDate && due > 0 ? `(${fmtDate(st.promiseDate)})` : ''}</span>
                     </div>
                 </div>
 
-                <div class="st-details-box">
-                    <div class="details-row">
-                        <div class="detail-item">
-                            <small>Plan & Shift Timing</small>
-                            <span>${planTitle}</span>
-                        </div>
-                        <div class="detail-item">
-                            <small>Status</small>
-                            <span style="color:${isLive ? 'var(--success)' : 'var(--danger)'};">${isLive ? 'Active / Live' : 'Expired'}</span>
-                        </div>
-                    </div>
-                    <div class="details-row">
-                        <div class="detail-item">
-                            <small>Start / Join</small>
-                            <span>${formatDateDMY(st.startDate)}</span>
-                        </div>
-                        <div class="detail-item">
-                            <small>Expiry / Valid Upto</small>
-                            <span style="color:#C62828; font-weight:700;">${formatDateDMY(st.endDate)}</span>
-                        </div>
-                    </div>
-                    <div class="details-money">
-                        <div class="detail-item">
-                            <small>Total Bill</small>
-                            <span>₹${st.totalAmount}</span>
-                        </div>
-                        <div class="detail-item">
-                            <small>Paid</small>
-                            <span style="color:var(--success);">₹${paid}</span>
-                        </div>
-                        <div class="detail-item">
-                            <small>Remaining Due</small>
-                            <span style="color:var(--danger); font-weight:700;">₹${due} ${st.promiseDate && due > 0 ? `<small style="color:#856404;">(Date: ${formatDateDMY(st.promiseDate)})</small>` : ''}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="st-card-actions">
-                    <button class="act-btn" onclick="openIdModal(${idx})">
-                        <i class="fa-solid fa-id-card"></i> ID-Card / Bill
+                <div class="st-actions">
+                    <button class="s-btn" style="background:var(--maroon); color:#FFF;" onclick="showCompactId(${idx})">
+                        <i class="fa-solid fa-id-card"></i> ID Card
                     </button>
-                    <button class="act-btn" onclick="editStudent(${idx})">
+                    <button class="s-btn" onclick="openDocsModal(${idx})">
+                        <i class="fa-solid fa-folder-open"></i> Docs / Full Info
+                    </button>
+                    <button class="s-btn" onclick="editRecord(${idx})">
                         <i class="fa-solid fa-pen"></i> Edit
                     </button>
-                    <button class="act-btn" onclick="quickAddPay(${idx})">
-                        <i class="fa-solid fa-indian-rupee-sign"></i> Add Pay
+                    <button class="s-btn" style="color:var(--green);" onclick="collectDue(${idx})">
+                        <i class="fa-solid fa-indian-rupee-sign"></i> Pay Due
                     </button>
-                    <button class="act-btn" onclick="renewStudent(${idx})">
-                        <i class="fa-solid fa-rotate"></i> Renew
-                    </button>
-                    <button class="act-btn" style="color:var(--danger);" onclick="deleteStudent(${idx})">
+                    <button class="s-btn" style="color:var(--red);" onclick="removeRecord(${idx})">
                         <i class="fa-solid fa-trash"></i> Delete
                     </button>
                 </div>
             `;
-            container.appendChild(card);
+            list.appendChild(card);
         });
 
-        document.getElementById('statTotal').innerText = totalReg;
-        document.getElementById('statLive').innerText = liveCount;
-        document.getElementById('statExpired').innerText = expiredCount;
-        document.getElementById('statCollection').innerText = '₹' + totalColl;
-        document.getElementById('statDues').innerText = '₹' + totalDues;
+        document.getElementById('stTotal').innerText = total;
+        document.getElementById('stLive').innerText = live;
+        document.getElementById('stExpired').innerText = exp;
+        document.getElementById('stPaid').innerText = '₹' + coll;
+        document.getElementById('stDue').innerText = '₹' + dues;
 
-        if (promiseList.length > 0) {
-            document.getElementById('promiseAlertText').innerHTML = `<b>${promiseList.length} Student(s) promised payment:</b> ${promiseList.slice(0, 3).join(', ')}`;
+        if (promiseMatches.length > 0) {
+            document.getElementById('promiseBannerText').innerHTML = `🚨 <b>PROMISE DUE TODAY (${promiseMatches.length}):</b> ${promiseMatches.slice(0, 3).join(', ')}`;
         } else {
-            document.getElementById('promiseAlertText').innerText = "No overdue promise dates pending today.";
+            document.getElementById('promiseBannerText').innerText = "No pending fee promises due for today.";
         }
     }
 
-    function openIdModal(idx) {
-        currentModalIdx = idx;
+    function showCompactId(idx) {
+        activeCardIndex = idx;
         let st = students[idx];
-        let avatar = st.photo || 'https://via.placeholder.com/90?text=Photo';
-        let planTitle = st.shiftPlan ? st.shiftPlan.split('|')[0] : 'Standard Shift';
+        let shiftName = st.shiftPlan ? st.shiftPlan.split('|')[0] : 'Standard Shift';
+        let photoSrc = st.photo || EMBEDDED_LOGO;
         let due = parseInt(st.remainingDue) || 0;
 
-        let html = `
-            <div class="id-top-banner">
-                <img src="1000038642.png" alt="Logo" onerror="this.src='https://via.placeholder.com/60?text=BL'">
-                <h3>BUDDHA LIBRARY</h3>
-                <p>A Unit of "Flair Foundation" Kachchi Dargah Near<br>Durga Mandir Patna , Bihar 803201<br>Mob: 0612-2641161 | 7050668855</p>
-            </div>
-
-            <div class="id-avatar-wrap">
-                <img src="${avatar}" onclick="zoomImage('${avatar}')" title="Click to zoom photo">
-                <div class="id-floating-badge">
-                    <i class="fa-solid fa-id-badge"></i> ${st.idNo}
+        document.getElementById('idCardCaptureArea').innerHTML = `
+            <div class="id-header">
+                <img src="${LOGO_SRC}" onerror="this.src=EMBEDDED_LOGO">
+                <div class="id-header-text">
+                    <h3>BUDDHA LIBRARY</h3>
+                    <p>A Unit of "Flair Foundation" | Kachchi Dargah,<br>Near Durga Mandir, Patna-803201<br>Helpline: 7050668855, 0612-2641161</p>
                 </div>
             </div>
-
-            <div class="id-student-name">${st.name}</div>
-
-            <table class="id-info-table">
-                <tr>
-                    <td class="lbl">Contact no. :</td>
-                    <td class="val">${st.mobile}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">Address :</td>
-                    <td class="val">${st.address || 'Patna'}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">Start Date :</td>
-                    <td class="val">${formatDateDMY(st.startDate)}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">Valid Upto :</td>
-                    <td class="val"><span class="valid-highlight">${formatDateDMY(st.endDate)}</span></td>
-                </tr>
-                <tr>
-                    <td class="lbl">Shift & Time :</td>
-                    <td class="val">${planTitle}</td>
-                </tr>
-                <tr>
-                    <td class="lbl">Seat no. :</td>
-                    <td class="val"><b>${st.seatNo}</b></td>
-                </tr>
-                <tr>
-                    <td class="lbl">Balance Due :</td>
-                    <td class="val">
-                        ${due > 0 ? `<span class="due-highlight">₹${due} Due</span>` : `<span style="color:var(--success); font-weight:700;">₹0 (No Due)</span>`}
-                    </td>
-                </tr>
-            </table>
+            <div class="id-body">
+                <div class="id-photo-row">
+                    <img src="${photoSrc}" onclick="zoomImg('${photoSrc}')" title="Tap to zoom">
+                    <div class="id-title-block">
+                        <div class="id-pill-row">
+                            <span class="id-tag">ID: #${st.idNo}</span>
+                            <span class="seat-tag">SEAT: ${st.seatNo}</span>
+                        </div>
+                        <div class="id-st-name">${st.name}</div>
+                        <div class="id-st-mob"><i class="fa-solid fa-phone"></i> +91 ${st.mobile}</div>
+                    </div>
+                </div>
+                <table class="id-grid-table">
+                    <tr>
+                        <td class="k">Shift & Time</td>
+                        <td>${shiftName}</td>
+                    </tr>
+                    <tr>
+                        <td class="k">Start Date</td>
+                        <td>${fmtDate(st.startDate)}</td>
+                    </tr>
+                    <tr>
+                        <td class="k">Valid Upto</td>
+                        <td style="background:#FFEBEE; color:#C62828; font-size:12.5px;">${fmtDate(st.endDate)}</td>
+                    </tr>
+                    <tr>
+                        <td class="k">Address</td>
+                        <td>${st.address || 'Patna'}</td>
+                    </tr>
+                    <tr>
+                        <td class="k">Balance Due</td>
+                        <td style="color:${due > 0 ? '#C62828' : '#0F7B32'}; font-size:12.5px;">
+                            ${due > 0 ? `₹${due} PENDING` : `₹0 (NO DUE)`}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="id-footer-strip">
+                Authorized Digital Identity Card • Buddha Library Patna
+            </div>
         `;
-
-        document.getElementById('printableArea').innerHTML = html;
         document.getElementById('idModal').style.display = 'flex';
     }
 
-    function closeIdModal() {
-        document.getElementById('idModal').style.display = 'none';
+    async function shareIdCardImage() {
+        if (activeCardIndex === null) return;
+        let st = students[activeCardIndex];
+        let cardEl = document.getElementById('idCardCaptureArea');
+
+        try {
+            let canvas = await html2canvas(cardEl, { scale: 2, useCORS: true });
+            canvas.toBlob(async (blob) => {
+                let file = new File([blob], `Buddha_Library_ID_${st.idNo}.png`, { type: 'image/png' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: `Buddha Library ID #${st.idNo}`
+                    });
+                } else {
+                    // Fallback: Download compact ID image & open WhatsApp chat
+                    let link = document.createElement('a');
+                    link.download = `Buddha_Library_ID_${st.idNo}.png`;
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+
+                    let due = parseInt(st.remainingDue) || 0;
+                    let shiftName = st.shiftPlan ? st.shiftPlan.split('|')[0] : '';
+                    let txt = `*BUDDHA LIBRARY - DIGITAL ID CARD*\n*ID:* #${st.idNo} | *Seat:* ${st.seatNo}\n*Name:* ${st.name}\n*Mobile:* ${st.mobile}\n*Shift:* ${shiftName}\n*Start:* ${fmtDate(st.startDate)}\n*Valid Upto:* *${fmtDate(st.endDate)}*\n*Balance Due:* ₹${due}\n*Helpline:* 7050668855`;
+                    window.open(`https://api.whatsapp.com/send?phone=91${st.mobile}&text=${encodeURIComponent(txt)}`, '_blank');
+                }
+            });
+        } catch (err) {
+            alert("Error generating card image.");
+        }
     }
 
-    function editStudent(idx) {
+    function openDocsModal(idx) {
         let st = students[idx];
-        document.getElementById('editIndex').value = idx;
+        document.getElementById('docsModalTitle').innerText = `${st.name} (ID #${st.idNo}) - Complete Details`;
+        let html = `
+            <p><b>Full Name:</b> ${st.name}</p>
+            <p><b>Student Mobile:</b> <a href="tel:+91${st.mobile}">+91 ${st.mobile}</a></p>
+            <p><b>Guardian Info (Internal):</b> ${st.parentInfo || 'Not Provided'}</p>
+            <p><b>Address:</b> ${st.address || 'Patna'}</p>
+            <p><b>Shift & Plan:</b> ${st.shiftPlan ? st.shiftPlan.split('|')[0] : ''}</p>
+            <p><b>Total Bill:</b> ₹${st.totalAmount} | <b>Paid:</b> ₹${st.amountPaid} | <b>Due:</b> ₹${st.remainingDue}</p>
+            <hr style="margin:10px 0;">
+            <p style="margin-bottom:6px;"><b>Uploaded Documents (Click to Zoom):</b></p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div>
+                    <small>Aadhaar Front</small><br>
+                    ${st.aadhaarFront ? `<img src="${st.aadhaarFront}" style="width:100%; height:110px; object-fit:cover; border:2px solid var(--maroon); border-radius:6px; cursor:pointer;" onclick="zoomImg('${st.aadhaarFront}')">` : `<p style="color:#888;">No Front Image</p>`}
+                </div>
+                <div>
+                    <small>Aadhaar Back</small><br>
+                    ${st.aadhaarBack ? `<img src="${st.aadhaarBack}" style="width:100%; height:110px; object-fit:cover; border:2px solid var(--maroon); border-radius:6px; cursor:pointer;" onclick="zoomImg('${st.aadhaarBack}')">` : `<p style="color:#888;">No Back Image</p>`}
+                </div>
+            </div>
+        `;
+        document.getElementById('docsModalBody').innerHTML = html;
+        document.getElementById('docsModal').style.display = 'flex';
+    }
+
+    function editRecord(idx) {
+        let st = students[idx];
+        document.getElementById('editIdx').value = idx;
         document.getElementById('idNo').value = st.idNo;
         document.getElementById('seatNo').value = st.seatNo;
         document.getElementById('name').value = st.name;
@@ -1205,123 +1348,128 @@
         document.getElementById('shiftPlan').value = st.shiftPlan;
         document.getElementById('startDate').value = st.startDate;
         document.getElementById('endDate').value = st.endDate;
-        document.getElementById('newAdmCheck').checked = st.newAdmCheck || false;
+        document.getElementById('admFeeCheck').checked = st.admFeeCheck || false;
         document.getElementById('lockerCheck').checked = st.lockerCheck || false;
         document.getElementById('discountAmt').value = st.discountAmt || 0;
-        document.getElementById('totalBillAmt').value = st.totalAmount || 0;
-        document.getElementById('paidAmt').value = st.amountPaid || 0;
-        document.getElementById('dueAmt').value = st.remainingDue || 0;
+        document.getElementById('totalBill').value = st.totalAmount || 0;
+        document.getElementById('paidNow').value = st.amountPaid || 0;
+        document.getElementById('dueAmount').value = st.remainingDue || 0;
         document.getElementById('promiseDate').value = st.promiseDate || '';
         document.getElementById('payMode').value = st.payMode || 'Cash';
 
-        document.getElementById('formHeading').innerHTML = `<i class="fa-solid fa-pen"></i> Edit Student (ID #${st.idNo})`;
-        document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-check"></i> Update Student Record`;
+        document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen"></i> Editing ID #${st.idNo}`;
+        document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-check"></i> Update Record`;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function quickAddPay(idx) {
+    function collectDue(idx) {
         let st = students[idx];
         let due = parseInt(st.remainingDue) || 0;
-        if (due <= 0) {
-            alert("No remaining due for " + st.name + "!");
-            return;
-        }
-        let rec = prompt(`Remaining Due for ${st.name} is ₹${due}.\nEnter amount received now (₹):`, due);
+        if (due <= 0) { alert("No pending dues for this student!"); return; }
+        let rec = prompt(`Pending Due for ${st.name} is ₹${due}.\nEnter amount received now (₹):`, due);
         if (rec !== null) {
-            let addAmt = parseInt(rec) || 0;
-            st.amountPaid = (parseInt(st.amountPaid) || 0) + addAmt;
+            let add = parseInt(rec) || 0;
+            st.amountPaid = (parseInt(st.amountPaid) || 0) + add;
             st.remainingDue = Math.max(0, st.totalAmount - st.amountPaid);
             if (st.remainingDue === 0) st.promiseDate = "";
             localStorage.setItem('buddha_library_students', JSON.stringify(students));
-            renderList();
+            pushToCloud();
+            renderDirectory();
         }
     }
 
-    function renewStudent(idx) {
-        let st = students[idx];
-        if (confirm(`Renew membership for ${st.name} for next 30 days?`)) {
-            let today = new Date().toISOString().split('T')[0];
-            st.startDate = today;
-            let d = new Date(today);
-            d.setDate(d.getDate() + 30);
-            st.endDate = d.toISOString().split('T')[0];
-            editStudent(idx);
-        }
-    }
-
-    function deleteStudent(idx) {
-        if (confirm("Are you sure you want to delete this record?")) {
+    function removeRecord(idx) {
+        if (confirm("Delete this student record permanently?")) {
             students.splice(idx, 1);
             localStorage.setItem('buddha_library_students', JSON.stringify(students));
-            assignNextId();
-            renderList();
+            pushToCloud();
+            setNextAvailableId();
+            renderDirectory();
         }
     }
 
-    function shareIdWhatsApp() {
-        if (currentModalIdx === null) return;
-        let st = students[currentModalIdx];
-        let planTitle = st.shiftPlan ? st.shiftPlan.split('|')[0] : 'Standard Shift';
-        let due = parseInt(st.remainingDue) || 0;
-
-        let text = `*BUDDHA LIBRARY - DIGITAL ID CARD*\n` +
-                   `A Unit of Flair Foundation, Kachchi Dargah, Patna\n` +
-                   `----------------------------\n` +
-                   `*ID No:* ${st.idNo} | *Seat No:* ${st.seatNo}\n` +
-                   `*Name:* ${st.name}\n` +
-                   `*Contact:* ${st.mobile}\n` +
-                   `*Start Date:* ${formatDateDMY(st.startDate)}\n` +
-                   `*Valid Upto:* *${formatDateDMY(st.endDate)}*\n` +
-                   `*Plan:* ${planTitle}\n` +
-                   `*Balance Due:* ₹${due}\n` +
-                   `----------------------------\n` +
-                   `Helpline: 0612-2641161, 7050668855`;
-
-        let url = `https://api.whatsapp.com/send?phone=91${st.mobile}&text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
-    }
-
-    function printCardOrBill() {
-        window.print();
-    }
-
-    function zoomImage(src) {
+    function zoomImg(src) {
         document.getElementById('lightboxImg').src = src;
         document.getElementById('lightbox').style.display = 'flex';
     }
 
-    function exportData() {
+    function exportBackup() {
         let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(students));
         let a = document.createElement('a');
-        a.setAttribute("href", dataStr);
-        a.setAttribute("download", "buddha_library_backup.json");
-        document.body.appendChild(a);
+        a.href = dataStr;
+        a.download = `Buddha_Library_Backup_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
-        a.remove();
     }
 
-    function importData(event) {
-        let file = event.target.files[0];
-        if (!file) return;
-        let reader = new FileReader();
-        reader.onload = function(e) {
+    function importBackup(e) {
+        let f = e.target.files[0];
+        if (!f) return;
+        let r = new FileReader();
+        r.onload = function(evt) {
             try {
-                let data = JSON.parse(e.target.result);
-                if (Array.isArray(data)) {
-                    students = data;
+                let arr = JSON.parse(evt.target.result);
+                if (Array.isArray(arr)) {
+                    students = arr;
                     localStorage.setItem('buddha_library_students', JSON.stringify(students));
-                    assignNextId();
-                    renderList();
+                    pushToCloud();
+                    setNextAvailableId();
+                    renderDirectory();
                     alert("Backup restored successfully!");
                 }
-            } catch (err) {
-                alert("Invalid backup file!");
-            }
+            } catch (err) { alert("Invalid backup file!"); }
         };
-        reader.readAsText(file);
+        r.readAsText(f);
     }
 
-    renderList();
+    // Live Cloud Sync Functions (Works across Mobile, Laptop, TV)
+    function openCloudSetup() {
+        document.getElementById('cloudUrlInput').value = localStorage.getItem('buddha_cloud_url') || '';
+        document.getElementById('cloudModal').style.display = 'flex';
+    }
+
+    function saveCloudConfig() {
+        let url = document.getElementById('cloudUrlInput').value.trim().replace(/\/$/, "");
+        localStorage.setItem('buddha_cloud_url', url);
+        pushToCloud(true);
+        document.getElementById('cloudModal').style.display = 'none';
+    }
+
+    async function pushToCloud(showAlert = false) {
+        let url = localStorage.getItem('buddha_cloud_url');
+        if (!url) return;
+        try {
+            await fetch(`${url}/buddha_students.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(students)
+            });
+            if (showAlert) alert("Data synced live to Cloud!");
+        } catch (e) {
+            if (showAlert) alert("Cloud sync failed. Check URL.");
+        }
+    }
+
+    async function pullFromCloud(showAlert = false) {
+        let url = localStorage.getItem('buddha_cloud_url');
+        if (!url) return;
+        try {
+            let res = await fetch(`${url}/buddha_students.json`);
+            let data = await res.json();
+            if (Array.isArray(data)) {
+                students = data;
+                localStorage.setItem('buddha_library_students', JSON.stringify(students));
+                setNextAvailableId();
+                renderDirectory();
+                if (showAlert) alert("Latest live data loaded from Cloud!");
+            }
+        } catch (e) {
+            if (showAlert) alert("Could not fetch from Cloud.");
+        }
+    }
+
+    // Auto-pull latest data on page load if Cloud URL is configured
+    pullFromCloud(false);
+    renderDirectory();
 </script>
 
 </body>
