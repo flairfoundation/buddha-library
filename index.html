@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>बुद्धा लाइब्रेरी - मैनेजमेंट सिस्टम</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #D4AF37; /* Golden Yellow from Logo */
+            --primary-dark: #B38F1D;
+            --secondary: #800020; /* Maroon Red from Logo text */
+            --dark: #1F1F1F;
+            --light: #F9F9FB;
+            --white: #FFFFFF;
+            --gray: #E0E0E0;
+            --danger: #DC3545;
+            --success: #28A745;
+            --warning: #FFC107;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #FFF9E6 0%, #F5F7FA 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header Styling */
+        header {
+            background: var(--white);
+            border-bottom: 4px solid var(--primary);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand img {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+            object-fit: cover;
+        }
+
+        .brand-title h1 {
+            color: var(--secondary);
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-title p {
+            color: #666;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 15px;
+        }
+
+        .stat-badge {
+            background: #FFF3CD;
+            border: 1px solid var(--primary);
+            padding: 8px 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-badge span {
+            display: block;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        .stat-badge small {
+            font-size: 11px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        /* Dashboard Alert Box */
+        .alert-box {
+            background: linear-gradient(135deg, #800020, #5A0017);
+            color: var(--white);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 10px rgba(128,0,32,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .alert-box div {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-box i {
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        /* Main Layout Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-top: 4px solid var(--secondary);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            color: var(--secondary);
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--gray);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #444;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--gray);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            background: #FFFDF4;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px dashed var(--primary);
+        }
+
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--secondary);
+        }
+
+        .btn {
+            background: var(--secondary);
+            color: var(--white);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .btn:hover {
+            background: #5A0017;
+        }
+
+        .btn-secondary {
+            background: var(--primary);
+            color: var(--dark);
+        }
+        .btn-secondary:hover {
+            background: var(--primary-dark);
+            color: var(--white);
+        }
+
+        /* Search & Filters Bar */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            color: #888;
+        }
+
+        .search-box input {
+            padding-left: 38px;
+        }
+
+        /* Table Styling */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--gray);
+        }
+
+        th {
+            background: #F8F9FA;
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #FFFDF4;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-active { background: #D4EDDA; color: #155724; }
+        .badge-expired { background: #F8D7DA; color: #721C24; }
+        .badge-leave { background: #FFF3CD; color: #856404; }
+
+        .action-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .action-btns button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .btn-view { color: #007BFF; }
+        .btn-whatsapp { color: #25D366; }
+        .btn-delete { color: var(--danger); }
+        .action-btns button:hover { background: var(--gray); }
+
+        /* Modal / Popups */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 15px;
+        }
+
+        .modal-content {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-top: 5px solid var(--primary);
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        /* ID Card Design */
+        .id-card-preview {
+            background: linear-gradient(135deg, #FFFDF4, #FFFFFF);
+            border: 2px solid var(--primary);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 5px 20px rgba(212,175,55,0.2);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .id-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid var(--secondary);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .id-header img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+        }
+
+        .id-header h3 {
+            color: var(--secondary);
+            font-size: 16px;
+            text-align: left;
+        }
+
+        .id-header p {
+            font-size: 10px;
+            color: #555;
+            text-align: left;
+        }
+
+        .student-photo-box {
+            width: 110px;
+            height: 130px;
+            border: 3px solid var(--primary);
+            border-radius: 8px;
+            margin: 0 auto 12px auto;
+            overflow: hidden;
+            cursor: pointer;
+            background: #eee;
+        }
+
+        .student-photo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .id-details {
+            text-align: left;
+            font-size: 13px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            background: #F9F9FB;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .id-details div span {
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        /* Image Lightbox */
+        #lightbox {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+        }
+        #lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            border: 3px solid var(--white);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <!-- यहाँ आपका लोगो इमेज यूज़ किया गया है -->
+            <img src="1000038642.png" alt="Buddha Library Logo">
+            <div class="brand-title">
+                <h1>बुद्धा लाइब्रेरी</h1>
+                <p>कच्ची दरगाह, बंका घाट, रेलवे स्टेशन रोड, पटना</p>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-badge">
+                <span id="totalStudentsCount">0</span>
+                <small>कुल छात्र</small>
+            </div>
+            <div class="stat-badge" style="background: #F8D7DA; border-color: #DC3545;">
+                <span id="expiringCount" style="color: #721C24;">0</span>
+                <small>आज/कल एक्सपायर</small>
+            </div>
+        </div>
+    </header>
+
+    <!-- Alert Box for Renewals & Promises -->
+    <div class="alert-box">
+        <div>
+            <i class="fa-solid fa-bell"></i>
+            <div>
+                <strong>स्मार्ट डैशबोर्ड अलर्ट:</strong> 
+                <span id="alertText">रिन्यूअल और प्रॉमिस डेट्स लोड हो रही हैं...</span>
+            </div>
+        </div>
+        <button class="btn btn-secondary" style="width: auto; padding: 6px 15px; margin: 0; font-size: 12px;" onclick="exportData()">
+            <i class="fa-solid fa-download"></i> बैकअप (JSON)
+        </button>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+        <!-- Student Form Card -->
+        <div class="card">
+            <h2><i class="fa-solid fa-user-plus"></i> नया एडमिशन / रिकॉर्ड दर्ज करें</h2>
+            <form id="studentForm" onsubmit="saveStudent(event)">
+                <input type="hidden" id="editIndex" value="">
+                
+                <div class="form-group">
+                    <label>छात्र का पूरा नाम *</label>
+                    <input type="text" id="name" required placeholder="जैसे: राहुल कुमार">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>मोबाइल नंबर *</label>
+                        <input type="tel" id="mobile" required placeholder="10-digit number" pattern="[0-9]{10}">
+                    </div>
+                    <div class="form-group">
+                        <label>अभिभावक (Parents) नंबर</label>
+                        <input type="tel" id="parentMobile" placeholder="वैकल्पिक नंबर">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>आईडी नंबर *</label>
+                        <input type="text" id="idNo" required placeholder="जैसे: BL-2026-001">
+                    </div>
+                    <div class="form-group">
+                        <label>सीट नंबर *</label>
+                        <input type="text" id="seatNo" required placeholder="जैसे: Seat No. 45">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>शिफ्ट और प्लान चुनें *</label>
+                    <select id="shiftPlan" onchange="calculateFee()" required>
+                        <option value="">-- शिफ्ट चुनें --</option>
+                        <option value="Morning (06:00 AM - 10:00 AM)|299">Morning (06:00 AM - 10:00 AM) - ₹299</option>
+                        <option value="Afternoon 1 (10:00 AM - 02:00 PM)|399">Afternoon 1 (10:00 AM - 02:00 PM) - ₹399</option>
+                        <option value="Afternoon 2 (02:00 PM - 06:00 PM)|399">Afternoon 2 (02:00 PM - 06:00 PM) - ₹399</option>
+                        <option value="Night Shift (10:00 PM - 05:00 AM)|399">Night Shift (10:00 PM - 05:00 AM) - ₹399</option>
+                        <option value="Full Day (12 HR) (06:00 AM - 06:00 PM)|499">Full Day (12 HR) (06:00 AM - 06:00 PM) - ₹499</option>
+                        <option value="Full Day (24 HR) (06:00 AM - 06:00 AM)|799">Full Day (24 HR) (06:00 AM - 06:00 AM) - ₹799</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>ज्वाइनिंग डेट *</label>
+                        <input type="date" id="joiningDate" required onchange="updateEndDate()">
+                    </div>
+                    <div class="form-group">
+                        <label>अगला रिन्यूअल (28 दिन)</label>
+                        <input type="date" id="endDate" readonly style="background: #eee;">
+                    </div>
+                </div>
+
+                <!-- Addons Checkboxes -->
+                <div class="checkbox-group">
+                    <input type="checkbox" id="isNewAdmission" onchange="calculateFee()">
+                    <label for="isNewAdmission" style="margin:0; cursor:pointer;">नया एडमिशन चार्ज जोड़ें (+₹199)</label>
+                </div>
+
+                <div class="checkbox-group" style="margin-top: 8px;">
+                    <input type="checkbox" id="hasLocker" onchange="toggleLockerFields()">
+                    <label for="hasLocker" style="margin:0; cursor:pointer;">लॉकर सुविधा लें (₹50/माह + ₹200 Sec.)</label>
+                </div>
+
+                <div id="lockerDetailsBox" style="display:none; margin-top: 10px; background: #FFF9E6; padding: 10px; border-radius: 8px;">
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label>लॉकर नंबर</label>
+                        <input type="text" id="lockerNo" placeholder="जैसे: L-12">
+                    </div>
+                </div>
+
+                <!-- Payment & Promise details -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <div class="form-group">
+                        <label>पेमेंट मोड</label>
+                        <select id="paymentMode">
+                            <option value="Cash">Cash (नकद)</option>
+                            <option value="Online (UPI)">Online (UPI / GPay)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>भुगतान स्थिति</label>
+                        <select id="payStatus">
+                            <option value="Paid">Paid (भुगतान पूर्ण)</option>
+                            <option value="Due">Due (बकाया)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>फिजिकल प्रॉमिस डेट (यदि भुगतान का वादा किया हो)</label>
+                    <input type="date" id="promiseDate">
+                </div>
+
+                <div class="form-group">
+                    <label>नोट्स / प्रॉमिस रिमार्क</label>
+                    <input type="text" id="promiseNote" placeholder="जैसे: 13 तारीख को फीस देने का वादा किया">
+                </div>
+
+                <!-- Document / Photos Upload -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 10px;">
+                    <div class="form-group">
+                        <label style="font-size: 11px;">छात्र फोटो</label>
+                        <input type="file" id="studentPhoto" accept="image/*" style="font-size: 11px; padding: 5px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 11px;">आधार (Front)</label>
+                        <input type="file" id="aadharFront" accept="image/*,application/pdf" style="font-size: 11px; padding: 5px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 11px;">आधार (Back)</label>
+                        <input type="file" id="aadharBack" accept="image/*,application/pdf" style="font-size: 11px; padding: 5px;">
+                    </div>
+                </div>
+
+                <!-- Calculated Total Summary -->
+                <div style="background: #F8F9FA; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; border-left: 4px solid var(--primary);">
+                    <strong>कुल राशि (5% GST सहित): </strong> <span id="displayTotal" style="color: var(--secondary); font-size: 18px; font-weight: 700;">₹0</span>
+                </div>
+
+                <button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> रिकॉर्ड सुरक्षित करें</button>
+            </form>
+        </div>
+
+        <!-- Student List & Management Card -->
+        <div class="card">
+            <h2><i class="fa-solid fa-users-rectangle"></i> लाइब्रेरी छात्र डायरेक्टरी</h2>
+            
+            <div class="toolbar">
+                <div class="search-box">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="नाम, आईडी या मोबाइल से खोजें..." onkeyup="renderTable()">
+                </div>
+                <button class="btn btn-secondary" style="width: auto; margin:0;" onclick="importDataClick()">
+                    <i class="fa-solid fa-upload"></i> इम्पोर्ट
+                </button>
+                <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>आईडी / सीट</th>
+                            <th>छात्र विवरण</th>
+                            <th>शिफ्ट / वैधता</th>
+                            <th>फीस / स्टेटस</th>
+                            <th>एक्शन</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <!-- Data dynamically loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for ID Card & Invoice -->
+<div id="previewModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <div id="modalBodyContent">
+            <!-- Dynamic ID Card / Invoice -->
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn" onclick="shareOnWhatsApp()"><i class="fa-brands fa-whatsapp"></i> WhatsApp शेयर करें</button>
+            <button class="btn btn-secondary" onclick="printCard()"><i class="fa-solid fa-print"></i> प्रिंट / सेव</button>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox for Image Zoom -->
+<div id="lightbox" onclick="this.style.display='none'">
+    <img id="lightboxImg" src="" alt="Zoomed Image">
+</div>
+
+<script>
+    // Initialize LocalStorage Database
+    let students = JSON.parse(localStorage.getItem('buddha_library_students')) || [];
+
+    // Set today's date as default joining date
+    document.getElementById('joiningDate').valueAsDate = new Date();
+    updateEndDate();
+
+    function toggleLockerFields() {
+        const hasLocker = document.getElementById('hasLocker').checked;
+        document.getElementById('lockerDetailsBox').style.display = hasLocker ? 'block' : 'none';
+        calculateFee();
+    }
+
+    // 28 Days calculation rule
+    function updateEndDate() {
+        const joiningVal = document.getElementById('joiningDate').value;
+        if (!joiningVal) return;
+        let d = new Date(joiningVal);
+        d.setDate(d.getDate() + 28); // 28 days cycle
+        document.getElementById('endDate').value = d.toISOString().split('T')[0];
+    }
+
+    function calculateFee() {
+        const shiftPlan = document.getElementById('shiftPlan').value;
+        if (!shiftPlan) {
+            document.getElementById('displayTotal').innerText = '₹0';
+            return 0;
+        }
+
+        let baseFee = parseInt(shiftPlan.split('|')[1]);
+        let total = baseFee;
+
+        // Admission Fee +199
+        if (document.getElementById('isNewAdmission').checked) {
+            total += 199;
+        }
+
+        // Locker Fee (₹50/month + ₹200 Sec)
+        if (document.getElementById('hasLocker').checked) {
+            total += (50 + 200);
+        }
+
+        // Add 5% GST
+        let gst = total * 0.05;
+        let finalAmount = Math.round(total + gst);
+
+        document.getElementById('displayTotal').innerText = `₹${finalAmount} (बेस: ₹${total} + 5% GST: ₹${Math.round(gst)})`;
+        return finalAmount;
+    }
+
+    // Save or Update Student Record
+    function saveStudent(e) {
+        e.preventDefault();
+        
+        const editIdx = document.getElementById('editIndex').value;
+        const name = document.getElementById('name').value;
+        const mobile = document.getElementById('mobile').value;
+        const parentMobile = document.getElementById('parentMobile').value;
+        const idNo = document.getElementById('idNo').value;
+        const seatNo = document.getElementById('seatNo').value;
+        const shiftPlan = document.getElementById('shiftPlan').value;
+        const joiningDate = document.getElementById('joiningDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const isNewAdmission = document.getElementById('isNewAdmission').checked;
+        const hasLocker = document.getElementById('hasLocker').checked;
+        const lockerNo = document.getElementById('lockerNo').value;
+        const paymentMode = document.getElementById('paymentMode').value;
+        const payStatus = document.getElementById('payStatus').value;
+        const promiseDate = document.getElementById('promiseDate').value;
+        const promiseNote = document.getElementById('promiseNote').value;
+        const totalAmount = calculateFee();
+
+        // Handle File Uploads (Converting to Base64 for local storage)
+        const studentPhotoInput = document.getElementById('studentPhoto');
+        const aadharFrontInput = document.getElementById('aadharFront');
+        const aadharBackInput = document.getElementById('aadharBack');
+
+        // Helper to read files
+        processFiles([studentPhotoInput, aadharFrontInput, aadharBackInput], (photos) => {
+            const studentObj = {
+                name, mobile, parentMobile, idNo, seatNo, shiftPlan,
+                joiningDate, endDate, isNewAdmission, hasLocker, lockerNo,
+                paymentMode, payStatus, promiseDate, promiseNote, totalAmount,
+                photo: photos[0] || (editIdx !== "" ? students[editIdx].photo : ""),
+                aadharFront: photos[1] || (editIdx !== "" ? students[editIdx].aadharFront : ""),
+                aadharBack: photos[2] || (editIdx !== "" ? students[editIdx].aadharBack : "")
+            };
+
+            if (editIdx === "") {
+                students.push(studentObj);
+            } else {
+                students[editIdx] = studentObj;
+                document.getElementById('editIndex').value = "";
+            }
+
+            localStorage.setItem('buddha_library_students', JSON.stringify(students));
+            document.getElementById('studentForm').reset();
+            document.getElementById('joiningDate').valueAsDate = new Date();
+            updateEndDate();
+            calculateFee();
+            renderTable();
+            alert('सफलतापूर्वक सुरक्षित हो गया!');
+        });
+    }
+
+    function processFiles(fileInputs, callback) {
+        let results = [];
+        let pending = fileInputs.length;
+        if (pending === 0) { callback(results); return; }
+
+        fileInputs.forEach((input, index) => {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    results[index] = e.target.result;
+                    pending--;
+                    if (pending === 0) callback(results);
+                }
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                results[index] = null;
+                pending--;
+                if (pending === 0) callback(results);
+            }
+        });
+    }
+
+    function renderTable() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const tbody = document.getElementById('studentTableBody');
+        tbody.innerHTML = '';
+
+        let totalCount = 0;
+        let expiringSoonCount = 0;
+        let todayStr = new Date().toISOString().split('T')[0];
+
+        // Tomorrow date calculation
+        let tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        let tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+        let alertMsgArr = [];
+
+        students.forEach((st, index) => {
+            if (query && !st.name.toLowerCase().includes(query) && !st.idNo.toLowerCase().includes(query) && !st.mobile.includes(query)) {
+                return;
+            }
+            totalCount++;
+
+            // Check Expiry
+            if (st.endDate === todayStr || st.endDate === tomorrowStr) {
+                expiringSoonCount++;
+                alertMsgArr.push(`${st.name} (${st.idNo}) का महीना समाप्त होने वाला है!`);
+            }
+
+            let tr = document.createElement('tr');
+            
+            // Status badge
+            let statusBadge = `<span class="badge badge-active">Active</span>`;
+            if (st.endDate < todayStr) {
+                statusBadge = `<span class="badge badge-expired">Expired</span>`;
+            }
+
+            tr.innerHTML = `
+                <td><strong>${st.idNo}</strong><br><small>Seat: ${st.seatNo}</small></td>
+                <td><strong>${st.name}</strong><br><small><i class="fa-solid fa-phone"></i> ${st.mobile}</small></td>
+                <td>${st.shiftPlan.split('|')[0]}<br><small>End: ${st.endDate}</small></td>
+                <td>₹${st.totalAmount} <br><span class="badge ${st.payStatus === 'Paid' ? 'badge-active' : 'badge-expired'}">${st.payStatus}</span></td>
+                <td>
+                    <div class="action-btns">
+                        <button class="btn-view" onclick="openModal(${index})" title="ID कार्ड और बिल देखें"><i class="fa-solid fa-id-card"></i></button>
+                        <button class="btn-whatsapp" onclick="sendWhatsAppDirect(${index})" title="WhatsApp भेजें"><i class="fa-brands fa-whatsapp"></i></button>
+                        <button class="btn-delete" onclick="deleteStudent(${index})" title="डिलीट करें"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('totalStudentsCount').innerText = totalCount;
+        document.getElementById('expiringCount').innerText = expiringSoonCount;
+
+        if (alertMsgArr.length > 0) {
+            document.getElementById('alertText.innerHTML') = alertMsgArr.join(' | ');
+            document.getElementById('alertText').innerText = alertMsgArr.slice(0, 2).join(' | ') + (alertMsgArr.length > 2 ? '...' : '');
+        } else {
+            document.getElementById('alertText').innerText = 'सभी छात्रों की सदस्यता सुचारू रूप से चालू है। कोई तात्कालिक एक्सपायरी नहीं है।';
+        }
+    }
+
+    let currentModalStudent = null;
+    function openModal(index) {
+        const st = students[index];
+        currentModalStudent = st;
+
+        let photoSrc = st.photo || 'https://via.placeholder.com/150';
+        let aadharFrontSrc = st.aadharFront || 'https://via.placeholder.com/150';
+        let aadharBackSrc = st.aadharBack || 'https://via.placeholder.com/150';
+
+        let html = `
+            <div class="id-card-preview">
+                <div class="id-header">
+                    <img src="1000038642.png" alt="Logo">
+                    <div>
+                        <h3>बुद्धा लाइब्रेरी</h3>
+                        <p>कच्ची दरगाह, बंका घाट, पटना | Ph: 7050668855</p>
+                    </div>
+                </div>
+
+                <div class="student-photo-box" onclick="zoomImage('${photoSrc}')" title="बड़ा करने के लिए क्लिक करें">
+                    <img src="${photoSrc}" alt="Student Photo">
+                </div>
+                <h4 style="color: var(--secondary); margin-bottom: 5px;">${st.name}</h4>
+                <p style="font-size: 12px; color: #666; margin-bottom: 12px;">ID: <strong>${st.idNo}</strong> | Seat: <strong>${st.seatNo}</strong></p>
+
+                <div class="id-details">
+                    <div>शिफ्ट: <span>${st.shiftPlan.split('|')[0]}</span></div>
+                    <div>मोबाइल: <span>${st.mobile}</span></div>
+                    <div>लॉकर: <span>${st.hasLocker ? 'Locker #' + st.lockerNo : 'नहीं'}</span></div>
+                    <div>वैधता: <span>${st.endDate}</span></div>
+                    <div>पेमेंट: <span>₹${st.totalAmount} (${st.payStatus})</span></div>
+                    <div>वादा डेट: <span>${st.promiseDate || 'लागू नहीं'}</span></div>
+                </div>
+
+                <div style="font-size: 11px; text-align: left; background: #FFF; padding: 8px; border-radius: 6px; border: 1px dashed var(--primary);">
+                    <strong>आधार कार्ड दस्तावेज:</strong> 
+                    <a href="javascript:void(0)" onclick="zoomImage('${aadharFrontSrc}')">[फ्रंट देखें]</a> | 
+                    <a href="javascript:void(0)" onclick="zoomImage('${aadharBackSrc}')">[बैक देखें]</a>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('modalBodyContent').innerHTML = html;
+        document.getElementById('previewModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('previewModal').style.display = 'none';
+    }
+
+    function zoomImage(src) {
+        document.getElementById('lightboxImg').src = src;
+        document.getElementById('lightbox').style.display = 'flex';
+    }
+
+    function deleteStudent(index) {
+        if (confirm('क्या आप वाकई इस छात्र का रिकॉर्ड हटाना चाहते हैं?')) {
+            students.splice(index, 1);
+            localStorage.setItem('buddha_library_students', JSON.stringify(students));
+            renderTable();
+        }
+    }
+
+    function sendWhatsAppDirect(index) {
+        const st = students[index];
+        let msg = `नमस्ते ${st.name}, बुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) में आपका स्वागत/समीक्षा है। आपकी आईडी: ${st.idNo}, सीट: ${st.seatNo}, वैधता: ${st.endDate}, बकाया राशि: ₹${st.totalAmount} (${st.payStatus})। संपर्क: 7050668855`;
+        let url = `https://api.whatsapp.com/send?phone=91${st.mobile}&text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+    }
+
+    function shareOnWhatsApp() {
+        if (!currentModalStudent) return;
+        let st = currentModalStudent;
+        let msg = `बुद्धा लाइब्रेरी डिजिटल आईडी कार्ड\nनाम: ${st.name}\nID: ${st.idNo}\nSeat: ${st.seatNo}\nShift: ${st.shiftPlan.split('|')[0]}\nValid Upto: ${st.endDate}\nStatus: ${st.payStatus} (₹${st.totalAmount})`;
+        let url = `https://api.whatsapp.com/send?phone=91${st.mobile}&text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+    }
+
+    function printCard() {
+        window.print();
+    }
+
+    // JSON Backup Export
+    function exportData() {
+        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(students));
+        let downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", "buddha_library_backup.json");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importDataClick() {
+        document.getElementById('importFile').click();
+    }
+
+    function importData(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let imported = JSON.parse(e.target.result);
+                if (Array.isArray(imported)) {
+                    students = imported;
+                    localStorage.setItem('buddha_library_students', JSON.stringify(students));
+                    renderTable();
+                    alert('डेटा सफलतापूर्वक इम्पोर्ट हो गया!');
+                } else {
+                    alert('अमान्य फाइल फॉर्मेट!');
+                }
+            } catch (err) {
+                alert('फाइल रीड करने में त्रुटि!');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // Initial render call
+    renderTable();
+</script>
+
+</body>
+</html>
