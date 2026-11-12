@@ -8,9 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #D4AF37; /* Golden Yellow */
+            --primary: #D4AF37;
             --primary-dark: #B38F1D;
-            --secondary: #800020; /* Maroon Red */
+            --secondary: #800020;
             --dark: #1F1F1F;
             --light: #F9F9FB;
             --white: #FFFFFF;
@@ -370,9 +370,32 @@
             border-radius: 8px;
             border: 3px solid var(--white);
         }
+
+        /* PIN Lock Overlay */
+        #pinLockOverlay {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(31, 31, 31, 0.95);
+            justify-content: center;
+            align-items: center;
+            color: #FFF;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+
+<!-- Optional PIN Lock Screen -->
+<div id="pinLockOverlay">
+    <div style="background: #fff; color: #333; padding: 30px; border-radius: 12px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <h3 style="color: var(--secondary); margin-bottom: 15px;">Buddha Library Locked</h3>
+        <p style="font-size: 13px; margin-bottom: 15px; color: #666;">Enter 4-digit PIN to access app (Default: 1234)</p>
+        <input type="password" id="pinInput" placeholder="Enter PIN" maxlength="4" style="text-align: center; font-size: 20px; letter-spacing: 5px; margin-bottom: 15px;">
+        <button class="btn" onclick="verifyPin()">Unlock App</button>
+    </div>
+</div>
 
 <div class="container">
     <header>
@@ -403,9 +426,15 @@
         </div>
     </header>
 
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; gap: 10px;">
+        <button class="btn btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px; margin:0;" onclick="toggleAppLock()">
+            <i class="fa-solid fa-lock"></i> <span id="lockBtnText">Enable App Lock</span>
+        </button>
+    </div>
+
     <div class="front-search-bar">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="frontSearchInput" placeholder="Quick Search by Student Name, ID No, Mobile, Parent Name or Seat No..." onkeyup="renderTable()">
+        <input type="text" id="frontSearchInput" placeholder="Quick Search by Student Name, ID No, Mobile, Parent Name, Address or Seat No..." onkeyup="renderTable()">
     </div>
 
     <div class="alert-box">
@@ -443,10 +472,15 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>Student Address (Full Address) *</label>
+                    <input type="text" id="studentAddress" required placeholder="e.g. Kachchidargah, Patna">
+                </div>
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="form-group">
-                        <label>Unique ID No *</label>
-                        <input type="text" id="idNo" required placeholder="e.g. BL-2026-001">
+                        <label>Auto ID No (1 - 1000) *</label>
+                        <input type="text" id="idNo" readonly style="background: #eee; font-weight: bold; color: var(--secondary);">
                     </div>
                     <div class="form-group">
                         <label>Seat No *</label>
@@ -497,7 +531,7 @@
 
                 <div class="form-group" style="margin-top: 10px;">
                     <label>Custom Discount / Concession Amount (₹)</label>
-                    <input type="number" id="customDiscount" value="0" min="0" oninput="calculateFee()" placeholder="e.g. 100 to reduce fee/admission">
+                    <input type="number" id="customDiscount" value="0" min="0" oninput="calculateFee()" placeholder="e.g. 100">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
@@ -543,7 +577,7 @@
                 </div>
 
                 <div style="background: #F8F9FA; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; border-left: 4px solid var(--primary);">
-                    <strong>Total Amount (After Discount & Inc. GST): </strong> <span id="displayTotal" style="color: var(--secondary); font-size: 18px; font-weight: 700;">₹0</span>
+                    <strong>Total Amount: </strong> <span id="displayTotal" style="color: var(--secondary); font-size: 18px; font-weight: 700;">₹0</span>
                 </div>
 
                 <button type="submit" id="submitBtn" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Record</button>
@@ -600,6 +634,20 @@
 
     document.getElementById('joiningDate').valueAsDate = new Date();
     updateEndDate();
+    generateNextId();
+
+    function generateNextId() {
+        if(document.getElementById('editIndex').value !== "") return;
+        let nextId = 1;
+        if(students.length > 0) {
+            let ids = students.map(st => parseInt(st.idNo)).filter(id => !isNaN(id));
+            if(ids.length > 0) {
+                nextId = Math.max(...ids) + 1;
+            }
+        }
+        if(nextId > 1000) nextId = 1000;
+        document.getElementById('idNo').value = nextId;
+    }
 
     function toggleLockerFields() {
         const hasLocker = document.getElementById('hasLocker').checked;
@@ -633,7 +681,6 @@
             total += (50 + 200);
         }
 
-        // Apply Custom Discount
         let discount = parseInt(document.getElementById('customDiscount').value) || 0;
         total = Math.max(0, total - discount);
 
@@ -651,6 +698,7 @@
         const name = document.getElementById('name').value;
         const mobile = document.getElementById('mobile').value;
         const parentName = document.getElementById('parentName').value;
+        const studentAddress = document.getElementById('studentAddress').value;
         const idNo = document.getElementById('idNo').value;
         const seatNo = document.getElementById('seatNo').value;
         const shiftPlan = document.getElementById('shiftPlan').value;
@@ -666,18 +714,13 @@
         const promiseNote = document.getElementById('promiseNote').value;
         const totalAmount = calculateFee();
 
-        if (editIdx === "" && students.some(st => st.idNo.toLowerCase() === idNo.toLowerCase())) {
-            alert('Error: This ID No already exists! ID must be unique.');
-            return;
-        }
-
         const studentPhotoInput = document.getElementById('studentPhoto');
         const aadharFrontInput = document.getElementById('aadharFront');
         const aadharBackInput = document.getElementById('aadharBack');
 
         processFiles([studentPhotoInput, aadharFrontInput, aadharBackInput], (photos) => {
             const studentObj = {
-                name, mobile, parentName, idNo, seatNo, shiftPlan,
+                name, mobile, parentName, studentAddress, idNo, seatNo, shiftPlan,
                 joiningDate, endDate, isNewAdmission, hasLocker, lockerNo,
                 customDiscount, paymentMode, payStatus, promiseDate, promiseNote, totalAmount,
                 photo: photos[0] || (editIdx !== "" ? students[editIdx].photo : ""),
@@ -698,6 +741,7 @@
             document.getElementById('studentForm').reset();
             document.getElementById('joiningDate').valueAsDate = new Date();
             updateEndDate();
+            generateNextId();
             calculateFee();
             renderTable();
             alert('Record saved successfully!');
@@ -710,6 +754,7 @@
         document.getElementById('name').value = st.name;
         document.getElementById('mobile').value = st.mobile;
         document.getElementById('parentName').value = st.parentName || '';
+        document.getElementById('studentAddress').value = st.studentAddress || '';
         document.getElementById('idNo').value = st.idNo;
         document.getElementById('seatNo').value = st.seatNo;
         document.getElementById('shiftPlan').value = st.shiftPlan;
@@ -778,19 +823,18 @@
                 totalDues += st.totalAmount;
             }
 
-            // Check if today is the promise date
             if (st.promiseDate === todayStr && st.payStatus === 'Due') {
-                promiseAlertList.push(`${st.name} (${st.idNo} - ₹${st.totalAmount})`);
+                promiseAlertList.push(`${st.name} (ID: ${st.idNo} - ₹${st.totalAmount})`);
             }
 
-            if (query && !st.name.toLowerCase().includes(query) && !st.idNo.toLowerCase().includes(query) && !st.mobile.includes(query) && !(st.parentName && st.parentName.toLowerCase().includes(query)) && !st.seatNo.toLowerCase().includes(query)) {
+            if (query && !st.name.toLowerCase().includes(query) && !st.idNo.toLowerCase().includes(query) && !st.mobile.includes(query) && !(st.parentName && st.parentName.toLowerCase().includes(query)) && !(st.studentAddress && st.studentAddress.toLowerCase().includes(query)) && !st.seatNo.toLowerCase().includes(query)) {
                 return;
             }
 
             let tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><strong>${st.idNo}</strong><br><small>Seat: ${st.seatNo}</small></td>
-                <td><strong>${st.name}</strong><br><small><i class="fa-solid fa-phone"></i> ${st.mobile} | P: ${st.parentName || 'N/A'}</small></td>
+                <td><strong>ID #${st.idNo}</strong><br><small>Seat: ${st.seatNo}</small></td>
+                <td><strong>${st.name}</strong><br><small><i class="fa-solid fa-phone"></i> ${st.mobile} | Addr: ${st.studentAddress || 'N/A'}</small></td>
                 <td>${st.shiftPlan.split('|')[0]}<br><small>End: ${st.endDate}</small></td>
                 <td>₹${st.totalAmount} <br><span class="badge ${st.payStatus === 'Paid' ? 'badge-active' : 'badge-expired'}">${st.payStatus}</span></td>
                 <td>
@@ -832,21 +876,26 @@
                     <img src="1000038642.png" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--primary);">
                     <div>
                         <h4 style="color: var(--secondary); font-size: 14px;">BUDDHA LIBRARY</h4>
-                        <p style="font-size: 9px; color: #555;">Kachchidargah, Patna</p>
+                        <p style="font-size: 9px; color: #555;">Kachchidargah, Patna | Ph: 7050668855</p>
                     </div>
                 </div>
 
                 <div style="width: 90px; height: 110px; border: 3px solid var(--primary); border-radius: 6px; margin: 0 auto 10px auto; overflow: hidden; cursor:pointer;" onclick="zoomImage('${photoSrc}')">
                     <img src="${photoSrc}" style="width:100%; height:100%; object-fit:cover;">
                 </div>
-                <h3 style="color: var(--secondary); font-size: 16px; margin-bottom: 3px;">${st.name}</h3>
-                <p style="font-size: 11px; color: #444; margin-bottom: 10px;">ID: <strong>${st.idNo}</strong> | Seat: <strong>${st.seatNo}</strong></p>
+                <h3 style="color: var(--secondary); font-size: 16px; margin-bottom: 2px;">${st.name}</h3>
+                <p style="font-size: 11px; color: #444; margin-bottom: 4px;">Parent: <b>${st.parentName || 'N/A'}</b></p>
+                <p style="font-size: 11px; color: #444; margin-bottom: 10px;">Address: <b>${st.studentAddress || 'Patna'}</b></p>
+                <p style="font-size: 11px; color: #444; margin-bottom: 10px;">ID No: <b>${st.idNo}</b> | Seat: <b>${st.seatNo}</b></p>
 
                 <div style="background: #F9F9FB; padding: 8px; border-radius: 6px; font-size: 11px; text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
                     <div>Shift: <b>${st.shiftPlan.split('|')[0]}</b></div>
                     <div>Mobile: <b>${st.mobile}</b></div>
                     <div>Valid Upto: <b>${st.endDate}</b></div>
                     <div>Status: <b style="color:var(--secondary);">${st.payStatus}</b></div>
+                </div>
+                <div style="margin-top: 8px; font-size: 10px; color: var(--secondary); font-weight: bold;">
+                    Helpline: 7050668855
                 </div>
             </div>
 
@@ -889,13 +938,14 @@
         if (confirm('Are you sure you want to delete this student record?')) {
             students.splice(index, 1);
             localStorage.setItem('buddha_library_students', JSON.stringify(students));
+            generateNextId();
             renderTable();
         }
     }
 
     function sendWhatsAppDirect(index) {
         const st = students[index];
-        let msg = `Buddha Library ID Card\nName: ${st.name}\nID: ${st.idNo}\nSeat: ${st.seatNo}\nShift: ${st.shiftPlan.split('|')[0]}\nValid Upto: ${st.endDate}\nStatus: ${st.payStatus} (₹${st.totalAmount})\nContact: 7050668855`;
+        let msg = `Buddha Library ID Card\nName: ${st.name}\nID: ${st.idNo}\nSeat: ${st.seatNo}\nShift: ${st.shiftPlan.split('|')[0]}\nValid Upto: ${st.endDate}\nStatus: ${st.payStatus} (₹${st.totalAmount})\nHelpline: 7050668855`;
         let url = `https://api.whatsapp.com/send?phone=91${st.mobile}&text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
     }
@@ -903,7 +953,7 @@
     function shareOnWhatsApp() {
         if (!currentModalStudent) return;
         let st = currentModalStudent;
-        let msg = `Buddha Library Digital ID Card\nName: ${st.name}\nID: ${st.idNo}\nSeat: ${st.seatNo}\nShift: ${st.shiftPlan.split('|')[0]}\nValid Upto: ${st.endDate}\nFee Status: ${st.payStatus} (₹${st.totalAmount})`;
+        let msg = `Buddha Library Digital ID Card\nName: ${st.name}\nID: ${st.idNo}\nSeat: ${st.seatNo}\nShift: ${st.shiftPlan.split('|')[0]}\nValid Upto: ${st.endDate}\nFee Status: ${st.payStatus} (₹${st.totalAmount})\nHelpline: 7050668855`;
         let url = `https://api.whatsapp.com/send?phone=91${st.mobile}&text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
     }
@@ -936,6 +986,7 @@
                 if (Array.isArray(imported)) {
                     students = imported;
                     localStorage.setItem('buddha_library_students', JSON.stringify(students));
+                    generateNextId();
                     renderTable();
                     alert('Data imported successfully!');
                 } else {
@@ -946,6 +997,42 @@
             }
         };
         reader.readAsText(file);
+    }
+
+    // Optional PIN Lock Logic
+    let isLocked = localStorage.getItem('buddha_library_locked') === 'true';
+    if(isLocked) {
+        document.getElementById('pinLockOverlay').style.display = 'flex';
+        document.getElementById('lockBtnText').innerText = 'Disable App Lock';
+    }
+
+    function toggleAppLock() {
+        if(isLocked) {
+            localStorage.setItem('buddha_library_locked', 'false');
+            isLocked = false;
+            document.getElementById('lockBtnText').innerText = 'Enable App Lock';
+            alert('App Lock Disabled.');
+        } else {
+            let pin = prompt('Set a 4-digit PIN for locking the app:', '1234');
+            if(pin) {
+                localStorage.setItem('buddha_library_pin', pin);
+                localStorage.setItem('buddha_library_locked', 'true');
+                isLocked = true;
+                document.getElementById('lockBtnText').innerText = 'Disable App Lock';
+                alert('App Lock Enabled. Next time you open, it will ask for PIN.');
+            }
+        }
+    }
+
+    function verifyPin() {
+        let entered = document.getElementById('pinInput').value;
+        let savedPin = localStorage.getItem('buddha_library_pin') || '1234';
+        if(entered === savedPin) {
+            document.getElementById('pinLockOverlay').style.display = 'none';
+            document.getElementById('pinInput').value = '';
+        } else {
+            alert('Incorrect PIN! Try 1234');
+        }
     }
 
     renderTable();
