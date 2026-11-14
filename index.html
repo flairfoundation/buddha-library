@@ -14,9 +14,9 @@
         .theme-border { border-color: #5c061c; }
         .fade-in { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .id-safe-line { line-height: 1.45 !important; padding-top: 1px; padding-bottom: 1px; }
+        .id-safe-line { line-height: 1.4 !important; padding-top: 1px; padding-bottom: 1px; }
         .face-focus-thumb { object-fit: cover; object-position: center 15%; }
-        .active-filter-ring { ring: 3px; box-shadow: 0 0 0 3px #5c061c !important; background-color: #fffbeb !important; }
+        .active-filter-ring { box-shadow: 0 0 0 3px #5c061c !important; background-color: #fffbeb !important; }
         @media print {
             .no-print { display: none !important; }
             body { background: #fff !important; }
@@ -41,15 +41,29 @@
     <!-- Main Application Wrapper -->
     <div id="mainApp" class="max-w-7xl mx-auto p-2.5 sm:p-4 hidden fade-in">
 
-        <!-- 2. Clean Professional Header with 3-Line Menu (☰) -->
-        <header class="theme-maroon text-white p-4 sm:p-5 rounded-2xl shadow-lg mb-3 relative">
-            <div class="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2">
+        <!-- 2. Compact Horizontal Header (Logo on Left Side to Save Vertical Space) -->
+        <header class="theme-maroon text-white px-4 py-3 sm:px-6 sm:py-3.5 rounded-2xl shadow-lg mb-3 relative flex items-center justify-between">
+            <!-- Left Side Logo + Title -->
+            <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full flex items-center justify-center text-2xl shadow-md border-2 border-yellow-400 overflow-hidden flex-shrink-0">
+                    <img id="headerLogoImg" src="" class="w-full h-full object-cover hidden">
+                    <span id="headerLogoEmoji">🏛️</span>
+                </div>
+                <div class="text-left min-w-0">
+                    <h1 class="text-lg sm:text-2xl font-extrabold tracking-wider leading-tight truncate">BUDDHA LIBRARY</h1>
+                    <p class="text-[11px] sm:text-xs text-yellow-300 font-bold tracking-wide">A Unit of Flair Foundation</p>
+                    <p class="text-[10px] sm:text-xs text-slate-200 mt-0.5">📍 Kachchhi Dargah, Patna | 📞 <a href="tel:7050668855" class="no-underline font-bold text-white">7050668855</a></p>
+                </div>
+            </div>
+
+            <!-- Right Side 3-Line Menu (☰) -->
+            <div class="flex items-center gap-2 flex-shrink-0">
                 <span id="syncStatusDot" title="Cloud Sync Status" class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block shadow"></span>
                 <button onclick="toggleHeaderMenu()" class="bg-white bg-opacity-15 hover:bg-opacity-25 text-white px-3 py-1.5 rounded-xl font-extrabold text-lg shadow transition">☰</button>
             </div>
 
             <!-- Dropdown Menu -->
-            <div id="headerDropdown" class="hidden absolute top-14 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-60 py-2 z-40 text-xs font-bold fade-in">
+            <div id="headerDropdown" class="hidden absolute top-16 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-60 py-2 z-40 text-xs font-bold fade-in">
                 <button onclick="openLogoModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">🖼️ Set Official Library Logo</button>
                 <button onclick="openCloudSyncModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">☁️ Firebase Cloud Sync</button>
                 <button onclick="exportDriveBackup(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">💾 Download JSON Backup</button>
@@ -59,35 +73,19 @@
                 <button onclick="changeAppPin(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2 text-indigo-700">🔑 Change Security PIN</button>
                 <button onclick="logoutApp()" class="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-2 text-red-600">🔒 Lock / Logout</button>
             </div>
-
-            <div class="flex flex-col items-center justify-center text-center">
-                <div class="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center text-2xl shadow-md mb-1.5 border-2 border-yellow-400 overflow-hidden">
-                    <img id="headerLogoImg" src="" class="w-full h-full object-cover hidden">
-                    <span id="headerLogoEmoji">🏛️</span>
-                </div>
-                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-wider leading-tight">BUDDHA LIBRARY</h1>
-                <p class="text-xs sm:text-sm text-yellow-300 font-bold tracking-wide">A Unit of Flair Foundation</p>
-                <p class="text-[11px] sm:text-xs text-slate-200 mt-1">📍 Kachchhi Dargah, Patna | 📞 Helpline: <a href="tel:7050668855" class="no-underline font-bold text-white">7050668855</a></p>
-            </div>
         </header>
 
-        <!-- 3. Clean Search Bar right at Top (No Duplicate Filter Buttons Below It) -->
+        <!-- 3. Clean Search Bar right at Top (Supports 2000+ Student IDs, Mobile or Name) -->
         <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200 mb-3 flex items-center gap-2">
             <div class="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-300 flex-grow">
                 <span class="text-base">🔍</span>
-                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search ID (1, 99), 10-Digit Mobile, or Student Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
+                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search Any Student ID (1 to 2000+), Mobile Number, or Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
                 <button onclick="document.getElementById('searchInput').value=''; resetLimitAndRender();" class="text-xs text-slate-400 hover:text-red-600 font-extrabold px-1">✖</button>
             </div>
         </div>
 
-        <!-- 4. Unified Equal-Size Action & Filter Dashboard Grid (No Duplicate Buttons!) -->
+        <!-- 4. Row 1: Member Status Filter Cards (Starts with Total Members) -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2.5">
-            <!-- New Admission Button right beside Total Members -->
-            <button onclick="toggleAdmissionForm()" class="theme-maroon text-white p-3 rounded-xl shadow-md hover:opacity-95 transition flex flex-col justify-between text-left">
-                <span class="text-[11px] text-yellow-300 font-extrabold">➕ NEW ENTRY</span>
-                <span class="text-sm sm:text-base font-extrabold mt-1">New Admission</span>
-            </button>
-
             <div id="cardTab-all" onclick="setTab('all')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow transition active-filter-ring">
                 <p class="text-[11px] text-slate-500 font-bold">👥 Total Members</p>
                 <h3 id="statTotalMembers" class="text-xl font-extrabold text-slate-800 mt-0.5">0</h3>
@@ -102,10 +100,7 @@
                 <p class="text-[11px] text-slate-500 font-bold">🔴 Expired Members</p>
                 <h3 id="statExpiredMembers" class="text-xl font-extrabold text-rose-600 mt-0.5">0</h3>
             </div>
-        </div>
 
-        <!-- Second Row of Equal-Size Utility & Filter Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2.5">
             <div id="cardTab-promise" onclick="setTab('promise')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600 cursor-pointer hover:shadow transition">
                 <p class="text-[11px] text-red-800 font-extrabold flex items-center justify-between">
                     <span>📅 Promise / Dues</span>
@@ -113,47 +108,55 @@
                 </p>
                 <h3 id="colTotalDues" class="text-lg font-extrabold text-red-600 mt-0.5">₹0</h3>
             </div>
-
-            <div onclick="openVacantModal()" class="bg-purple-50 p-3 rounded-xl shadow-sm border-l-4 border-purple-700 cursor-pointer hover:bg-purple-100 transition">
-                <p class="text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="text-[10px] bg-purple-200 px-1.5 py-0.2 rounded">View</span></p>
-                <h3 id="statVacantSummary" class="text-xs sm:text-sm font-extrabold text-purple-800 mt-1">S: 250 | C: 250 | L: 90</h3>
-            </div>
-
-            <div onclick="openExpenseModal()" class="bg-indigo-50 p-3 rounded-xl shadow-sm border-l-4 border-indigo-700 cursor-pointer hover:bg-indigo-100 transition">
-                <p class="text-[11px] text-indigo-900 font-extrabold">📊 Expense Tracker</p>
-                <h3 class="text-xs sm:text-sm font-extrabold text-indigo-800 mt-1">Manage Expenses ➔</h3>
-            </div>
-
-            <div onclick="openBirthdayModal()" class="bg-pink-50 p-3 rounded-xl shadow-sm border-l-4 border-pink-600 cursor-pointer hover:bg-pink-100 transition">
-                <p class="text-[11px] text-pink-900 font-extrabold flex items-center justify-between">
-                    <span>🎂 Birthdays</span>
-                    <span id="bdayCountBadge" class="bg-pink-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
-                </p>
-                <h3 class="text-xs sm:text-sm font-extrabold text-pink-700 mt-1">Wish in Hindi ➔</h3>
-            </div>
         </div>
 
-        <!-- 5. Equal 4-Box Financial Collection Strip -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
+        <!-- Row 2: Collection Strip + New Admission Button right beside This Year Total -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-2.5">
             <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 shadow-sm">
                 <p class="text-[10px] text-emerald-800 font-bold">💵 Today's Collection</p>
-                <h4 id="colToday" class="text-base sm:text-lg font-extrabold text-emerald-700">₹0</h4>
+                <h4 id="colToday" class="text-base sm:text-lg font-extrabold text-emerald-700 mt-0.5">₹0</h4>
             </div>
             <div class="bg-blue-50 p-2.5 rounded-xl border border-blue-200 shadow-sm">
                 <p class="text-[10px] text-blue-800 font-bold">📅 This Month</p>
-                <h4 id="colThisMonth" class="text-base sm:text-lg font-extrabold text-blue-700">₹0</h4>
+                <h4 id="colThisMonth" class="text-base sm:text-lg font-extrabold text-blue-700 mt-0.5">₹0</h4>
             </div>
             <div class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 shadow-sm">
                 <p class="text-[10px] text-indigo-800 font-bold">⏮️ Last Month</p>
-                <h4 id="colLastMonth" class="text-base sm:text-lg font-extrabold text-indigo-700">₹0</h4>
+                <h4 id="colLastMonth" class="text-base sm:text-lg font-extrabold text-indigo-700 mt-0.5">₹0</h4>
             </div>
             <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-200 shadow-sm">
                 <p class="text-[10px] text-amber-900 font-bold">🏦 This Year Total</p>
-                <h4 id="colThisYear" class="text-base sm:text-lg font-extrabold text-amber-800">₹0</h4>
+                <h4 id="colThisYear" class="text-base sm:text-lg font-extrabold text-amber-800 mt-0.5">₹0</h4>
+            </div>
+            <!-- New Admission Button right beside This Year Total -->
+            <button onclick="toggleAdmissionForm()" class="col-span-2 sm:col-span-1 theme-maroon text-white p-2.5 rounded-xl shadow-md hover:opacity-95 transition flex flex-col justify-center items-center text-center">
+                <span class="text-[10px] text-yellow-300 font-extrabold tracking-wider">➕ ADMISSION</span>
+                <span class="text-xs sm:text-sm font-extrabold mt-0.5">New Admission</span>
+            </button>
+        </div>
+
+        <!-- Row 3: Equal 3-Box Utility Strip (Vacant Finder, Expense Tracker, Birthdays) -->
+        <div class="grid grid-cols-3 gap-2.5 mb-4">
+            <div onclick="openVacantModal()" class="bg-purple-50 p-2.5 rounded-xl shadow-sm border-l-4 border-purple-700 cursor-pointer hover:bg-purple-100 transition">
+                <p class="text-[10px] sm:text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="hidden sm:inline text-[10px] bg-purple-200 px-1.5 rounded">View</span></p>
+                <h3 id="statVacantSummary" class="text-[11px] sm:text-xs font-extrabold text-purple-800 mt-0.5">S:250 | C:250 | L:90</h3>
+            </div>
+
+            <div onclick="openExpenseModal()" class="bg-indigo-50 p-2.5 rounded-xl shadow-sm border-l-4 border-indigo-700 cursor-pointer hover:bg-indigo-100 transition">
+                <p class="text-[10px] sm:text-[11px] text-indigo-900 font-extrabold">📊 Expense Tracker</p>
+                <h3 class="text-[11px] sm:text-xs font-extrabold text-indigo-800 mt-0.5">Manage Expenses ➔</h3>
+            </div>
+
+            <div onclick="openBirthdayModal()" class="bg-pink-50 p-2.5 rounded-xl shadow-sm border-l-4 border-pink-600 cursor-pointer hover:bg-pink-100 transition">
+                <p class="text-[10px] sm:text-[11px] text-pink-900 font-extrabold flex items-center justify-between">
+                    <span>🎂 Birthdays</span>
+                    <span id="bdayCountBadge" class="bg-pink-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
+                </p>
+                <h3 class="text-[11px] sm:text-xs font-extrabold text-pink-700 mt-0.5">Wish in Hindi ➔</h3>
             </div>
         </div>
 
-        <!-- 6. Collapsible Admission / Edit Form -->
+        <!-- 5. Collapsible Admission / Edit Form (With Explicit +₹50/M Locker Rent Checkbox + ₹200 Security + 5% GST) -->
         <div id="admissionFormBox" class="bg-white p-4 sm:p-5 rounded-2xl shadow-xl mb-5 hidden border-2 theme-border fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-4">
                 <h2 id="formHeading" class="text-base sm:text-lg font-extrabold theme-maroon-text">📝 Student Admission & Plan Form (28-Day Cycle)</h2>
@@ -164,8 +167,8 @@
                 <input type="hidden" id="editIndex" value="">
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Unique ID * (1 to 1000)</label>
-                    <input type="number" id="uniId" min="1" max="1000" required class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-red-900 bg-amber-50" placeholder="1 - 1000">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Unique ID * (1 to 5000)</label>
+                    <input type="number" id="uniId" min="1" max="5000" required class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-red-900 bg-amber-50" placeholder="1, 2, 3...">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Student Full Name *</label>
@@ -201,7 +204,7 @@
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-indigo-800 mb-1">🗄️ Locker (1-90) [+₹50/M Auto]</label>
-                        <div class="flex items-center border-2 border-indigo-300 bg-white rounded-lg overflow-hidden">
+                        <div class="flex items-center border-2 border-indigo-400 bg-white rounded-lg overflow-hidden">
                             <span class="bg-red-900 text-white px-2.5 py-2 font-extrabold text-xs">L-</span>
                             <input type="number" id="lockerNo" min="1" max="90" oninput="onLockerInputChanged()" class="w-full p-2 outline-none font-extrabold text-blue-800" placeholder="Digit">
                         </div>
@@ -291,7 +294,12 @@
                     <input type="date" id="manualBillDate" required class="w-full border-2 border-purple-300 p-2 rounded-lg font-extrabold bg-purple-50">
                 </div>
 
-                <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <!-- 3 Clear Tick Boxes: +₹50/M Locker Monthly Charge, +₹200 Locker Security, +5% GST -->
+                <div class="sm:col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div class="flex items-center gap-2 bg-teal-50 p-2.5 rounded-xl border border-teal-300">
+                        <input type="checkbox" id="lockerMonthlyCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-teal-800 cursor-pointer">
+                        <label for="lockerMonthlyCheck" class="text-xs font-extrabold text-teal-900 cursor-pointer">🗄️ +₹50/Month Locker Charge</label>
+                    </div>
                     <div class="flex items-center gap-2 bg-indigo-50 p-2.5 rounded-xl border border-indigo-300">
                         <input type="checkbox" id="lockerSecurityCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-indigo-900 cursor-pointer">
                         <label for="lockerSecurityCheck" class="text-xs font-extrabold text-indigo-900 cursor-pointer">🔑 +₹200 Locker Security (Refundable)</label>
@@ -301,6 +309,9 @@
                         <label for="applyGstCheck" class="text-xs font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Optional Tax Bill)</label>
                     </div>
                 </div>
+
+                <!-- Live Bill Breakdown Strip -->
+                <div id="admissionBillBreakdown" class="sm:col-span-2 md:col-span-4 bg-slate-100 px-3 py-1.5 rounded-lg border text-xs font-bold text-slate-700"></div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">💵 Total Payable Bill (₹) *</label>
@@ -350,7 +361,7 @@
             </form>
         </div>
 
-        <!-- 7. Responsive Justified Student List Container -->
+        <!-- 6. Responsive Justified Student List Container -->
         <div id="studentListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch"></div>
 
         <!-- Load More Button -->
@@ -379,51 +390,57 @@
         </div>
     </div>
 
-    <!-- Modal B: 100% Bug-Free HD ID Card Modal (Plain Bold ID Text Below Photo & Above Name - Never Disappears!) -->
+    <!-- Modal B: Compact Horizontal HD ID Card Modal (Left Logo in Header + Side-by-Side Photo & Plain Info - Short & Crisp!) -->
     <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2 overflow-y-auto">
         <!-- Outer Padded Capture Frame -->
-        <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3.5 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
-            <div class="bg-white w-[320px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
-                <!-- Header -->
-                <div class="theme-maroon text-white p-3.5 text-center border-b-2 border-amber-400">
-                    <div class="w-12 h-12 bg-white rounded-full mx-auto mb-1.5 flex items-center justify-center text-xl border-2 border-amber-300 overflow-hidden shadow">
+        <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
+            <div class="bg-white w-[335px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
+                <!-- Compact Header: Logo on Left Side, Text on Right Side -->
+                <div class="theme-maroon text-white px-3.5 py-2.5 flex items-center gap-3 border-b-2 border-amber-400">
+                    <div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-lg border-2 border-amber-300 overflow-hidden shadow flex-shrink-0">
                         <img id="idCardLogoImg" src="" class="w-full h-full object-cover hidden">
                         <span id="idCardLogoEmoji">🏛️</span>
                     </div>
-                    <h2 class="text-lg font-extrabold tracking-wider id-safe-line">BUDDHA LIBRARY</h2>
-                    <p class="text-[11px] text-yellow-300 font-bold id-safe-line">A Unit of Flair Foundation</p>
-                    <p class="text-[10px] text-slate-200 id-safe-line">Kachchhi Dargah, Patna | 📞 7050668855</p>
+                    <div class="text-left min-w-0">
+                        <h2 class="text-base font-extrabold tracking-wider leading-tight id-safe-line">BUDDHA LIBRARY</h2>
+                        <p class="text-[10px] text-yellow-300 font-bold leading-tight id-safe-line">A Unit of Flair Foundation</p>
+                        <p class="text-[9.5px] text-slate-200 leading-tight mt-0.5 id-safe-line">Kachchhi Dargah, Patna | 📞 7050668855</p>
+                    </div>
                 </div>
 
-                <!-- Body: Centered Square Face Photo + Plain Bold Unboxed ID Number right below photo -->
-                <div class="p-4 bg-gradient-to-b from-white to-slate-50 text-center">
-                    <img id="idCardPhoto" src="" class="w-24 h-24 rounded-2xl face-focus-thumb border-2 border-red-900 shadow-md bg-slate-100 mx-auto">
+                <!-- Compact Body: Photo on Left + Plain Unboxed ID, Name, Mobile & Clean Address on Right -->
+                <div class="p-3.5 bg-gradient-to-b from-white to-slate-50">
+                    <div class="flex items-center gap-3 mb-2.5 pb-2.5 border-b border-slate-200">
+                        <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl face-focus-thumb border-2 border-red-900 shadow-sm bg-slate-100 flex-shrink-0">
+                        <div class="text-left min-w-0 flex-grow">
+                            <!-- Plain Colored ID Text right beside photo (No Box so it never vanishes) -->
+                            <div id="idCardUniId" class="text-xs font-extrabold text-red-800 tracking-wide uppercase id-safe-line">ID NO: 1</div>
+                            <div id="idCardName" class="text-base font-extrabold text-slate-900 leading-snug id-safe-line">Student Name</div>
+                            <div id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-safe-line">📞 0000000000</div>
+                            <!-- Clean Plain Address (No grey box that clips) -->
+                            <div id="idCardAddress" class="text-[11px] font-bold text-slate-600 mt-0.5 id-safe-line">📍 Address</div>
+                        </div>
+                    </div>
 
-                    <!-- Plain Bold Text ID (No Box/Border so html2canvas NEVER hides or clips it!) -->
-                    <p id="idCardUniId" class="text-base font-extrabold text-red-800 mt-2 tracking-wide id-safe-line">ID NO: 1</p>
-                    <h3 id="idCardName" class="text-lg font-extrabold text-slate-900 mt-0.5 id-safe-line">Student Name</h3>
-                    <p id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-safe-line">📞 0000000000</p>
-                    <p id="idCardAddress" class="text-xs font-bold text-slate-600 mt-1 bg-slate-100 py-1 px-2.5 rounded-lg border border-slate-200 id-safe-line">📍 Address</p>
-
-                    <!-- Details Box -->
-                    <div class="mt-3 text-left bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-2 shadow-sm">
+                    <!-- Compact Details Table -->
+                    <div class="text-left bg-white p-2.5 rounded-xl border border-slate-200 text-[11px] space-y-1.5 shadow-sm">
                         <div class="flex justify-between items-center gap-1">
                             <span class="text-slate-500 font-bold flex-shrink-0">⏱️ Shift:</span>
-                            <b id="idCardShift" class="text-slate-900 text-right text-[11px] font-extrabold whitespace-nowrap id-safe-line"></b>
+                            <b id="idCardShift" class="text-slate-900 text-right font-extrabold whitespace-nowrap id-safe-line"></b>
                         </div>
-                        <div class="flex justify-between items-center border-t pt-1.5">
+                        <div class="flex justify-between items-center border-t pt-1">
                             <span class="text-slate-500 font-bold">💺 Seat/Locker:</span>
                             <span id="idCardResources" class="font-extrabold text-right id-safe-line"></span>
                         </div>
-                        <div class="flex justify-between items-center border-t pt-1.5">
+                        <div class="flex justify-between items-center border-t pt-1">
                             <span class="text-slate-500 font-bold">▶️ Start Date:</span>
                             <b id="idCardStart" class="text-blue-800 font-extrabold id-safe-line"></b>
                         </div>
-                        <div class="flex justify-between items-center border-t pt-1.5">
+                        <div class="flex justify-between items-center border-t pt-1">
                             <span class="text-slate-500 font-bold">⏳ Valid Upto:</span>
                             <b id="idCardEnd" class="text-emerald-700 font-extrabold id-safe-line"></b>
                         </div>
-                        <div class="flex justify-between items-center border-t pt-1.5">
+                        <div class="flex justify-between items-center border-t pt-1">
                             <span class="text-slate-500 font-bold">💰 Fee Status:</span>
                             <b id="idCardDueStatus" class="font-extrabold id-safe-line"></b>
                         </div>
@@ -470,7 +487,7 @@
                         <label class="block font-bold text-indigo-800 mb-1">🗄️ Locker No (+₹50/M Auto)</label>
                         <div class="flex items-center border bg-white rounded-lg overflow-hidden">
                             <span class="bg-red-900 text-white px-2 py-1.5 font-extrabold">L-</span>
-                            <input type="number" id="renewLockerNo" min="1" max="90" oninput="recalcRenewalBill()" class="w-full p-1.5 outline-none font-extrabold text-blue-800" placeholder="Optional">
+                            <input type="number" id="renewLockerNo" min="1" max="90" oninput="onRenewLockerChanged()" class="w-full p-1.5 outline-none font-extrabold text-blue-800" placeholder="Optional">
                         </div>
                     </div>
                     <div>
@@ -502,14 +519,18 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div class="flex items-center gap-2 bg-indigo-50 p-2 rounded-xl border border-indigo-200">
-                        <input type="checkbox" id="renewLockerSecCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-indigo-900">
-                        <label for="renewLockerSecCheck" class="font-extrabold text-indigo-900 cursor-pointer">🔑 +₹200 New Locker Deposit</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div class="flex items-center gap-1.5 bg-teal-50 p-2 rounded-xl border border-teal-300">
+                        <input type="checkbox" id="renewLockerMonthCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-teal-800">
+                        <label for="renewLockerMonthCheck" class="font-extrabold text-teal-900 cursor-pointer">🗄️ +₹50/M Locker</label>
                     </div>
-                    <div class="flex items-center gap-2 bg-amber-50 p-2 rounded-xl border border-amber-300">
+                    <div class="flex items-center gap-1.5 bg-indigo-50 p-2 rounded-xl border border-indigo-200">
+                        <input type="checkbox" id="renewLockerSecCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-indigo-900">
+                        <label for="renewLockerSecCheck" class="font-extrabold text-indigo-900 cursor-pointer">🔑 +₹200 Security</label>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-amber-50 p-2 rounded-xl border border-amber-300">
                         <input type="checkbox" id="renewGstCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-red-900">
-                        <label for="renewGstCheck" class="font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Tax Bill)</label>
+                        <label for="renewGstCheck" class="font-extrabold text-amber-900 cursor-pointer">🧾 +5% GST</label>
                     </div>
                 </div>
 
@@ -812,10 +833,12 @@
             updateDashboardStats();
         }
 
-        // 2. 28-Day Cycle + Locker Auto ₹50/M + ₹200 Security Deposit + Optional 5% GST
+        // 2. 28-Day Cycle + Explicit Locker ₹50/M Auto Check + ₹200 Security Deposit + Optional 5% GST
         function onLockerInputChanged() {
             const lVal = cleanResNum(document.getElementById('lockerNo').value);
             const editIdx = document.getElementById('editIndex').value;
+            // Automatically check "+₹50/Month Locker Charge" whenever Locker No is filled
+            document.getElementById('lockerMonthlyCheck').checked = (lVal !== "");
             if(editIdx === "") {
                 document.getElementById('lockerSecurityCheck').checked = (lVal !== "");
             }
@@ -843,18 +866,24 @@
             else if(months === 6) shiftTotal = Math.round(shiftTotal * 0.90);
             else if(months === 12) shiftTotal = Math.round(shiftTotal * 0.85);
 
-            const hasLocker = cleanResNum(document.getElementById('lockerNo').value) !== "";
-            const lockerRent = hasLocker ? (LOCKER_MONTHLY_FEE * months) : 0;
+            // Locker Monthly Charge (₹50 per month if Locker No is entered OR checkbox is ticked)
+            const hasLockerNum = cleanResNum(document.getElementById('lockerNo').value) !== "";
+            const isLockerMonthlyChecked = document.getElementById('lockerMonthlyCheck').checked || hasLockerNum;
+            if(hasLockerNum) document.getElementById('lockerMonthlyCheck').checked = true;
+            const lockerRent = isLockerMonthlyChecked ? (LOCKER_MONTHLY_FEE * months) : 0;
 
+            // Optional ₹200 Locker Security Deposit
             const hasSecDeposit = document.getElementById('lockerSecurityCheck').checked;
             const secDepositAmt = hasSecDeposit ? LOCKER_SECURITY_DEPOSIT : 0;
 
             const subTotal = shiftTotal + lockerRent + secDepositAmt;
             const addGst = document.getElementById('applyGstCheck').checked;
-            const finalPayable = addGst ? Math.round(subTotal * 1.05) : subTotal;
+            const gstAmt = addGst ? Math.round(subTotal * 0.05) : 0;
+            const finalPayable = subTotal + gstAmt;
 
             document.getElementById('totalBill').value = finalPayable;
             document.getElementById('paidNow').value = finalPayable;
+            document.getElementById('admissionBillBreakdown').innerHTML = `💡 <b>Bill Breakdown:</b> Shift Fee (${months}M): ₹${shiftTotal} + Locker Rent: ₹${lockerRent} + Security Deposit: ₹${secDepositAmt} + GST: ₹${gstAmt} = <b class="text-red-800">Total ₹${finalPayable}</b>`;
             recalcDuesOnly();
         }
 
@@ -873,7 +902,7 @@
 
         function getNextAvailableId() {
             let used = new Set(students.map(s => parseInt(s.uniId)));
-            for(let i = 1; i <= 1000; i++) {
+            for(let i = 1; i <= 5000; i++) {
                 if(!used.has(i)) return i;
             }
             return 1;
@@ -891,6 +920,9 @@
                 document.getElementById('admissionDateInput').value = today;
                 document.getElementById('cycleStartDate').value = today;
                 document.getElementById('manualBillDate').value = today;
+                document.getElementById('lockerMonthlyCheck').checked = false;
+                document.getElementById('lockerSecurityCheck').checked = false;
+                document.getElementById('applyGstCheck').checked = false;
                 document.getElementById('otherCourseWrap').classList.add('hidden');
                 tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '' };
                 update28DayValidity();
@@ -898,7 +930,7 @@
             }
         }
 
-        // 3. Smart Dual Photo Compression: Face & Neck Closeup Square Thumbnail + Full Original HD Photo for Zoom
+        // 3. Smart Dual Photo Compression
         function compressStudentPhotoWithFaceCrop(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -989,8 +1021,9 @@
             const validUpto = document.getElementById('validUpto').value;
             const billDate = document.getElementById('manualBillDate').value || new Date().toISOString().split('T')[0];
             const isGst = document.getElementById('applyGstCheck').checked;
+            const hasLockerMonth = document.getElementById('lockerMonthlyCheck').checked || (lockerNo !== "");
             const hasLockerSec = document.getElementById('lockerSecurityCheck').checked;
-            const lockerRentAmt = lockerNo ? (LOCKER_MONTHLY_FEE * durationMonths) : 0;
+            const lockerRentAmt = hasLockerMonth ? (LOCKER_MONTHLY_FEE * durationMonths) : 0;
             const lockerSecAmt = hasLockerSec ? LOCKER_SECURITY_DEPOSIT : 0;
 
             const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
@@ -999,8 +1032,8 @@
             const promiseDate = remainingDue > 0 ? document.getElementById('promiseDate').value : '';
             const paymentMode = document.getElementById('paymentMode').value;
 
-            if(isNaN(uniId) || uniId < 1 || uniId > 1000) {
-                alert("❌ Invalid Unique ID! आईडी नंबर केवल 1 से 1000 के बीच ही हो सकता है।");
+            if(isNaN(uniId) || uniId < 1 || uniId > 5000) {
+                alert("❌ Invalid Unique ID! कृपया सही आईडी नंबर डालें।");
                 return;
             }
             if(!/^\d{10}$/.test(mobile)) {
@@ -1120,7 +1153,7 @@
             renderStudentList();
         }
 
-        // 6. Render Student List (Balanced Desktop/Mobile Layout + Equal 2x4 Grid Action Buttons + 3-Step Delete Lock)
+        // 6. Render Student List (Supports Any Student ID 1 to 5000+ Search)
         function renderStudentList() {
             const container = document.getElementById('studentListContainer');
             const rawQuery = document.getElementById('searchInput').value.trim();
@@ -1134,7 +1167,7 @@
             if(currentTab === 'promise') {
                 workingList.sort((a, b) => (a.item.promiseDate || '9999-99-99').localeCompare(b.item.promiseDate || '9999-99-99'));
             } else {
-                workingList.sort((a, b) => (parseInt(a.item.uniId) || 9999) - (parseInt(b.item.uniId) || 9999));
+                workingList.sort((a, b) => (parseInt(a.item.uniId) || 99999) - (parseInt(b.item.uniId) || 99999));
             }
 
             let filtered = workingList.filter(({ item: s }) => {
@@ -1146,9 +1179,11 @@
 
                 if(!rawQuery) return true;
                 if(/^\d+$/.test(rawQuery)) {
-                    if(rawQuery.length <= 4) {
+                    // Pure digits up to 5 digits (e.g. 1 to 2000+): Match Exact Unique ID
+                    if(rawQuery.length <= 5) {
                         return parseInt(s.uniId) === parseInt(rawQuery);
                     }
+                    // 6+ digits: Match Mobile Number
                     return (s.mobile && s.mobile.includes(rawQuery));
                 }
                 return (s.fullName && s.fullName.toLowerCase().includes(qLower)) ||
@@ -1165,7 +1200,6 @@
             const visibleItems = filtered.slice(0, displayLimit);
             document.getElementById('loadMoreWrap').classList.toggle('hidden', filtered.length <= displayLimit);
 
-            // Smart Desktop/Mobile Balancing: If only 1 card is visible, span full width neatly so right side isn't empty on Desktop
             if(visibleItems.length === 1) {
                 container.className = "grid grid-cols-1 max-w-3xl mx-auto gap-3.5";
             } else {
@@ -1190,13 +1224,11 @@
 
                 card.innerHTML = `
                     <div class="flex items-start gap-3">
-                        <!-- Face-Focused Square HD Photo + Clean Serial Number WITHOUT '#' -->
                         <div class="relative flex-shrink-0">
                             <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl face-focus-thumb border-2 border-red-900 cursor-pointer shadow-sm bg-slate-100" title="Click to View Full Original HD Photo">
                             <span class="absolute -top-1.5 -left-1.5 bg-slate-800 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded shadow">${serialIdx + 1}</span>
                         </div>
 
-                        <!-- Student Details -->
                         <div class="flex-grow min-w-0">
                             <div class="flex items-start justify-between gap-2">
                                 <div class="flex flex-wrap items-center gap-1.5">
@@ -1236,7 +1268,7 @@
                         </div>
                     </div>
 
-                    <!-- Equal-Sized Justified 8-Button Action Grid (2 Cols on Mobile, 4 Cols on Tablet/Desktop) -->
+                    <!-- Equal-Sized Justified 8-Button Action Grid -->
                     <div id="cardMenu-${originalIdx}" class="hidden mt-3 pt-2.5 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl fade-in">
                         <button onclick="openIdCardModal(${originalIdx})" class="w-full theme-maroon text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">🪪 ID Card</button>
                         <button onclick="openProfileModal(${originalIdx})" class="w-full bg-purple-700 hover:bg-purple-600 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">👤 Profile</button>
@@ -1257,13 +1289,13 @@
             if(el) el.classList.toggle('hidden');
         }
 
-        // 7. Triple Confirmation Delete Protection (Never Deletes by Mistake!)
+        // 7. Triple Confirmation Delete Protection
         function deleteStudentRecord(index) {
             const s = students[index];
             const step1 = confirm(`⚠️ सावधान (Step 1/3):\nक्या आप वाकई छात्र "${s.fullName} (ID: ${s.uniId})" को डिलीट करना चाहते हैं?`);
             if(!step1) return;
 
-            const step2 = confirm(`🛑 अंतिम चेतावनी (Step 2/3):\nडिलीट करने पर "${s.fullName}" का सारा पेमेंट लेजर और आधार रिकॉर्ड हमेशा के लिए मिट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`);
+            const step2 = confirm(`🛑 अंतिम चेतावनी (Step 2/3):\nडिलीट करने पर "${s.fullName}" का सारा पेमेंट लेजर और रिकॉर्ड हमेशा के लिए मिट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`);
             if(!step2) return;
 
             const step3 = prompt(`🔐 सुरक्षा पुष्टि (Step 3/3):\nपरमानेंट डिलीट करने के लिए इस छात्र का ID नंबर (${s.uniId}) नीचे टाइप करें:`);
@@ -1277,7 +1309,7 @@
             }
         }
 
-        // 8. Promise Date Update & Due Cleared with Manual Bill Date
+        // 8. Promise Date Update & Due Cleared
         function openPromiseUpdatePrompt(index) {
             let s = students[index];
             const today = new Date().toISOString().split('T')[0];
@@ -1372,7 +1404,7 @@
             }
         }
 
-        // 10. 100% Visible Plain-Text ID Card Modal (ID Number Never Vanishes!)
+        // 10. Compact Horizontal HD ID Card Modal
         function openIdCardModal(index) {
             const s = students[index];
             const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
@@ -1452,6 +1484,12 @@
         }
 
         // 11. Full Plan Renewal Modal
+        function onRenewLockerChanged() {
+            const lVal = cleanResNum(document.getElementById('renewLockerNo').value);
+            document.getElementById('renewLockerMonthCheck').checked = (lVal !== "");
+            recalcRenewalBill();
+        }
+
         function openRenewModal(index) {
             const s = students[index];
             const today = new Date().toISOString().split('T')[0];
@@ -1469,8 +1507,10 @@
             }
             if(!matched) shiftDropdown.selectedIndex = 0;
 
-            document.getElementById('renewLockerNo').value = cleanResNum(s.lockerNo);
+            const existingLocker = cleanResNum(s.lockerNo);
+            document.getElementById('renewLockerNo').value = existingLocker;
             document.getElementById('renewKeyNo').value = cleanResNum(s.keyNo);
+            document.getElementById('renewLockerMonthCheck').checked = (existingLocker !== "");
             document.getElementById('renewStartDate').value = s.validUpto || today;
             document.getElementById('renewBillDate').value = today;
             document.getElementById('renewMonths').value = '1';
@@ -1505,7 +1545,7 @@
             else if(months === 6) shiftSub = Math.round(shiftSub * 0.90);
             else if(months === 12) shiftSub = Math.round(shiftSub * 0.85);
 
-            const hasLocker = cleanResNum(document.getElementById('renewLockerNo').value) !== "";
+            const hasLocker = cleanResNum(document.getElementById('renewLockerNo').value) !== "" || document.getElementById('renewLockerMonthCheck').checked;
             const lockerRent = hasLocker ? (LOCKER_MONTHLY_FEE * months) : 0;
             const secDeposit = document.getElementById('renewLockerSecCheck').checked ? LOCKER_SECURITY_DEPOSIT : 0;
 
@@ -1535,8 +1575,9 @@
             const billD = document.getElementById('renewBillDate').value || new Date().toISOString().split('T')[0];
             const months = parseInt(document.getElementById('renewMonths').value) || 1;
             const isGst = document.getElementById('renewGstCheck').checked;
+            const hasLockerMonth = document.getElementById('renewLockerMonthCheck').checked || (newLocker !== "");
             const hasSec = document.getElementById('renewLockerSecCheck').checked;
-            const lockerRentAmt = newLocker ? (LOCKER_MONTHLY_FEE * months) : 0;
+            const lockerRentAmt = hasLockerMonth ? (LOCKER_MONTHLY_FEE * months) : 0;
             const lockerSecAmt = hasSec ? LOCKER_SECURITY_DEPOSIT : 0;
 
             const billAmt = parseFloat(document.getElementById('renewBillAmt').value) || 0;
@@ -2008,6 +2049,7 @@
             document.getElementById('cycleStartDate').value = s.cycleStartDate || s.admissionDate || '';
             document.getElementById('validUpto').value = s.validUpto;
             document.getElementById('manualBillDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('lockerMonthlyCheck').checked = (cleanResNum(s.lockerNo) !== "");
             document.getElementById('lockerSecurityCheck').checked = (parseFloat(s.lockerSecurityPaid) > 0);
             document.getElementById('totalBill').value = s.totalBill || 0;
             document.getElementById('paidNow').value = s.paidNow || 0;
@@ -2059,7 +2101,7 @@
             document.getElementById('statTotalMembers').innerText = students.length;
             document.getElementById('statActiveMembers').innerText = activeCount;
             document.getElementById('statExpiredMembers').innerText = expiredCount;
-            document.getElementById('statVacantSummary').innerText = `S: ${TOTAL_SEATS - usedSeats.size} | C: ${TOTAL_CHAIRS - usedChairs.size} | L: ${TOTAL_LOCKERS - usedLockers.size}`;
+            document.getElementById('statVacantSummary').innerText = `S:${TOTAL_SEATS - usedSeats.size} | C:${TOTAL_CHAIRS - usedChairs.size} | L:${TOTAL_LOCKERS - usedLockers.size}`;
 
             document.getElementById('colToday').innerText = `₹${colToday}`;
             document.getElementById('colThisMonth').innerText = `₹${colThisMonth}`;
