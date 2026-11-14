@@ -10,267 +10,351 @@
         .theme-maroon { background-color: #5c061c; }
         .theme-maroon-text { color: #5c061c; }
         .theme-border { border-color: #5c061c; }
+        .fade-in { animation: fadeIn 0.25s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-    <!-- App Security / PIN Lock Modal -->
-    <div id="pinModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
-        <div class="bg-white p-6 rounded-xl shadow-2xl w-80 text-center">
-            <h2 class="text-xl font-bold mb-2 theme-maroon-text">🏛️ Buddha Library Security</h2>
-            <p class="text-sm text-gray-600 mb-4">सुरक्षा के लिए 4-डिजिट पिन दर्ज करें:</p>
-            <input type="password" id="appPin" maxlength="4" class="w-full text-center text-2xl tracking-widest border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-red-900" placeholder="••••">
-            <button onclick="verifyPin()" class="w-full theme-maroon text-white py-2 rounded-lg font-semibold hover:opacity-90">🔓 Unlock App</button>
-            <p id="pinError" class="text-red-500 text-xs mt-2 hidden">गलत पिन! (डिफ़ॉल्ट पिन: 2026)</p>
-        </div>
-    </div>
-
-    <!-- Main Container -->
-    <div id="mainApp" class="max-w-5xl mx-auto p-4 hidden">
+    <!-- Main Container (Opens Directly - No Password Hassle) -->
+    <div id="mainApp" class="max-w-6xl mx-auto p-3 md:p-5 fade-in">
         
-        <!-- Header Section -->
-        <header class="theme-maroon text-white p-4 rounded-xl shadow-md mb-4 flex flex-col md:flex-row justify-between items-center">
-            <div class="text-center md:text-left mb-2 md:mb-0 flex items-center gap-3">
-                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-inner">🏛️</div>
-                <div>
-                    <h1 class="text-2xl font-bold tracking-wide">BUDDHA LIBRARY</h1>
-                    <p class="text-xs text-center md:text-left text-yellow-200 mt-0.5">A Unit of Flair Foundation</p>
-                    <p class="text-xs text-gray-200">Kachchhi Dargah, Patna | 📞 7050668855</p>
+        <!-- Multi-line Centered Professional Header -->
+        <header class="theme-maroon text-white p-5 rounded-2xl shadow-lg mb-5 text-center relative">
+            <div class="flex flex-col items-center justify-center">
+                <!-- Logo Placeholder / Icon -->
+                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-md mb-2 border-2 border-yellow-400 overflow-hidden">
+                    <img id="headerLogo" src="" alt="🏛️" class="w-full h-full object-cover hidden" onload="this.classList.remove('hidden'); this.parentElement.querySelector('span').classList.add('hidden');">
+                    <span>🏛️</span>
                 </div>
+                <h1 class="text-2xl md:text-4xl font-extrabold tracking-wider">BUDDHA LIBRARY</h1>
+                <p class="text-sm md:text-base text-yellow-300 font-semibold mt-1">A Unit of Flair Foundation</p>
+                <p class="text-xs md:text-sm text-gray-200 mt-1">📍 Kachchhi Dargah, Patna | 📞 Helpline: <a href="tel:7050668855" class="underline font-bold">7050668855</a></p>
             </div>
-            <div class="flex flex-wrap gap-2 items-center">
-                <button onclick="openCloudSyncModal()" class="bg-yellow-500 text-black text-xs font-semibold px-3 py-1.5 rounded-lg shadow">☁️ Cloud Sync</button>
-                <button onclick="exportDriveBackup()" class="bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow">💾 Backup</button>
-                <button onclick="triggerRestore()" class="bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow">📂 Restore</button>
-                <button onclick="logoutApp()" class="bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow">🔒 Logout</button>
+
+            <!-- Top Action Buttons -->
+            <div class="flex flex-wrap justify-center gap-2 mt-4 pt-3 border-t border-red-900">
+                <button onclick="openLogoModal()" class="bg-amber-500 text-black text-xs font-bold px-3 py-1.5 rounded-lg shadow hover:bg-amber-400">🖼️ Set Library Logo</button>
+                <button onclick="openCloudSyncModal()" class="bg-yellow-400 text-black text-xs font-bold px-3 py-1.5 rounded-lg shadow hover:bg-yellow-300">☁️ Cloud Sync <span id="syncDot" class="inline-block w-2 h-2 rounded-full bg-red-600 ml-1"></span></button>
+                <button onclick="exportDriveBackup()" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow hover:bg-blue-500">💾 Download Backup</button>
+                <button onclick="triggerRestore()" class="bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow hover:bg-green-500">📂 Restore Backup</button>
             </div>
         </header>
 
         <!-- Search Bar -->
-        <div class="bg-white p-3 rounded-xl shadow-sm mb-4 flex items-center gap-2">
-            <span class="text-gray-400 font-bold">🔍</span>
-            <input type="text" id="searchInput" oninput="filterStudents()" placeholder="Search by Student Name, ID, Mobile, Seat No..." class="w-full text-sm outline-none">
+        <div class="bg-white p-3.5 rounded-xl shadow-sm mb-4 flex items-center gap-3 border border-gray-200">
+            <span class="text-xl">🔍</span>
+            <input type="text" id="searchInput" oninput="renderStudents()" placeholder="Search by Student Name, Unique ID, Mobile Number, Seat No..." class="w-full text-sm md:text-base outline-none font-medium">
+            <button onclick="document.getElementById('searchInput').value=''; renderStudents();" class="text-xs text-gray-400 hover:text-gray-700">✖ Clear</button>
         </div>
 
         <!-- Analytics & Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600">
-                <p class="text-xs text-gray-500">👥 Total Members</p>
-                <h3 id="statTotal" class="text-xl font-bold">0</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <div onclick="setTab('all')" class="bg-white p-3.5 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition">
+                <p class="text-xs text-gray-500 font-semibold">👥 Total Members</p>
+                <h3 id="statTotal" class="text-2xl font-extrabold text-gray-800 mt-1">0</h3>
             </div>
-            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-green-600">
-                <p class="text-xs text-gray-500">🟢 Live Active</p>
-                <h3 id="statActive" class="text-xl font-bold text-green-700">0</h3>
+            <div onclick="setTab('active')" class="bg-white p-3.5 rounded-xl shadow-sm border-l-4 border-green-600 cursor-pointer hover:shadow-md transition">
+                <p class="text-xs text-gray-500 font-semibold">🟢 Live Active</p>
+                <h3 id="statActive" class="text-2xl font-extrabold text-green-700 mt-1">0</h3>
             </div>
-            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-amber-600">
-                <p class="text-xs text-gray-500">💰 Monthly Collection</p>
-                <h3 id="statCollection" class="text-xl font-bold text-amber-700">₹0</h3>
+            <div class="bg-white p-3.5 rounded-xl shadow-sm border-l-4 border-amber-600">
+                <p class="text-xs text-gray-500 font-semibold">💰 Monthly Collection</p>
+                <h3 id="statCollection" class="text-2xl font-extrabold text-amber-700 mt-1">₹0</h3>
             </div>
-            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600">
-                <p class="text-xs text-gray-500">⚠️ Total Dues</p>
-                <h3 id="statDues" class="text-xl font-bold text-red-600">₹0</h3>
+            <div onclick="setTab('dues')" class="bg-white p-3.5 rounded-xl shadow-sm border-l-4 border-red-600 cursor-pointer hover:shadow-md transition">
+                <p class="text-xs text-gray-500 font-semibold">⚠️ Total Dues Pending</p>
+                <h3 id="statDues" class="text-2xl font-extrabold text-red-600 mt-1">₹0</h3>
             </div>
         </div>
 
-        <!-- Action Bar -->
-        <div class="flex flex-wrap gap-2 mb-4">
-            <button onclick="toggleAdmissionForm()" class="theme-maroon text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:opacity-90">
-                ➕ New Admission Form
+        <!-- Main Action Bar -->
+        <div class="flex flex-wrap gap-2.5 mb-5">
+            <button onclick="toggleAdmissionForm()" class="theme-maroon text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:opacity-95 transition">
+                ➕ New Admission
             </button>
-            <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow">
+            <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-indigo-600 transition">
                 📊 Expense Tracker
             </button>
-            <button onclick="openBirthdayList()" class="bg-pink-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow">
-                🎂 Today's Birthdays
+            <button onclick="openBirthdayList()" class="bg-pink-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-pink-500 transition">
+                🎂 Today's Birthdays <span id="bdayBadge" class="bg-white text-pink-600 px-1.5 py-0.5 rounded-full text-xs ml-1 hidden">0</span>
             </button>
         </div>
 
-        <!-- Collapsible Admission Form (Optional Fields, No Force Required) -->
-        <div id="admissionFormContainer" class="bg-white p-4 rounded-xl shadow-md mb-4 hidden border-2 theme-border">
-            <h2 id="formTitle" class="text-lg font-bold mb-3 theme-maroon-text border-b pb-2">📝 Student Admission & Registration Form</h2>
-            <form id="studentForm" onsubmit="saveStudent(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+        <!-- Collapsible Admission Form (Seat/Chair/Locker Non-Mandatory) -->
+        <div id="admissionFormContainer" class="bg-white p-5 rounded-2xl shadow-lg mb-6 hidden border-2 theme-border fade-in">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h2 id="formTitle" class="text-lg font-extrabold theme-maroon-text">📝 Student Admission & Registration Form</h2>
+                <button type="button" onclick="toggleAdmissionForm()" class="text-gray-400 hover:text-red-600 font-bold text-lg">✖</button>
+            </div>
+
+            <form id="studentForm" onsubmit="saveStudent(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <input type="hidden" id="editIndex" value="">
+                
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Unique ID * (No Duplicate)</label>
-                    <input type="number" id="uniId" required class="w-full border p-2 rounded-lg" placeholder="1, 2, 3...">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Unique ID * (Auto / No Duplicate)</label>
+                    <input type="number" id="uniId" required class="w-full border border-gray-300 p-2.5 rounded-lg font-bold text-red-900 bg-yellow-50" placeholder="e.g. 1">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Seat No & Chair No (Optional)</label>
-                    <input type="text" id="seatNo" class="w-full border p-2 rounded-lg" placeholder="Seat 12 / Chair 15">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Student Full Name *</label>
+                    <input type="text" id="fullName" required class="w-full border border-gray-300 p-2.5 rounded-lg" placeholder="Enter Full Name">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Locker No & Key No (Optional)</label>
-                    <input type="text" id="lockerNo" class="w-full border p-2 rounded-lg" placeholder="Locker 5 / Key 5">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Student Full Name *</label>
-                    <input type="text" id="fullName" required class="w-full border p-2 rounded-lg" placeholder="Enter Full Name">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Gender *</label>
-                    <select id="gender" required class="w-full border p-2 rounded-lg">
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">Gender *</label>
+                    <select id="gender" required class="w-full border border-gray-300 p-2.5 rounded-lg">
+                        <option value="Male">Male (लड़का)</option>
+                        <option value="Female">Female (लड़की)</option>
                     </select>
                 </div>
+
+                <!-- Separate Optional Resource Mapping -->
+                <div class="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">💺 Seat No (Optional)</label>
+                        <input type="text" id="seatNo" class="w-full border p-2 rounded-lg" placeholder="e.g. S-10">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">🪑 Chair No (Optional)</label>
+                        <input type="text" id="chairNo" class="w-full border p-2 rounded-lg" placeholder="e.g. C-10">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">🗄️ Locker No (Optional)</label>
+                        <input type="text" id="lockerNo" class="w-full border p-2 rounded-lg" placeholder="e.g. L-5">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">🔑 Key No (Optional)</label>
+                        <input type="text" id="keyNo" class="w-full border p-2 rounded-lg" placeholder="e.g. K-5">
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Student Mobile * (Click-to-Call)</label>
-                    <input type="tel" id="mobile" required maxlength="10" class="w-full border p-2 rounded-lg" placeholder="10-digit mobile">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">📞 Student Mobile * (Direct Call)</label>
+                    <input type="tel" id="mobile" required maxlength="10" class="w-full border border-gray-300 p-2.5 rounded-lg" placeholder="10-digit mobile">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Guardian Mobile (Office Use)</label>
-                    <input type="tel" id="guardianMobile" maxlength="10" class="w-full border p-2 rounded-lg" placeholder="Optional">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">🏠 Guardian Mobile (Optional)</label>
+                    <input type="tel" id="guardianMobile" maxlength="10" class="w-full border border-gray-300 p-2.5 rounded-lg" placeholder="Parent mobile">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Date of Birth (DOB) *</label>
-                    <input type="date" id="dob" required class="w-full border p-2 rounded-lg">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">🎂 Date of Birth (Optional)</label>
+                    <input type="date" id="dob" class="w-full border border-gray-300 p-2.5 rounded-lg">
                 </div>
+
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Address / Village *</label>
-                    <input type="text" id="address" required class="w-full border p-2 rounded-lg" placeholder="Kachchhi Dargah, Patna">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">📍 Address / Village</label>
+                    <input type="text" id="address" class="w-full border border-gray-300 p-2.5 rounded-lg" placeholder="Kachchhi Dargah, Patna">
                 </div>
+
+                <!-- Separate Study Courses -->
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Study Course / Purpose *</label>
-                    <select id="studyCourse" onchange="checkOtherCourse()" class="w-full border p-2 rounded-lg">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">📚 Study Course / Purpose *</label>
+                    <select id="studyCourse" onchange="checkOtherCourse()" class="w-full border border-gray-300 p-2.5 rounded-lg">
                         <option value="10th Board">10th Board</option>
-                        <option value="11th Science/Arts/Commerce">11th Science / Arts / Commerce</option>
-                        <option value="12th Science/Arts/Commerce">12th Science / Arts / Commerce</option>
-                        <option value="General Competition">General Competition</option>
+                        <option value="11th (Sci / Arts / Com)">11th (Science / Arts / Commerce)</option>
+                        <option value="12th Board (Sci / Arts / Com)">12th Board (Science / Arts / Commerce)</option>
+                        <option value="General Competition">General Competition (BPSC/SSC/Railway)</option>
                         <option value="Computer Course">Computer Course</option>
-                        <option value="Other">Other (Manual Entry)</option>
+                        <option value="Other">Other (हाथ से लिखें)</option>
                     </select>
                 </div>
-                <div id="otherCourseDiv" class="hidden">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Specify Other Course *</label>
-                    <input type="text" id="otherCourseText" class="w-full border p-2 rounded-lg" placeholder="Type course name">
+                <div id="otherCourseDiv" class="hidden md:col-span-3">
+                    <label class="block text-xs font-bold text-indigo-700 mb-1">✍️ Specify Course Name *</label>
+                    <input type="text" id="otherCourseText" class="w-full border-2 border-indigo-400 p-2.5 rounded-lg" placeholder="जैसे: NEET, JEE, Law, D.El.Ed आदि टाइप करें...">
                 </div>
+
+                <!-- Shift & Billing -->
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Shift & Exact Plan *</label>
-                    <select id="shiftPlan" onchange="calculateBill()" required class="w-full border p-2 rounded-lg">
-                        <option value="">-- Select Shift --</option>
-                        <option value="Morning (06AM - 10AM) - ₹299">Morning (06:00 AM - 10:00 AM) - ₹299</option>
-                        <option value="Morning/Day Slot (10AM - 02PM) - ₹399">Morning/Day (10:00 AM - 02:00 PM) - ₹399</option>
-                        <option value="Evening (02PM - 06PM) - ₹399">Evening (02:00 PM - 06:00 PM) - ₹399</option>
-                        <option value="Full Day (12 Hours: 06AM - 06PM) - ₹499">Full Day (12 Hours: 06AM - 06PM) - ₹499</option>
-                        <option value="24 Hours Plan - ₹799">24 Hours Plan - ₹799</option>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">⏱️ Shift & Monthly Plan *</label>
+                    <select id="shiftPlan" onchange="calculateBill()" required class="w-full border border-gray-300 p-2.5 rounded-lg font-semibold">
+                        <option value="Morning (06AM - 10AM) - ₹299" data-rate="299">Morning (06:00 AM - 10:00 AM) - ₹299</option>
+                        <option value="Day (10AM - 02PM) - ₹399" data-rate="399">Day (10:00 AM - 02:00 PM) - ₹399</option>
+                        <option value="Evening (02PM - 06PM) - ₹399" data-rate="399">Evening (02:00 PM - 06:00 PM) - ₹399</option>
+                        <option value="Full Day (12 Hrs: 06AM - 06PM) - ₹499" data-rate="499">Full Day (12 Hrs: 06AM - 06PM) - ₹499</option>
+                        <option value="24 Hours Plan - ₹799" data-rate="799">24 Hours Plan - ₹799</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Admission Start Date *</label>
-                    <input type="date" id="startDate" onchange="updateValidUpto()" required class="w-full border p-2 rounded-lg">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valid Upto (28 Days Auto)</label>
-                    <input type="date" id="validUpto" readonly class="w-full border p-2 rounded-lg bg-gray-100 font-bold">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Duration (Discount)</label>
-                    <select id="durationMonths" onchange="calculateBill()" class="w-full border p-2 rounded-lg">
-                        <option value="1">1 Month (Standard)</option>
-                        <option value="3">3 Months (5% Off)</option>
-                        <option value="6">6 Months (10% Off)</option>
-                        <option value="12">12 Months (15% Off)</option>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">🗓️ Duration (Auto Discount)</label>
+                    <select id="durationMonths" onchange="updateValidUpto()" class="w-full border border-gray-300 p-2.5 rounded-lg">
+                        <option value="1">1 Month (No Discount)</option>
+                        <option value="3">3 Months (5% Discount)</option>
+                        <option value="6">6 Months (10% Discount)</option>
+                        <option value="12">12 Months (15% Discount)</option>
                     </select>
                 </div>
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="addAdmissionFee" onchange="calculateBill()" class="w-4 h-4">
-                    <label class="text-xs font-semibold">Add Admission Fee (+₹199)</label>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">📅 Admission Date *</label>
+                    <input type="date" id="startDate" onchange="updateValidUpto()" required class="w-full border border-gray-300 p-2.5 rounded-lg">
                 </div>
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="addLockerFee" onchange="calculateBill()" class="w-4 h-4">
-                    <label class="text-xs font-semibold">Add Locker Security (+₹200 refundable)</label>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">⏳ Valid Upto (Expiry Date) *</label>
+                    <input type="date" id="validUpto" required class="w-full border border-gray-300 p-2.5 rounded-lg bg-yellow-50 font-bold text-red-700">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Total Bill (with 5% GST)</label>
-                    <input type="number" id="totalBill" readonly class="w-full border p-2 rounded-lg bg-gray-100 font-bold text-red-700">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">💵 Total Fee (Editable) *</label>
+                    <input type="number" id="totalBill" oninput="calculateDues()" required class="w-full border border-gray-300 p-2.5 rounded-lg font-bold text-gray-800">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Paid Now *</label>
-                    <input type="number" id="paidNow" oninput="calculateDues()" required class="w-full border p-2 rounded-lg font-bold text-green-700">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">✅ Paid Amount (जमा राशि) *</label>
+                    <input type="number" id="paidNow" oninput="calculateDues()" required class="w-full border border-gray-300 p-2.5 rounded-lg font-bold text-green-700">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">⚠️ Remaining Due (बकाया)</label>
+                    <input type="number" id="remainingDue" readonly class="w-full border border-gray-300 p-2.5 rounded-lg bg-gray-100 font-bold text-red-600">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Remaining Due</label>
-                    <input type="number" id="remainingDue" readonly class="w-full border p-2 rounded-lg bg-gray-100 font-bold">
+                    <label class="block text-xs font-bold text-red-700 mb-1">📅 Promise Date (बकाया देने की तारीख)</label>
+                    <input type="date" id="promiseDate" class="w-full border border-red-300 p-2.5 rounded-lg bg-red-50">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Due Promise Date</label>
-                    <input type="date" id="promiseDate" class="w-full border p-2 rounded-lg">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Payment Mode</label>
-                    <select id="paymentMode" class="w-full border p-2 rounded-lg">
-                        <option value="Cash">Cash</option>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">💳 Payment Mode</label>
+                    <select id="paymentMode" class="w-full border border-gray-300 p-2.5 rounded-lg">
+                        <option value="Cash">Cash (नकद)</option>
                         <option value="Online / UPI">Online / UPI</option>
                     </select>
                 </div>
-                <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 bg-gray-50 p-3 rounded-lg border">
+
+                <!-- Document Upload (Auto-Compress) -->
+                <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3 bg-gray-50 p-3.5 rounded-xl border border-gray-200">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">📷 Student Photo</label>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">📷 Student Photo</label>
                         <input type="file" id="studentPhoto" accept="image/*" class="w-full text-xs" onchange="compressImage(this, 'photoBase64')">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">🆔 Aadhaar Front</label>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">🆔 Aadhaar Front Photo</label>
                         <input type="file" id="aadhaarFront" accept="image/*" class="w-full text-xs" onchange="compressImage(this, 'frontBase64')">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">🆔 Aadhaar Back</label>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">🆔 Aadhaar Back Photo</label>
                         <input type="file" id="aadhaarBack" accept="image/*" class="w-full text-xs" onchange="compressImage(this, 'backBase64')">
                     </div>
                 </div>
-                <div class="md:col-span-3 flex justify-end gap-2 mt-2">
-                    <button type="button" onclick="toggleAdmissionForm()" class="bg-gray-400 text-white px-4 py-2 rounded-lg">Cancel</button>
-                    <button type="submit" class="theme-maroon text-white px-6 py-2 rounded-lg font-semibold shadow">💾 Save & Sync Student</button>
+
+                <div class="md:col-span-3 flex justify-end gap-3 mt-2">
+                    <button type="button" onclick="toggleAdmissionForm()" class="bg-gray-400 text-white px-5 py-2.5 rounded-xl font-semibold">Cancel</button>
+                    <button type="submit" class="theme-maroon text-white px-8 py-2.5 rounded-xl font-bold shadow-md hover:opacity-90">💾 Save Student</button>
                 </div>
             </form>
         </div>
 
-        <!-- Filter Tabs -->
+        <!-- Filter Tabs with Counters -->
         <div class="flex flex-wrap gap-2 mb-4">
-            <button onclick="setTab('all')" id="tab-all" class="px-4 py-2 rounded-xl text-xs font-bold theme-maroon text-white shadow">👥 All Members</button>
-            <button onclick="setTab('active')" id="tab-active" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow">🟢 Live Active</button>
-            <button onclick="setTab('expired')" id="tab-expired" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow">🔴 Expired</button>
-            <button onclick="setTab('dues')" id="tab-dues" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow">⚠️ Dues Pending</button>
-            <button onclick="setTab('promise')" id="tab-promise" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow">📅 Promise Today</button>
+            <button onclick="setTab('all')" id="tab-all" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold theme-maroon text-white shadow">👥 All Members</button>
+            <button onclick="setTab('active')" id="tab-active" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-gray-700 shadow">🟢 Live Active</button>
+            <button onclick="setTab('expired')" id="tab-expired" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-gray-700 shadow">🔴 Expired</button>
+            <button onclick="setTab('dues')" id="tab-dues" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-gray-700 shadow">⚠️ Dues Pending</button>
+            <button onclick="setTab('promise')" id="tab-promise" class="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-gray-700 shadow">📅 Promise Alerts <span id="promiseBadge" class="bg-red-600 text-white px-1.5 py-0.5 rounded-full text-xs ml-1 hidden">0</span></button>
         </div>
 
         <!-- Student List Container -->
-        <div id="studentList" class="space-y-3"></div>
+        <div id="studentList" class="space-y-3.5"></div>
 
     </div>
 
-    <!-- Image Zoom Modal -->
-    <div id="zoomModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center hidden" onclick="closeZoom()">
-        <div class="bg-white p-2 rounded-xl max-w-lg text-center relative">
-            <img id="zoomedImg" src="" class="max-h-[80vh] mx-auto rounded-lg">
-            <p class="text-xs text-gray-500 mt-2">Click anywhere to close</p>
+    <!-- 1. Photo Zoom Modal -->
+    <div id="zoomModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex items-center justify-center hidden p-4" onclick="closeZoom()">
+        <div class="bg-white p-3 rounded-2xl max-w-lg w-full text-center relative shadow-2xl" onclick="event.stopPropagation()">
+            <button onclick="closeZoom()" class="absolute top-2 right-3 text-gray-600 hover:text-red-600 font-bold text-xl">✖</button>
+            <h4 id="zoomTitle" class="font-bold text-sm mb-2 theme-maroon-text">Student Photo</h4>
+            <img id="zoomedImg" src="" class="max-h-[75vh] mx-auto rounded-xl object-contain border">
         </div>
     </div>
 
-    <!-- Cloud Sync Modal -->
-    <div id="cloudModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+    <!-- 2. Full Student Profile, Aadhaar & Promise History Modal -->
+    <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-3 overflow-y-auto">
+        <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-lg font-extrabold theme-maroon-text">👤 Complete Student Profile & Ledger</h3>
+                <button onclick="closeProfileModal()" class="text-gray-500 hover:text-red-600 font-bold text-xl">✖</button>
+            </div>
+            <div id="profileModalContent"></div>
+        </div>
+    </div>
+
+    <!-- 3. Professional ID Card Modal (Clean Screenshot Mode) -->
+    <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex flex-col items-center justify-center hidden p-4">
+        <!-- The ID Card Box (Clicking it toggles action buttons for clean screenshot) -->
+        <div id="idCardBox" onclick="toggleIdCardButtons()" class="bg-white w-80 rounded-2xl shadow-2xl overflow-hidden border-2 border-red-900 cursor-pointer select-none">
+            <div class="theme-maroon text-white p-3.5 text-center relative">
+                <div class="w-12 h-12 bg-white rounded-full mx-auto mb-1 flex items-center justify-center text-xl border-2 border-yellow-400 overflow-hidden">
+                    <img id="idCardLogo" src="" class="w-full h-full object-cover hidden">
+                    <span id="idCardEmoji">🏛️</span>
+                </div>
+                <h2 class="text-lg font-extrabold tracking-wide leading-tight">BUDDHA LIBRARY</h2>
+                <p class="text-[11px] text-yellow-300 font-semibold">A Unit of Flair Foundation</p>
+                <p class="text-[10px] text-gray-200">Kachchhi Dargah, Patna | 7050668855</p>
+            </div>
+            <div class="p-4 text-center">
+                <img id="idPhoto" src="" class="w-24 h-24 rounded-full mx-auto object-cover border-4 border-red-900 shadow-md">
+                <div class="mt-2 inline-block bg-red-900 text-white text-xs font-extrabold px-3 py-0.5 rounded-full" id="idUniId">ID: 1</div>
+                <h3 id="idFullName" class="text-base font-extrabold text-gray-900 mt-1">Student Name</h3>
+                <p id="idCourse" class="text-xs font-bold text-indigo-700">Course</p>
+
+                <div class="mt-3 text-left bg-gray-50 p-2.5 rounded-xl border text-xs space-y-1">
+                    <div class="flex justify-between"><span>📞 Mobile:</span> <b id="idMobile"></b></div>
+                    <div class="flex justify-between"><span>⏱️ Shift:</span> <b id="idShift" class="text-right"></b></div>
+                    <div class="flex justify-between"><span>💺 Seat / Chair:</span> <b id="idSeatChair"></b></div>
+                    <div class="flex justify-between"><span>🗄️ Locker / Key:</span> <b id="idLockerKey"></b></div>
+                    <div class="flex justify-between"><span>📅 Admission:</span> <b id="idAdmDate"></b></div>
+                    <div class="flex justify-between border-t pt-1 text-red-700"><span>⏳ Valid Upto:</span> <b id="idValid"></b></div>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-2">Authorized Signatory • Buddha Library</p>
+            </div>
+        </div>
+
+        <!-- Share & Close Buttons (Auto-hide when card is tapped for clean screenshot) -->
+        <div id="idCardActions" class="mt-4 flex flex-wrap gap-2 justify-center no-print">
+            <button id="idWhatsappBtn" class="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg">💬 Share on WhatsApp</button>
+            <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg">🖨️ Print / Save PDF</button>
+            <button onclick="closeIdCardModal()" class="bg-gray-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg">✖ Close</button>
+            <p class="w-full text-center text-[11px] text-gray-300 mt-1">💡 Tip: स्क्रीनशॉट लेने के लिए आईडी कार्ड के ऊपर एक बार टच करें, बटन छुप जाएंगे!</p>
+        </div>
+    </div>
+
+    <!-- 4. Logo Upload Modal -->
+    <div id="logoModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white p-5 rounded-2xl shadow-xl w-80 text-center">
+            <h3 class="text-base font-bold theme-maroon-text mb-2">🖼️ Set Buddha Library Logo</h3>
+            <p class="text-xs text-gray-600 mb-3">अपना गोल लोगो चुनें (हेडर और आईडी कार्ड दोनों पर अपने आप लग जाएगा):</p>
+            <input type="file" accept="image/*" onchange="uploadLibraryLogo(this)" class="w-full text-xs mb-4 border p-2 rounded">
+            <button onclick="document.getElementById('logoModal').classList.add('hidden')" class="bg-gray-400 text-white text-xs px-4 py-2 rounded-lg font-bold">Close</button>
+        </div>
+    </div>
+
+    <!-- 5. Cloud Sync Modal -->
+    <div id="cloudModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-96">
             <h3 class="text-lg font-bold mb-2 theme-maroon-text">☁️ Firebase Live Cloud Sync</h3>
             <p class="text-xs text-gray-600 mb-3">अपना Firebase Realtime Database URL दर्ज करें:</p>
-            <input type="text" id="firebaseUrlInput" class="w-full border p-2 rounded-lg text-xs mb-3" placeholder="https://your-app-rtdb.firebaseio.com">
+            <input type="text" id="firebaseUrlInput" class="w-full border p-2.5 rounded-lg text-xs mb-3" placeholder="https://your-app-rtdb.firebaseio.com">
             <div class="flex justify-end gap-2">
-                <button onclick="closeCloudSyncModal()" class="bg-gray-300 text-xs px-3 py-1.5 rounded-lg">Cancel</button>
-                <button onclick="saveCloudUrl()" class="theme-maroon text-white text-xs px-4 py-1.5 rounded-lg font-semibold">Save & Connect</button>
+                <button onclick="closeCloudSyncModal()" class="bg-gray-300 text-xs px-4 py-2 rounded-lg font-semibold">Cancel</button>
+                <button onclick="saveCloudUrl()" class="theme-maroon text-white text-xs px-4 py-2 rounded-lg font-bold">Save & Sync</button>
             </div>
         </div>
     </div>
 
-    <!-- Expense Tracker Modal -->
-    <div id="expenseModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 class="text-lg font-bold mb-3 theme-maroon-text border-b pb-2">📊 Library Expense Tracker</h3>
+    <!-- 6. Expense Tracker Modal -->
+    <div id="expenseModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2 mb-3">
+                <h3 class="text-lg font-bold theme-maroon-text">📊 Library Expense Tracker</h3>
+                <button onclick="closeExpenseModal()" class="text-gray-500 font-bold">✖</button>
+            </div>
             <form id="expenseForm" onsubmit="saveExpense(event)" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Expense Item *</label>
-                    <input type="text" id="expTitle" required class="w-full border p-2 rounded-lg" placeholder="Electricity / Wi-Fi">
+                    <input type="text" id="expTitle" required class="w-full border p-2 rounded-lg" placeholder="Electricity / Wi-Fi / Water">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Amount (₹) *</label>
-                    <input type="number" id="expAmount" required class="w-full border p-2 rounded-lg" placeholder="1500">
+                    <input type="number" id="expAmount" required class="w-full border p-2 rounded-lg" placeholder="500">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Date *</label>
@@ -284,68 +368,85 @@
                     </select>
                 </div>
                 <div class="md:col-span-2 flex justify-end">
-                    <button type="submit" class="bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-semibold">➕ Add Expense</button>
+                    <button type="submit" class="bg-indigo-700 text-white px-5 py-2 rounded-lg text-xs font-bold">➕ Add Expense</button>
                 </div>
             </form>
             <div id="expenseList" class="space-y-2 text-xs mb-4"></div>
-            <div class="flex justify-end">
-                <button onclick="closeExpenseModal()" class="bg-gray-400 text-white text-xs px-4 py-2 rounded-lg">Close</button>
-            </div>
         </div>
     </div>
 
-    <!-- JavaScript Application Logic -->
+    <!-- JavaScript Logic (Clean, Fast & Error-Free) -->
     <script>
-        let students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]');
-        let expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]');
+        let students = [];
+        let expenses = [];
         let currentTab = 'all';
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
+        let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
         let tempImages = { photoBase64: '', frontBase64: '', backBase64: '' };
 
+        try { students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]'); } catch(e) { students = []; }
+        try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
+
         window.onload = function() {
-            if(localStorage.getItem('buddha_library_logged_in') === 'true') {
-                document.getElementById('pinModal').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                initApp();
-            }
-        };
-
-        function verifyPin() {
-            const pin = document.getElementById('appPin').value;
-            if(pin === '2026' || pin === '7050') {
-                localStorage.setItem('buddha_library_logged_in', 'true');
-                document.getElementById('pinModal').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                initApp();
-            } else {
-                document.getElementById('pinError').classList.remove('hidden');
-            }
-        }
-
-        function logoutApp() {
-            localStorage.removeItem('buddha_library_logged_in');
-            location.reload();
-        }
-
-        function initApp() {
-            document.getElementById('startDate').valueAsDate = new Date();
-            document.getElementById('expDate').valueAsDate = new Date();
-            document.getElementById('dob').valueAsDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            document.getElementById('expDate').value = today;
+            if(libraryLogo) applyLogo(libraryLogo);
             updateValidUpto();
-            if(firebaseDbUrl) fetchFromFirebase();
+            if(firebaseDbUrl) {
+                document.getElementById('syncDot').classList.replace('bg-red-600', 'bg-green-600');
+                fetchFromFirebase();
+            }
             renderStudents();
             updateStats();
+        };
+
+        function openLogoModal() { document.getElementById('logoModal').classList.remove('hidden'); }
+        function uploadLibraryLogo(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 200; canvas.height = 200;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, 200, 200);
+                        libraryLogo = canvas.toDataURL('image/jpeg', 0.8);
+                        localStorage.setItem('buddha_library_logo', libraryLogo);
+                        applyLogo(libraryLogo);
+                        document.getElementById('logoModal').classList.add('hidden');
+                    };
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        function applyLogo(src) {
+            const hLogo = document.getElementById('headerLogo');
+            hLogo.src = src; hLogo.classList.remove('hidden');
+        }
+
+        function getNextUniqueId() {
+            if(students.length === 0) return 1;
+            let maxId = 0;
+            students.forEach(s => { let id = parseInt(s.uniId) || 0; if(id > maxId) maxId = id; });
+            return maxId + 1;
         }
 
         function toggleAdmissionForm() {
             const form = document.getElementById('admissionFormContainer');
             form.classList.toggle('hidden');
-            document.getElementById('studentForm').reset();
-            document.getElementById('editIndex').value = '';
-            document.getElementById('formTitle').innerText = "📝 Student Admission & Registration Form";
-            document.getElementById('startDate').valueAsDate = new Date();
-            tempImages = { photoBase64: '', frontBase64: '', backBase64: '' };
-            updateValidUpto();
+            if(!form.classList.contains('hidden')) {
+                document.getElementById('studentForm').reset();
+                document.getElementById('editIndex').value = '';
+                document.getElementById('formTitle').innerText = "📝 New Student Admission Form";
+                document.getElementById('uniId').value = getNextUniqueId();
+                document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('otherCourseDiv').classList.add('hidden');
+                tempImages = { photoBase64: '', frontBase64: '', backBase64: '' };
+                updateValidUpto();
+            }
         }
 
         function checkOtherCourse() {
@@ -360,38 +461,32 @@
             if(!startVal) return;
             const startDate = new Date(startVal);
             const months = parseInt(document.getElementById('durationMonths').value) || 1;
-            startDate.setDate(startDate.getDate() + (28 * months));
+            startDate.setDate(startDate.getDate() + (30 * months));
             document.getElementById('validUpto').value = startDate.toISOString().split('T')[0];
             calculateBill();
         }
 
         function calculateBill() {
-            const shift = document.getElementById('shiftPlan').value;
-            let baseRate = 299;
-            if(shift.includes('399')) baseRate = 399;
-            else if(shift.includes('499')) baseRate = 499;
-            else if(shift.includes('799')) baseRate = 799;
+            const shiftSelect = document.getElementById('shiftPlan');
+            const selectedOption = shiftSelect.options[shiftSelect.selectedIndex];
+            let baseRate = parseFloat(selectedOption.getAttribute('data-rate')) || 299;
 
             const months = parseInt(document.getElementById('durationMonths').value) || 1;
             let subtotal = baseRate * months;
 
-            if(months === 3) subtotal *= 0.95;
-            else if(months === 6) subtotal *= 0.90;
-            else if(months === 12) subtotal *= 0.85;
+            if(months === 3) subtotal = Math.round(subtotal * 0.95);
+            else if(months === 6) subtotal = Math.round(subtotal * 0.90);
+            else if(months === 12) subtotal = Math.round(subtotal * 0.85);
 
-            if(document.getElementById('addAdmissionFee').checked) subtotal += 199;
-            if(document.getElementById('addLockerFee').checked) subtotal += 200;
-
-            const totalWithGst = Math.round(subtotal * 1.05);
-            document.getElementById('totalBill').value = totalWithGst;
-            document.getElementById('paidNow').value = totalWithGst;
+            document.getElementById('totalBill').value = subtotal;
+            document.getElementById('paidNow').value = subtotal;
             calculateDues();
         }
 
         function calculateDues() {
             const total = parseFloat(document.getElementById('totalBill').value) || 0;
             const paid = parseFloat(document.getElementById('paidNow').value) || 0;
-            document.getElementById('remainingDue').value = total - paid;
+            document.getElementById('remainingDue').value = Math.max(0, total - paid);
         }
 
         function compressImage(input, key) {
@@ -403,41 +498,37 @@
                     img.onload = function () {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        const MAX_WIDTH = 400;
-                        const MAX_HEIGHT = 400;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                        } else {
-                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
+                        const MAX_SIZE = 450;
+                        let width = img.width, height = img.height;
+                        if (width > height && width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                        else if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                        canvas.width = width; canvas.height = height;
                         ctx.drawImage(img, 0, 0, width, height);
-                        tempImages[key] = canvas.toDataURL('image/jpeg', 0.7);
-                    }
-                }
+                        tempImages[key] = canvas.toDataURL('image/jpeg', 0.65);
+                    };
+                };
                 reader.readAsDataURL(input.files[0]);
             }
         }
 
         function saveStudent(e) {
             e.preventDefault();
-            const uniId = document.getElementById('uniId').value;
-            const seatNo = document.getElementById('seatNo').value;
-            const lockerNo = document.getElementById('lockerNo').value;
-            const fullName = document.getElementById('fullName').value;
+            const editIndex = document.getElementById('editIndex').value;
+            const uniId = document.getElementById('uniId').value.trim();
+            const seatNo = document.getElementById('seatNo').value.trim();
+            const chairNo = document.getElementById('chairNo').value.trim();
+            const lockerNo = document.getElementById('lockerNo').value.trim();
+            const keyNo = document.getElementById('keyNo').value.trim();
+            const fullName = document.getElementById('fullName').value.trim();
             const gender = document.getElementById('gender').value;
-            const mobile = document.getElementById('mobile').value;
-            const guardianMobile = document.getElementById('guardianMobile').value;
+            const mobile = document.getElementById('mobile').value.trim();
+            const guardianMobile = document.getElementById('guardianMobile').value.trim();
             const dob = document.getElementById('dob').value;
-            const address = document.getElementById('address').value;
+            const address = document.getElementById('address').value.trim() || 'Kachchhi Dargah, Patna';
             
             let studyCourse = document.getElementById('studyCourse').value;
             if(studyCourse === 'Other') {
-                studyCourse = document.getElementById('otherCourseText').value || 'Other';
+                studyCourse = document.getElementById('otherCourseText').value.trim() || 'Other';
             }
 
             const shiftPlan = document.getElementById('shiftPlan').value;
@@ -449,228 +540,325 @@
             const promiseDate = document.getElementById('promiseDate').value;
             const paymentMode = document.getElementById('paymentMode').value;
 
-            const editIndex = document.getElementById('editIndex').value;
+            // Strict Unique ID Check
             for(let i=0; i<students.length; i++) {
                 if(editIndex !== "" && parseInt(editIndex) === i) continue;
-                if(students[i].uniId == uniId) {
-                    alert(`⚠️ Error: Unique ID #${uniId} is already assigned to ${students[i].fullName}!`);
+                if(String(students[i].uniId) === String(uniId)) {
+                    alert(`❌ रुकिए! Unique ID: ${uniId} पहले से "${students[i].fullName}" को मिल चुका है। कृपया दूसरा ID नंबर डालें!`);
                     return;
                 }
             }
 
-            let paymentRecord = { date: startDate, amount: paidNow, mode: paymentMode, type: 'Admission/Renewal' };
-
             if(editIndex !== "") {
                 let st = students[editIndex];
-                st.uniId = uniId;
-                st.seatNo = seatNo;
-                st.lockerNo = lockerNo;
-                st.fullName = fullName;
-                st.gender = gender;
-                st.mobile = mobile;
-                st.guardianMobile = guardianMobile;
-                st.dob = dob;
-                st.address = address;
-                st.studyCourse = studyCourse;
-                st.shiftPlan = shiftPlan;
-                st.validUpto = validUpto;
-                st.remainingDue = remainingDue;
-                st.promiseDate = promiseDate;
+                // Track Promise Date Change History (Cheating/Delay Counter)
+                if(promiseDate && promiseDate !== st.promiseDate) {
+                    if(!st.promiseHistory) st.promiseHistory = [];
+                    st.promiseHistory.push({ oldDate: st.promiseDate || 'First Promise', newDate: promiseDate, changedOn: new Date().toISOString().split('T')[0] });
+                }
+                st.uniId = uniId; st.seatNo = seatNo; st.chairNo = chairNo; st.lockerNo = lockerNo; st.keyNo = keyNo;
+                st.fullName = fullName; st.gender = gender; st.mobile = mobile; st.guardianMobile = guardianMobile;
+                st.dob = dob; st.address = address; st.studyCourse = studyCourse; st.shiftPlan = shiftPlan;
+                st.validUpto = validUpto; st.totalBill = totalBill; st.remainingDue = remainingDue; st.promiseDate = promiseDate;
                 if(tempImages.photoBase64) st.photo = tempImages.photoBase64;
                 if(tempImages.frontBase64) st.aadhaarFront = tempImages.frontBase64;
                 if(tempImages.backBase64) st.aadhaarBack = tempImages.backBase64;
-                if(paidNow > 0) st.paymentHistory.push(paymentRecord);
             } else {
+                let promiseHistory = [];
+                if(promiseDate) promiseHistory.push({ oldDate: 'Admission Time', newDate: promiseDate, changedOn: startDate });
                 let newStudent = {
-                    uniId, seatNo, lockerNo, fullName, gender, mobile, guardianMobile, dob, address, studyCourse, shiftPlan,
-                    admissionDate: startDate,
-                    validUpto,
-                    totalBill,
-                    paidNow,
-                    remainingDue,
-                    promiseDate,
+                    uniId, seatNo, chairNo, lockerNo, keyNo, fullName, gender, mobile, guardianMobile, dob, address, studyCourse, shiftPlan,
+                    admissionDate: startDate, validUpto, totalBill, paidNow, remainingDue, promiseDate,
+                    promiseHistory: promiseHistory,
                     photo: tempImages.photoBase64 || '',
                     aadhaarFront: tempImages.frontBase64 || '',
                     aadhaarBack: tempImages.backBase64 || '',
-                    paymentHistory: [paymentRecord]
+                    paymentHistory: [{ date: startDate, amount: paidNow, mode: paymentMode, period: `${startDate} to ${validUpto}`, type: 'New Admission' }]
                 };
                 students.push(newStudent);
             }
 
             syncAndSave();
-            toggleAdmissionForm();
+            document.getElementById('admissionFormContainer').classList.add('hidden');
             renderStudents();
             updateStats();
         }
 
         function renderStudents() {
             const listContainer = document.getElementById('studentList');
-            const search = document.getElementById('searchInput').value.toLowerCase();
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
             listContainer.innerHTML = '';
 
+            const today = new Date().toISOString().split('T')[0];
+
             let filtered = students.filter(s => {
-                const matchSearch = s.fullName.toLowerCase().includes(search) || s.uniId.toString().includes(search) || s.mobile.includes(search) || (s.seatNo && s.seatNo.toLowerCase().includes(search));
+                const matchSearch = (s.fullName && s.fullName.toLowerCase().includes(search)) ||
+                                    String(s.uniId).includes(search) ||
+                                    (s.mobile && s.mobile.includes(search)) ||
+                                    (s.seatNo && s.seatNo.toLowerCase().includes(search));
                 if(!matchSearch) return false;
 
-                const today = new Date().toISOString().split('T')[0];
                 const isActive = s.validUpto >= today;
-
                 if(currentTab === 'active') return isActive;
                 if(currentTab === 'expired') return !isActive;
-                if(currentTab === 'dues') return s.remainingDue > 0;
-                if(currentTab === 'promise') return s.promiseDate === today;
+                if(currentTab === 'dues') return (s.remainingDue || 0) > 0;
+                if(currentTab === 'promise') return (s.remainingDue || 0) > 0 && s.promiseDate && s.promiseDate <= today;
                 return true;
             });
 
             if(filtered.length === 0) {
-                listContainer.innerHTML = `<div class="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">कोई छात्र रिकॉर्ड नहीं मिला।</div>`;
+                listContainer.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center text-gray-500 shadow-sm font-semibold">📭 इस कैटेगरी में कोई छात्र रिकॉर्ड नहीं मिला।</div>`;
                 return;
             }
 
-            filtered.forEach((s, idx) => {
+            filtered.forEach(s => {
                 const originalIndex = students.indexOf(s);
-                const today = new Date().toISOString().split('T')[0];
                 const isActive = s.validUpto >= today;
-                const totalPaid = s.paymentHistory.reduce((acc, cur) => acc + cur.amount, 0);
+                const totalPaid = (s.paymentHistory || []).reduce((acc, cur) => acc + (parseFloat(cur.amount) || 0), 0);
+                const delayCount = s.promiseHistory ? s.promiseHistory.length : 0;
+                const avatar = s.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(s.fullName) + '&background=5c061c&color=fff';
 
                 let card = document.createElement('div');
-                card.className = `bg-white p-4 rounded-xl shadow-md border-l-4 ${isActive ? 'border-green-600' : 'border-red-600'}`;
+                card.className = `bg-white p-4 rounded-2xl shadow-sm hover:shadow-md transition border-l-8 ${isActive ? 'border-green-600' : 'border-red-600'}`;
                 card.innerHTML = `
-                    <div class="flex justify-between items-start gap-3">
-                        <div class="flex items-center gap-3">
-                            <img src="${s.photo || 'https://via.placeholder.com/60'}" class="w-12 h-12 rounded-full object-cover border cursor-pointer shadow" onclick="zoomImage('${s.photo}')" title="Click to Zoom">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div class="flex items-center gap-3.5">
+                            <img src="${avatar}" class="w-16 h-16 rounded-full object-cover border-2 border-red-900 cursor-pointer shadow-sm hover:scale-105 transition" onclick="zoomImage('${avatar}', '${s.fullName}')" title="फोटो बड़ा देखने के लिए क्लिक करें">
                             <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="bg-red-900 text-white text-xs px-2 py-0.5 rounded font-bold">ID #${s.uniId}</span>
-                                    <h3 class="font-bold text-gray-800 text-base">${s.fullName} (${s.gender})</h3>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="theme-maroon text-white text-xs px-2.5 py-0.5 rounded-md font-extrabold">ID: ${s.uniId}</span>
+                                    <h3 onclick="openProfileModal(${originalIndex})" class="font-extrabold text-gray-900 text-base md:text-lg cursor-pointer hover:text-red-800 underline">${s.fullName}</h3>
+                                    <span class="text-xs text-gray-500">(${s.gender})</span>
+                                    ${delayCount > 1 ? `<span class="bg-red-100 text-red-800 text-[11px] font-extrabold px-2 py-0.5 rounded-full">⚠️ ${delayCount} बार डेट बढ़ाया</span>` : ''}
                                 </div>
-                                <p class="text-xs text-gray-600 mt-1">📞 <a href="tel:${s.mobile}" class="text-blue-700 font-bold underline">+91 ${s.mobile}</a> | 🏡 ${s.address}</p>
-                                <p class="text-xs text-indigo-700 font-semibold mt-0.5">📚 ${s.studyCourse} | ⏱️ ${s.shiftPlan}</p>
+                                <p class="text-xs md:text-sm text-gray-700 mt-1">
+                                    📞 <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold underline hover:text-blue-900">${s.mobile}</a> (Click to Call) | 📍 ${s.address}
+                                </p>
+                                <p class="text-xs text-indigo-700 font-bold mt-0.5">📚 ${s.studyCourse} | ⏱️ ${s.shiftPlan}</p>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <span class="text-xs px-2 py-1 rounded font-semibold ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                ${isActive ? '🟢 Active' : '🔴 Expired'}
+
+                        <div class="text-left md:text-right w-full md:w-auto bg-gray-50 md:bg-transparent p-2.5 md:p-0 rounded-xl border md:border-0">
+                            <span class="inline-block text-xs px-3 py-1 rounded-full font-extrabold ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${isActive ? '🟢 ACTIVE MEMBER' : '🔴 EXPIRED'}
                             </span>
-                            <p class="text-xs text-gray-500 mt-1">Valid Upto: <b>${s.validUpto}</b></p>
+                            <p class="text-xs text-gray-600 mt-1">📅 Admission: <b>${s.admissionDate || 'N/A'}</b></p>
+                            <p class="text-xs md:text-sm font-extrabold ${isActive ? 'text-gray-800' : 'text-red-600'} mt-0.5">⏳ Expiry: ${s.validUpto}</p>
                         </div>
                     </div>
-                    <div class="mt-3 pt-2 border-t grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                        <div><span class="text-gray-500">Total Paid:</span> <b class="text-green-700">₹${totalPaid}</b></div>
-                        <div><span class="text-gray-500">Remaining Due:</span> <b class="text-red-600">₹${s.remainingDue}</b></div>
-                        <div><span class="text-gray-500">Promise Date:</span> <b>${s.promiseDate || 'None'}</b></div>
-                        <div><span class="text-gray-500">Seat/Locker:</span> <b>${s.seatNo || 'N/A'} / ${s.lockerNo || 'N/A'}</b></div>
+
+                    <!-- Resource & Financial Strip -->
+                    <div class="mt-3 pt-2.5 border-t grid grid-cols-2 md:grid-cols-5 gap-2 text-xs bg-gray-50 p-2.5 rounded-xl">
+                        <div>💺 Seat/Chair: <b>${s.seatNo || '-'} / ${s.chairNo || '-'}</b></div>
+                        <div>🗄️ Locker/Key: <b>${s.lockerNo || '-'} / ${s.keyNo || '-'}</b></div>
+                        <div>✅ Total Paid: <b class="text-green-700">₹${totalPaid}</b></div>
+                        <div>⚠️ Due: <b class="text-red-600">₹${s.remainingDue || 0}</b></div>
+                        <div>📅 Promise: <b class="${s.promiseDate ? 'text-red-700 underline' : 'text-gray-500'}">${s.promiseDate || 'None'}</b></div>
                     </div>
+
+                    <!-- Action Buttons -->
                     <div class="mt-3 flex flex-wrap gap-2 justify-between items-center">
-                        <div class="flex flex-wrap gap-1">
-                            <button onclick="renewStudent(${originalIndex})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold">🔄 Renew</button>
-                            <button onclick="sendWhatsAppReminder(${originalIndex})" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold">💬 WhatsApp Dues</button>
-                            <button onclick="viewProfile(${originalIndex})" class="bg-purple-700 text-white px-3 py-1 rounded text-xs font-semibold">🪪 Profile & Aadhaar</button>
-                            <button onclick="viewHistory(${originalIndex})" class="bg-gray-700 text-white px-3 py-1 rounded text-xs font-semibold">📜 Ledger</button>
-                            <button onclick="editStudent(${originalIndex})" class="bg-amber-600 text-white px-3 py-1 rounded text-xs font-semibold">✏️ Edit</button>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button onclick="openProfileModal(${originalIndex})" class="bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-purple-600">👤 Full Profile & Aadhaar</button>
+                            <button onclick="openIdCardModal(${originalIndex})" class="theme-maroon text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:opacity-90">🪪 ID Card & Share</button>
+                            <button onclick="renewStudent(${originalIndex})" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-500">🔄 Renew Plan</button>
+                            <button onclick="updatePromiseDate(${originalIndex})" class="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-rose-500">📅 Change Promise Date</button>
+                            <button onclick="sendWhatsAppReminder(${originalIndex})" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-green-500">💬 WhatsApp</button>
+                            <button onclick="editStudent(${originalIndex})" class="bg-amber-500 text-black px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-amber-400">✏️ Edit</button>
                         </div>
-                        <button onclick="deleteStudent(${originalIndex})" class="bg-red-600 text-white px-2 py-1 rounded text-xs">🗑️ Delete</button>
+                        <button onclick="deleteStudent(${originalIndex})" class="bg-red-100 text-red-700 hover:bg-red-600 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition">🗑️</button>
                     </div>
                 `;
                 listContainer.appendChild(card);
             });
         }
 
-        function zoomImage(src) {
+        // Promise Date Tracker & Cheating Counter
+        function updatePromiseDate(index) {
+            let s = students[index];
+            let count = s.promiseHistory ? s.promiseHistory.length : 0;
+            let newDate = prompt(`⚠️ ${s.fullName} (Due: ₹${s.remainingDue})\nइस छात्र ने अब तक ${count} बार प्रॉमिस डेट लिया है।\n\nनई प्रॉमिस तारीख (YYYY-MM-DD) दर्ज करें या पैसा मिल गया हो तो 0 लिखें:`, new Date().toISOString().split('T')[0]);
+            if(newDate === null) return;
+            if(newDate === "0") {
+                let paid = parseFloat(s.remainingDue) || 0;
+                s.paymentHistory.push({ date: new Date().toISOString().split('T')[0], amount: paid, mode: 'Cash/Online', period: 'Due Cleared', type: 'Due Payment' });
+                s.remainingDue = 0;
+                s.promiseDate = '';
+                alert(`✅ ${s.fullName} का बकाया ₹${paid} जमा हो गया!`);
+            } else {
+                if(!s.promiseHistory) s.promiseHistory = [];
+                s.promiseHistory.push({ oldDate: s.promiseDate || 'None', newDate: newDate, changedOn: new Date().toISOString().split('T')[0] });
+                s.promiseDate = newDate;
+                alert(`📅 नई प्रॉमिस डेट (${newDate}) दर्ज हो गई। (कुल बार तारीख बदली: ${s.promiseHistory.length})`);
+            }
+            syncAndSave();
+            renderStudents();
+            updateStats();
+        }
+
+        // Complete Profile, Aadhaar & Multi-Year Payment Ledger
+        function openProfileModal(index) {
+            let s = students[index];
+            const avatar = s.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(s.fullName) + '&background=5c061c&color=fff';
+            const pHistory = (s.promiseHistory || []).map((p, i) => `<li class="text-xs text-red-700">👉 <b>${i+1} बार:</b> ${p.oldDate} से बढ़ाकर <b>${p.newDate}</b> किया (तारीख: ${p.changedOn})</li>`).join('');
+            const payRows = (s.paymentHistory || []).map((p, i) => `
+                <tr class="border-b">
+                    <td class="p-2">${i+1}</td>
+                    <td class="p-2 font-semibold">${p.date}</td>
+                    <td class="p-2 text-green-700 font-bold">₹${p.amount}</td>
+                    <td class="p-2">${p.mode}</td>
+                    <td class="p-2 text-gray-600">${p.period || p.type}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('profileModalContent').innerHTML = `
+                <div class="flex flex-col md:flex-row items-center gap-4 bg-gray-50 p-4 rounded-xl border mb-4">
+                    <img src="${avatar}" class="w-24 h-24 rounded-full object-cover border-4 border-red-900 shadow cursor-pointer" onclick="zoomImage('${avatar}', '${s.fullName}')">
+                    <div>
+                        <span class="theme-maroon text-white text-xs px-2.5 py-1 rounded font-bold">Unique ID: ${s.uniId}</span>
+                        <h2 class="text-xl font-extrabold mt-1">${s.fullName} (${s.gender})</h2>
+                        <p class="text-sm text-gray-700">📞 Mobile: <a href="tel:${s.mobile}" class="text-blue-700 font-bold underline">${s.mobile}</a> | Guardian: ${s.guardianMobile || 'N/A'}</p>
+                        <p class="text-xs text-gray-600">🎂 DOB: ${s.dob || 'N/A'} | 📍 Address: ${s.address}</p>
+                        <p class="text-xs font-bold text-indigo-700 mt-1">📚 Course: ${s.studyCourse} | ⏱️ Shift: ${s.shiftPlan}</p>
+                        <p class="text-xs font-bold text-gray-800 mt-1">📅 Original Admission: ${s.admissionDate} | ⏳ Current Expiry: <span class="text-red-600">${s.validUpto}</span></p>
+                    </div>
+                </div>
+
+                <!-- Promise Date / Cheating History -->
+                <div class="bg-red-50 p-3.5 rounded-xl border border-red-200 mb-4">
+                    <h4 class="text-xs font-extrabold text-red-900 mb-1">⚠️ Promise Date & Delay History (कितनी बार तारीख बढ़ाई: ${(s.promiseHistory || []).length})</h4>
+                    ${pHistory ? `<ul class="space-y-1">${pHistory}</ul>` : `<p class="text-xs text-gray-500">कोई प्रॉमिस डेट रिकॉर्ड नहीं है।</p>`}
+                </div>
+
+                <!-- Aadhaar Card Front & Back -->
+                <h4 class="text-sm font-extrabold theme-maroon-text mb-2">🆔 Uploaded Aadhaar Card (Click to Zoom)</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    <div class="border p-2 rounded-xl bg-gray-50 text-center">
+                        <p class="text-xs font-bold text-gray-600 mb-1">Aadhaar Front</p>
+                        ${s.aadhaarFront ? `<img src="${s.aadhaarFront}" onclick="zoomImage('${s.aadhaarFront}', 'Aadhaar Front - ${s.fullName}')" class="h-36 mx-auto object-contain rounded cursor-pointer border">` : `<p class="text-xs text-gray-400 py-10">Not Uploaded</p>`}
+                    </div>
+                    <div class="border p-2 rounded-xl bg-gray-50 text-center">
+                        <p class="text-xs font-bold text-gray-600 mb-1">Aadhaar Back</p>
+                        ${s.aadhaarBack ? `<img src="${s.aadhaarBack}" onclick="zoomImage('${s.aadhaarBack}', 'Aadhaar Back - ${s.fullName}')" class="h-36 mx-auto object-contain rounded cursor-pointer border">` : `<p class="text-xs text-gray-400 py-10">Not Uploaded</p>`}
+                    </div>
+                </div>
+
+                <!-- Complete Payment Ledger -->
+                <h4 class="text-sm font-extrabold theme-maroon-text mb-2">📜 Complete Payment Ledger (साल भर का पूरा हिसाब)</h4>
+                <div class="overflow-x-auto border rounded-xl">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-gray-100 font-bold">
+                            <tr><th class="p-2">#</th><th class="p-2">Date</th><th class="p-2">Amount</th><th class="p-2">Mode</th><th class="p-2">Period / Details</th></tr>
+                        </thead>
+                        <tbody>${payRows}</tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+        function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
+
+        // ID Card Generation & Clean Screenshot Mode
+        function openIdCardModal(index) {
+            let s = students[index];
+            const avatar = s.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(s.fullName) + '&background=5c061c&color=fff';
+            if(libraryLogo) {
+                document.getElementById('idCardLogo').src = libraryLogo;
+                document.getElementById('idCardLogo').classList.remove('hidden');
+                document.getElementById('idCardEmoji').classList.add('hidden');
+            }
+            document.getElementById('idPhoto').src = avatar;
+            document.getElementById('idUniId').innerText = `ID: ${s.uniId}`;
+            document.getElementById('idFullName').innerText = s.fullName;
+            document.getElementById('idCourse').innerText = s.studyCourse;
+            document.getElementById('idMobile').innerText = s.mobile;
+            document.getElementById('idShift').innerText = s.shiftPlan;
+            document.getElementById('idSeatChair').innerText = `${s.seatNo || 'N/A'} / ${s.chairNo || 'N/A'}`;
+            document.getElementById('idLockerKey').innerText = `${s.lockerNo || 'N/A'} / ${s.keyNo || 'N/A'}`;
+            document.getElementById('idAdmDate').innerText = s.admissionDate || 'N/A';
+            document.getElementById('idValid').innerText = s.validUpto;
+
+            document.getElementById('idWhatsappBtn').onclick = function() {
+                let msg = `प्रिय ${s.fullName}, नमस्ते! 🙏\n\n*बुद्धा लाइब्रेरी (A Unit of Flair Foundation)* में आपका स्वागत है।\n\n🪪 *आपका डिजिटल आईडी कार्ड विवरण:*\n• *ID:* ${s.uniId}\n• *नाम:* ${s.fullName}\n• *कोर्स:* ${s.studyCourse}\n• *शिफ्ट:* ${s.shiftPlan}\n• *सीट/चेयर:* ${s.seatNo || 'N/A'} / ${s.chairNo || 'N/A'}\n• *वैधता (Valid Upto):* ${s.validUpto}\n\n📍 पता: कच्ची दरगाह, पटना | 📞 7050668855`;
+                window.open(`https://wa.me/91${s.mobile}?text=${encodeURIComponent(msg)}`, '_blank');
+            };
+
+            document.getElementById('idCardActions').classList.remove('hidden');
+            document.getElementById('idCardModal').classList.remove('hidden');
+        }
+        function toggleIdCardButtons() {
+            document.getElementById('idCardActions').classList.toggle('hidden');
+        }
+        function closeIdCardModal() { document.getElementById('idCardModal').classList.add('hidden'); }
+
+        function zoomImage(src, title) {
             if(!src) return;
             document.getElementById('zoomedImg').src = src;
+            document.getElementById('zoomTitle').innerText = title || 'Photo';
             document.getElementById('zoomModal').classList.remove('hidden');
         }
         function closeZoom() { document.getElementById('zoomModal').classList.add('hidden'); }
-
-        function viewProfile(index) {
-            let s = students[index];
-            let win = window.open('', '_blank');
-            win.document.write(`
-                <html>
-                <head><title>Student Profile - ${s.fullName}</title>
-                <script src="https://cdn.tailwindcss.com"></script></head>
-                <body class="p-6 bg-gray-100 max-w-2xl mx-auto">
-                    <div class="bg-white p-6 rounded-xl shadow-lg border text-center">
-                        <h2 class="text-xl font-bold text-red-900">🏛️ BUDDHA LIBRARY</h2>
-                        <p class="text-xs text-gray-500">A Unit of Flair Foundation | Kachchhi Dargah, Patna</p>
-                        <hr class="my-4">
-                        <img src="${s.photo}" class="w-28 h-28 rounded-full mx-auto object-cover border-4 border-red-900 shadow">
-                        <h3 class="text-lg font-bold mt-2">${s.fullName} (ID #${s.uniId})</h3>
-                        <p class="text-sm text-gray-600">Mobile: +91 ${s.mobile} | Gender: ${s.gender}</p>
-                        <p class="text-sm text-indigo-700 font-semibold">Course: ${s.studyCourse} | Shift: ${s.shiftPlan}</p>
-                        <div class="grid grid-cols-2 gap-4 mt-6 text-left">
-                            <div class="bg-gray-50 p-3 rounded border">
-                                <p class="text-xs font-bold text-gray-500 mb-1">Aadhaar Front:</p>
-                                <img src="${s.aadhaarFront || 'https://via.placeholder.com/150'}" class="w-full h-32 object-cover rounded">
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded border">
-                                <p class="text-xs font-bold text-gray-500 mb-1">Aadhaar Back:</p>
-                                <img src="${s.aadhaarBack || 'https://via.placeholder.com/150'}" class="w-full h-32 object-cover rounded">
-                            </div>
-                        </div>
-                        <button onclick="window.print()" class="mt-6 bg-red-900 text-white px-6 py-2 rounded-lg text-sm font-semibold">🖨️ Print / Download ID Profile</button>
-                    </div>
-                </body>
-                </html>
-            `);
-        }
 
         function setTab(tab) {
             currentTab = tab;
             ['all', 'active', 'expired', 'dues', 'promise'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
-                if(t === tab) btn.className = "px-4 py-2 rounded-xl text-xs font-bold theme-maroon text-white shadow";
-                else btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow";
+                if(t === tab) btn.className = "px-4 py-2 rounded-xl text-xs md:text-sm font-bold theme-maroon text-white shadow";
+                else btn.className = "px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-white text-gray-700 shadow";
             });
             renderStudents();
         }
 
-        function filterStudents() { renderStudents(); }
-
         function renewStudent(index) {
             let s = students[index];
-            let amount = prompt(`Enter renewal amount received for ${s.fullName}:`, "299");
+            let months = parseInt(prompt(`🔄 ${s.fullName} का कितने महीने के लिए रिन्यूअल करना है? (1, 3, 6, या 12):`, "1")) || 1;
+            let amount = prompt(`💵 प्राप्त रिन्यूअल राशि (₹) दर्ज करें:`, "299");
             if(amount === null) return;
-            let mode = confirm("Click OK for Cash, Cancel for Online/UPI") ? "Cash" : "Online / UPI";
+            let mode = confirm("Cash के लिए OK दबाएं, Online/UPI के लिए Cancel दबाएं") ? "Cash" : "Online / UPI";
 
-            let startDate = new Date(s.validUpto);
+            let oldExpiry = s.validUpto;
+            let baseDate = new Date(s.validUpto);
             let today = new Date();
-            if(startDate < today) startDate = today;
+            if(baseDate < today) baseDate = today;
 
-            startDate.setDate(startDate.getDate() + 28);
-            let newValidUpto = startDate.toISOString().split('T')[0];
+            baseDate.setDate(baseDate.getDate() + (30 * months));
+            let newValidUpto = baseDate.toISOString().split('T')[0];
 
             s.validUpto = newValidUpto;
-            s.paymentHistory.push({ date: new Date().toISOString().split('T')[0], amount: parseFloat(amount) || 0, mode, type: 'Renewal' });
+            s.paymentHistory.push({
+                date: new Date().toISOString().split('T')[0],
+                amount: parseFloat(amount) || 0,
+                mode: mode,
+                period: `${oldExpiry} to ${newValidUpto} (${months}M)`,
+                type: 'Renewal'
+            });
             
             syncAndSave();
             renderStudents();
             updateStats();
-            alert(`✅ Renewal successful! Next expiry updated to ${newValidUpto}`);
+            alert(`✅ रिन्यूअल सफल! नई एक्सपायरी तारीख: ${newValidUpto}`);
         }
 
         function sendWhatsAppReminder(index) {
             let s = students[index];
-            let msg = `प्रिय ${s.fullName}, नमस्ते!\nबुद्धा लाइब्रेरी (A Unit of Flair Foundation) से सूचित किया जाता है कि आपका कुल बकाया (Due) ₹${s.remainingDue} है। कृपया यथाशीघ्र भुगतान करें।\nहेल्पलाइन: 7050668855`;
-            let url = `https://wa.me/91${s.mobile}?text=${encodeURIComponent(msg)}`;
-            window.open(url, '_blank');
-        }
-
-        function viewHistory(index) {
-            let s = students[index];
-            let historyText = s.paymentHistory.map((p, i) => `${i+1}. Date: ${p.date} | ₹${p.amount} (${p.mode}) - [${p.type}]`).join('\n');
-            let total = s.paymentHistory.reduce((acc, cur) => acc + cur.amount, 0);
-            alert(`📜 Payment Ledger for ${s.fullName} (ID #${s.uniId}):\n\n${historyText}\n\n------------------\nTotal Paid Till Date: ₹${total}`);
+            let msg = '';
+            if((s.remainingDue || 0) > 0) {
+                msg = `प्रिय ${s.fullName}, नमस्ते! 🙏\n\n*बुद्धा लाइब्रेरी (A Unit of Flair Foundation)* से याद दिलाया जाता है कि आपकी लाइब्रेरी फीस का *₹${s.remainingDue}* बकाया (Due) है${s.promiseDate ? ` (प्रॉमिस डेट: ${s.promiseDate})` : ''}।\n\nकृपया इसे यथाशीघ्र जमा करने का कष्ट करें।\n📍 कच्ची दरगाह, पटना | 📞 7050668855`;
+            } else {
+                msg = `प्रिय ${s.fullName}, नमस्ते! 🙏\n\n*बुद्धा लाइब्रेरी (A Unit of Flair Foundation)* से सूचित किया जाता है कि आपकी मेंबरशिप की वैधता *${s.validUpto}* तक है। कृपया समय पर रिन्यूअल करा लें।\n📍 कच्ची दरगाह, पटना | 📞 7050668855`;
+            }
+            window.open(`https://wa.me/91${s.mobile}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         function editStudent(index) {
             let s = students[index];
             document.getElementById('editIndex').value = index;
-            document.getElementById('formTitle').innerText = "✏️ Edit Student Record";
+            document.getElementById('formTitle').innerText = `✏️ Edit Student: ${s.fullName} (ID: ${s.uniId})`;
             document.getElementById('uniId').value = s.uniId;
             document.getElementById('seatNo').value = s.seatNo || '';
+            document.getElementById('chairNo').value = s.chairNo || '';
             document.getElementById('lockerNo').value = s.lockerNo || '';
+            document.getElementById('keyNo').value = s.keyNo || '';
             document.getElementById('fullName').value = s.fullName;
             document.getElementById('gender').value = s.gender;
             document.getElementById('mobile').value = s.mobile;
@@ -691,7 +879,7 @@
         }
 
         function deleteStudent(index) {
-            if(confirm("⚠️ क्या आप वाकई इस छात्र का रिकॉर्ड डिलीट करना चाहते हैं?")) {
+            if(confirm(`⚠️ क्या आप वाकई "${students[index].fullName}" का रिकॉर्ड डिलीट करना चाहते हैं?`)) {
                 students.splice(index, 1);
                 syncAndSave();
                 renderStudents();
@@ -699,6 +887,7 @@
             }
         }
 
+        // Expense Tracker
         function openExpenseModal() { document.getElementById('expenseModal').classList.remove('hidden'); renderExpenses(); }
         function closeExpenseModal() { document.getElementById('expenseModal').classList.add('hidden'); }
         function saveExpense(e) {
@@ -710,31 +899,33 @@
             expenses.push({ title, amount, date, mode });
             localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
             document.getElementById('expenseForm').reset();
-            document.getElementById('expDate').valueAsDate = new Date();
+            document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
             renderExpenses();
-            updateStats();
         }
         function renderExpenses() {
             let container = document.getElementById('expenseList');
             container.innerHTML = '';
-            if(expenses.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center">कोई खर्च दर्ज नहीं है।</p>`; return; }
+            if(expenses.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-4">कोई खर्च दर्ज नहीं है।</p>`; return; }
             expenses.forEach((ex, i) => {
-                container.innerHTML += `<div class="flex justify-between items-center bg-gray-50 p-2 rounded border"><div><b>${ex.title}</b> - ₹${ex.amount} (${ex.mode})</div><div class="text-gray-500">${ex.date} <button onclick="deleteExpense(${i})" class="text-red-500 ml-2">❌</button></div></div>`;
+                container.innerHTML += `<div class="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg border"><div><b>${ex.title}</b> - <span class="text-red-600 font-bold">₹${ex.amount}</span> (${ex.mode})</div><div class="text-gray-500">${ex.date} <button onclick="deleteExpense(${i})" class="text-red-500 ml-2 font-bold">✖</button></div></div>`;
             });
         }
         function deleteExpense(i) {
             expenses.splice(i, 1);
             localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
             renderExpenses();
-            updateStats();
         }
 
+        // Birthday List with Direct WhatsApp Wish
         function openBirthdayList() {
             const todayStr = new Date().toISOString().split('T')[0].slice(5);
             let bdays = students.filter(s => s.dob && s.dob.slice(5) === todayStr);
             if(bdays.length === 0) { alert("🎂 आज किसी भी छात्र का जन्मदिन नहीं है।"); return; }
-            let msg = bdays.map(b => `🎉 प्रिय ${b.fullName} (ID #${b.uniId}) को जन्मदिन की हार्दिक शुभकामनाएँ! 🎂`).join('\n\n');
-            alert(`🎂 Today's Birthday Students:\n\n${msg}`);
+            let b = bdays[0];
+            if(confirm(`🎂 आज प्रिय ${b.fullName} (ID: ${b.uniId}) का जन्मदिन है!\n\nक्या आप उन्हें WhatsApp पर बधाई संदेश भेजना चाहते हैं?`)) {
+                let msg = `प्रिय ${b.fullName}, नमस्ते! 🎂🎉\n\n*बुद्धा लाइब्रेरी (A Unit of Flair Foundation)* परिवार की ओर से आपको जन्मदिन की हार्दिक शुभकामनाएँ! ईश्वर से प्रार्थना है कि आप अपनी पढ़ाई और जीवन में जल्द से जल्द बड़ी सफलता प्राप्त करें। 🌟📚\n\n📍 कच्ची दरगाह, पटना`;
+                window.open(`https://wa.me/91${b.mobile}?text=${encodeURIComponent(msg)}`, '_blank');
+            }
         }
 
         function updateStats() {
@@ -746,12 +937,25 @@
             const currentMonthPrefix = today.slice(0, 7);
             let totalCol = 0;
             students.forEach(s => {
-                s.paymentHistory.forEach(p => {
-                    if(p.date.startsWith(currentMonthPrefix)) totalCol += p.amount;
+                (s.paymentHistory || []).forEach(p => {
+                    if(p.date && p.date.startsWith(currentMonthPrefix)) totalCol += (parseFloat(p.amount) || 0);
                 });
             });
             document.getElementById('statCollection').innerText = `₹${totalCol}`;
-            document.getElementById('statDues').innerText = `₹${students.reduce((acc, cur) => acc + (cur.remainingDue || 0), 0)}`;
+            document.getElementById('statDues').innerText = `₹${students.reduce((acc, cur) => acc + (parseFloat(cur.remainingDue) || 0), 0)}`;
+
+            // Promise Alert Badge
+            const promiseDueToday = students.filter(s => (s.remainingDue || 0) > 0 && s.promiseDate && s.promiseDate <= today).length;
+            const pBadge = document.getElementById('promiseBadge');
+            if(promiseDueToday > 0) { pBadge.innerText = promiseDueToday; pBadge.classList.remove('hidden'); }
+            else { pBadge.classList.add('hidden'); }
+
+            // Birthday Badge
+            const todayStr = today.slice(5);
+            const bdayCount = students.filter(s => s.dob && s.dob.slice(5) === todayStr).length;
+            const bBadge = document.getElementById('bdayBadge');
+            if(bdayCount > 0) { bBadge.innerText = bdayCount; bBadge.classList.remove('hidden'); }
+            else { bBadge.classList.add('hidden'); }
         }
 
         function openCloudSyncModal() {
@@ -763,8 +967,11 @@
             firebaseDbUrl = document.getElementById('firebaseUrlInput').value.trim();
             localStorage.setItem('buddha_library_firebase_url', firebaseDbUrl);
             closeCloudSyncModal();
-            if(firebaseDbUrl) fetchFromFirebase();
-            alert("✅ Cloud Sync URL Saved!");
+            if(firebaseDbUrl) {
+                document.getElementById('syncDot').classList.replace('bg-red-600', 'bg-green-600');
+                fetchFromFirebase();
+            }
+            alert("✅ Cloud Sync URL जुड़ गया!");
         }
 
         function syncAndSave() {
@@ -776,20 +983,20 @@
         function pushToFirebase() {
             if(!firebaseDbUrl) return;
             let url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
-            fetch(url, { method: 'PUT', body: JSON.stringify(students) }).catch(err => console.log('Firebase Sync Error:', err));
+            fetch(url, { method: 'PUT', body: JSON.stringify(students) }).catch(err => console.log('Sync Error:', err));
         }
 
         function fetchFromFirebase() {
             if(!firebaseDbUrl) return;
             let url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
             fetch(url).then(res => res.json()).then(data => {
-                if(data) {
+                if(data && Array.isArray(data)) {
                     students = data;
                     localStorage.setItem('buddha_library_students', JSON.stringify(students));
                     renderStudents();
                     updateStats();
                 }
-            }).catch(err => console.log('Firebase Fetch Error:', err));
+            }).catch(err => console.log('Fetch Error:', err));
         }
 
         function exportDriveBackup() {
@@ -815,9 +1022,9 @@
                         students = JSON.parse(readerEvent.target.result);
                         syncAndSave();
                         renderStudents();
-                        alert("✅ Data Restored Successfully!");
-                    } catch(err) { alert("❌ Invalid Backup File!"); }
-                }
+                        alert("✅ डेटा सफलतापूर्वक रीस्टोर हो गया!");
+                    } catch(err) { alert("❌ गलत बैकअप फाइल!"); }
+                };
             };
             input.click();
         }
