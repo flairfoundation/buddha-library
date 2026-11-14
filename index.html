@@ -14,7 +14,8 @@
         .theme-border { border-color: #5c061c; }
         .fade-in { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .text-justify-clean { text-align: justify; text-justify: inter-word; }
+        /* Special styling so html2canvas never clips text */
+        .id-text-safe { line-height: 1.45 !important; padding-top: 1px; padding-bottom: 2px; word-break: break-word; }
         @media print {
             .no-print { display: none !important; }
             body { background: #fff !important; }
@@ -32,22 +33,21 @@
             <input type="password" id="appPinInput" maxlength="4" inputmode="numeric" onkeydown="if(event.key==='Enter') verifyAppPin()" class="w-full text-center text-2xl font-extrabold tracking-widest border-2 border-slate-300 rounded-xl p-2.5 mb-3 focus:outline-none focus:border-red-900" placeholder="••••">
             <button onclick="verifyAppPin()" class="w-full theme-maroon text-white py-2.5 rounded-xl font-bold shadow-md hover:opacity-95 transition">🔓 Unlock Dashboard</button>
             <p id="pinErrorMsg" class="text-red-600 text-xs font-bold mt-2 hidden">❌ गलत पिन! कृपया सही 4-डिजिट पिन डालें।</p>
-            <button onclick="openForgotPin()" class="text-xs text-blue-700 font-semibold underline mt-4 inline-block">Forgot / Reset PIN?</button>
+            <button onclick="openForgotPin()" class="text-xs text-blue-700 font-semibold mt-4 inline-block">Forgot / Reset PIN?</button>
         </div>
     </div>
 
     <!-- Main Application Wrapper -->
     <div id="mainApp" class="max-w-7xl mx-auto p-2.5 sm:p-4 hidden fade-in">
 
-        <!-- 2. Clean Professional Header with 3-Line Menu -->
-        <header class="theme-maroon text-white p-4 sm:p-5 rounded-2xl shadow-lg mb-4 relative">
-            <!-- Top Right Hamburger Menu Button -->
+        <!-- 2. Clean Professional Header (No Underline on Helpline) -->
+        <header class="theme-maroon text-white p-4 sm:p-5 rounded-2xl shadow-lg mb-3 relative">
             <div class="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2">
                 <span id="syncStatusDot" title="Cloud Sync Status" class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block shadow"></span>
                 <button onclick="toggleHeaderMenu()" class="bg-white bg-opacity-15 hover:bg-opacity-25 text-white px-3 py-1.5 rounded-xl font-extrabold text-lg shadow transition">☰</button>
             </div>
 
-            <!-- Dropdown Menu inside Header -->
+            <!-- 3-Line Dropdown Menu -->
             <div id="headerDropdown" class="hidden absolute top-14 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-56 py-2 z-40 text-xs font-bold fade-in">
                 <button onclick="openLogoModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">🖼️ Set Library Logo</button>
                 <button onclick="openCloudSyncModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">☁️ Firebase Cloud Sync</button>
@@ -59,7 +59,6 @@
                 <button onclick="logoutApp()" class="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-2 text-red-600">🔒 Lock / Logout</button>
             </div>
 
-            <!-- Center Brand Identity -->
             <div class="flex flex-col items-center justify-center text-center">
                 <div class="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center text-2xl shadow-md mb-1.5 border-2 border-yellow-400 overflow-hidden">
                     <img id="headerLogoImg" src="" class="w-full h-full object-cover hidden">
@@ -67,12 +66,41 @@
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold tracking-wider leading-tight">BUDDHA LIBRARY</h1>
                 <p class="text-xs sm:text-sm text-yellow-300 font-bold tracking-wide">A Unit of Flair Foundation</p>
-                <p class="text-[11px] sm:text-xs text-slate-200 mt-1">📍 Kachchhi Dargah, Patna | 📞 Helpline: <a href="tel:7050668855" class="underline font-bold">7050668855</a></p>
+                <p class="text-[11px] sm:text-xs text-slate-200 mt-1">📍 Kachchhi Dargah, Patna | 📞 Helpline: <a href="tel:7050668855" class="no-underline font-bold text-white">7050668855</a></p>
             </div>
         </header>
 
-        <!-- 3. Member Status & 5-Box Financial Collection Dashboard -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
+        <!-- 3. Top Priority Search Bar & Quick Filter Tabs (Right at Top for Mobile Convenience) -->
+        <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 mb-3">
+            <div class="flex items-center gap-2 bg-slate-50 px-3.5 py-2.5 rounded-xl border border-slate-300 mb-2.5">
+                <span class="text-base">🔍</span>
+                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search Exact ID (e.g. 1, 99), Mobile Number, or Student Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
+                <button onclick="document.getElementById('searchInput').value=''; resetLimitAndRender();" class="text-xs text-slate-400 hover:text-red-600 font-extrabold px-1">✖</button>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+                <button onclick="setTab('all')" id="tab-all" class="px-3 py-1.5 rounded-xl text-xs font-extrabold theme-maroon text-white shadow-sm">👥 All Members</button>
+                <button onclick="setTab('active')" id="tab-active" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">🟢 Live Active</button>
+                <button onclick="setTab('expired')" id="tab-expired" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">🔴 Expired</button>
+                <button onclick="setTab('dues')" id="tab-dues" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">⚠️ Dues Pending</button>
+                <button onclick="setTab('promise')" id="tab-promise" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">📅 Promise Alerts <span id="promiseCountBadge" class="bg-red-600 text-white px-1.5 py-0.2 rounded-full text-[10px] ml-1 hidden">0</span></button>
+            </div>
+        </div>
+
+        <!-- 4. Primary Action Bar (No Duplicate Vacant Button) -->
+        <div class="flex flex-wrap gap-2 mb-3">
+            <button onclick="toggleAdmissionForm()" class="theme-maroon text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:opacity-95 transition">
+                ➕ New Admission
+            </button>
+            <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:bg-indigo-600 transition">
+                📊 Expenses
+            </button>
+            <button onclick="openBirthdayModal()" class="bg-pink-600 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:bg-pink-500 transition">
+                🎂 Birthdays <span id="bdayCountBadge" class="bg-white text-pink-600 px-1.5 py-0.5 rounded-full text-[11px] ml-1 hidden">0</span>
+            </button>
+        </div>
+
+        <!-- 5. Member Status & Single Vacant Finder Card -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2.5">
             <div onclick="setTab('all')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow transition">
                 <p class="text-[11px] text-slate-500 font-bold">👥 Total Members</p>
                 <h3 id="statTotalMembers" class="text-xl font-extrabold text-slate-800">0</h3>
@@ -85,65 +113,40 @@
                 <p class="text-[11px] text-slate-500 font-bold">🔴 Expired Members</p>
                 <h3 id="statExpiredMembers" class="text-xl font-extrabold text-rose-600">0</h3>
             </div>
-            <div onclick="openVacantModal()" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-purple-600 cursor-pointer hover:shadow transition">
-                <p class="text-[11px] text-slate-500 font-bold">💺 Vacant Seats / Lockers</p>
-                <h3 id="statVacantSummary" class="text-sm sm:text-base font-extrabold text-purple-700 mt-1">S: 250 | L: 90</h3>
+            <div onclick="openVacantModal()" class="bg-purple-50 p-3 rounded-xl shadow-sm border-l-4 border-purple-700 cursor-pointer hover:bg-purple-100 transition">
+                <p class="text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="underline text-[10px]">Check ➔</span></p>
+                <h3 id="statVacantSummary" class="text-xs sm:text-sm font-extrabold text-purple-800 mt-1">S: 250 | C: 250 | L: 90</h3>
             </div>
         </div>
 
         <!-- 5-Box Payment Collection & Dues Strip -->
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-4">
-            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 shadow-sm">
-                <p class="text-[11px] text-emerald-800 font-bold">💵 Today's Collection</p>
-                <h4 id="colToday" class="text-lg font-extrabold text-emerald-700">₹0</h4>
+            <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 shadow-sm">
+                <p class="text-[10px] text-emerald-800 font-bold">💵 Today's Collection</p>
+                <h4 id="colToday" class="text-base sm:text-lg font-extrabold text-emerald-700">₹0</h4>
             </div>
-            <div class="bg-blue-50 p-3 rounded-xl border border-blue-200 shadow-sm">
-                <p class="text-[11px] text-blue-800 font-bold">📅 This Month</p>
-                <h4 id="colThisMonth" class="text-lg font-extrabold text-blue-700">₹0</h4>
+            <div class="bg-blue-50 p-2.5 rounded-xl border border-blue-200 shadow-sm">
+                <p class="text-[10px] text-blue-800 font-bold">📅 This Month</p>
+                <h4 id="colThisMonth" class="text-base sm:text-lg font-extrabold text-blue-700">₹0</h4>
             </div>
-            <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-200 shadow-sm">
-                <p class="text-[11px] text-indigo-800 font-bold">⏮️ Last Month</p>
-                <h4 id="colLastMonth" class="text-lg font-extrabold text-indigo-700">₹0</h4>
+            <div class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 shadow-sm">
+                <p class="text-[10px] text-indigo-800 font-bold">⏮️ Last Month</p>
+                <h4 id="colLastMonth" class="text-base sm:text-lg font-extrabold text-indigo-700">₹0</h4>
             </div>
-            <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 shadow-sm">
-                <p class="text-[11px] text-amber-900 font-bold">🏦 This Year Total</p>
-                <h4 id="colThisYear" class="text-lg font-extrabold text-amber-800">₹0</h4>
+            <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-200 shadow-sm">
+                <p class="text-[10px] text-amber-900 font-bold">🏦 This Year Total</p>
+                <h4 id="colThisYear" class="text-base sm:text-lg font-extrabold text-amber-800">₹0</h4>
             </div>
-            <div onclick="setTab('dues')" class="col-span-2 sm:col-span-1 bg-red-50 p-3 rounded-xl border border-red-200 shadow-sm cursor-pointer hover:bg-red-100 transition">
-                <p class="text-[11px] text-red-800 font-bold">⚠️ Total Pending Dues</p>
-                <h4 id="colTotalDues" class="text-lg font-extrabold text-red-600">₹0</h4>
-            </div>
-        </div>
-
-        <!-- 4. Primary Action Buttons & Smart Search Bar -->
-        <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4">
-            <div class="flex flex-wrap gap-2">
-                <button onclick="toggleAdmissionForm()" class="theme-maroon text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow hover:opacity-95 transition">
-                    ➕ New Admission
-                </button>
-                <button onclick="openVacantModal()" class="bg-teal-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow hover:bg-teal-600 transition">
-                    💺 Vacant Finder (250/90)
-                </button>
-                <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow hover:bg-indigo-600 transition">
-                    📊 Expenses
-                </button>
-                <button onclick="openBirthdayModal()" class="bg-pink-600 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow hover:bg-pink-500 transition">
-                    🎂 Birthdays <span id="bdayCountBadge" class="bg-white text-pink-600 px-1.5 py-0.5 rounded-full text-[11px] ml-1 hidden">0</span>
-                </button>
-            </div>
-
-            <!-- Precision Search Box -->
-            <div class="bg-white px-3.5 py-2 rounded-xl shadow-sm border border-slate-300 flex items-center gap-2 flex-grow max-w-md">
-                <span>🔍</span>
-                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search Exact ID (e.g. 1, 99), 10-Digit Mobile or Name..." class="w-full text-xs sm:text-sm outline-none font-semibold">
-                <button onclick="document.getElementById('searchInput').value=''; resetLimitAndRender();" class="text-xs text-slate-400 hover:text-red-600 font-bold">✖</button>
+            <div onclick="setTab('dues')" class="col-span-2 sm:col-span-1 bg-red-50 p-2.5 rounded-xl border border-red-200 shadow-sm cursor-pointer hover:bg-red-100 transition">
+                <p class="text-[10px] text-red-800 font-bold">⚠️ Total Pending Dues</p>
+                <h4 id="colTotalDues" class="text-base sm:text-lg font-extrabold text-red-600">₹0</h4>
             </div>
         </div>
 
-        <!-- 5. Collapsible Admission / Edit Form -->
+        <!-- 6. Collapsible Admission / Edit Form (Unlocked Editable Dates) -->
         <div id="admissionFormBox" class="bg-white p-4 sm:p-5 rounded-2xl shadow-xl mb-5 hidden border-2 theme-border fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-4">
-                <h2 id="formHeading" class="text-base sm:text-lg font-extrabold theme-maroon-text">📝 Student Admission Form (28-Day Cycle)</h2>
+                <h2 id="formHeading" class="text-base sm:text-lg font-extrabold theme-maroon-text">📝 Student Admission & Plan Form (28-Day Cycle)</h2>
                 <button type="button" onclick="toggleAdmissionForm()" class="text-slate-400 hover:text-red-600 font-bold text-lg">✖</button>
             </div>
 
@@ -151,7 +154,7 @@
                 <input type="hidden" id="editIndex" value="">
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Unique ID * (1 to 1000 Only)</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Unique ID * (1 to 1000)</label>
                     <input type="number" id="uniId" min="1" max="1000" required class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-red-900 bg-amber-50" placeholder="1 - 1000">
                 </div>
                 <div class="sm:col-span-2">
@@ -160,37 +163,37 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">📞 Mobile * (Exact 10 Digits)</label>
-                    <input type="tel" id="mobile" required pattern="[0-9]{10}" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="w-full border border-slate-300 p-2 rounded-lg font-bold" placeholder="10-digit number">
+                    <input type="tel" id="mobile" required pattern="[0-9]{10}" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="w-full border border-slate-300 p-2 rounded-lg font-bold" placeholder="10-digit mobile">
                 </div>
 
-                <!-- Separate Optional Resource Digits (S-, C-, L-, K- Auto Formatted) -->
+                <!-- Separate Optional Resource Digits (S-, C-, L-, K-) -->
                 <div class="sm:col-span-2 md:col-span-4 grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">💺 Seat No (1-250 Optional)</label>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">💺 Seat (1-250 Optional)</label>
                         <div class="flex items-center border bg-white rounded-lg overflow-hidden">
-                            <span class="bg-slate-200 px-2.5 py-2 font-extrabold text-slate-700 text-xs">S-</span>
-                            <input type="number" id="seatNo" min="1" max="250" class="w-full p-2 outline-none font-bold" placeholder="Digit only">
+                            <span class="bg-red-900 text-white px-2.5 py-2 font-extrabold text-xs">S-</span>
+                            <input type="number" id="seatNo" min="1" max="250" class="w-full p-2 outline-none font-extrabold text-blue-800" placeholder="Digit">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">🪑 Chair No (1-250 Optional)</label>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">🪑 Chair (1-250 Optional)</label>
                         <div class="flex items-center border bg-white rounded-lg overflow-hidden">
-                            <span class="bg-slate-200 px-2.5 py-2 font-extrabold text-slate-700 text-xs">C-</span>
-                            <input type="number" id="chairNo" min="1" max="250" class="w-full p-2 outline-none font-bold" placeholder="Digit only">
+                            <span class="bg-red-900 text-white px-2.5 py-2 font-extrabold text-xs">C-</span>
+                            <input type="number" id="chairNo" min="1" max="250" class="w-full p-2 outline-none font-extrabold text-blue-800" placeholder="Digit">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">🗄️ Locker No (1-90 Optional)</label>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">🗄️ Locker (1-90 Optional)</label>
                         <div class="flex items-center border bg-white rounded-lg overflow-hidden">
-                            <span class="bg-slate-200 px-2.5 py-2 font-extrabold text-slate-700 text-xs">L-</span>
-                            <input type="number" id="lockerNo" min="1" max="90" class="w-full p-2 outline-none font-bold" placeholder="Digit only">
+                            <span class="bg-red-900 text-white px-2.5 py-2 font-extrabold text-xs">L-</span>
+                            <input type="number" id="lockerNo" min="1" max="90" class="w-full p-2 outline-none font-extrabold text-blue-800" placeholder="Digit">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">🔑 Key No (1-90 Optional)</label>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">🔑 Key (1-90 Optional)</label>
                         <div class="flex items-center border bg-white rounded-lg overflow-hidden">
-                            <span class="bg-slate-200 px-2.5 py-2 font-extrabold text-slate-700 text-xs">K-</span>
-                            <input type="number" id="keyNo" min="1" max="90" class="w-full p-2 outline-none font-bold" placeholder="Digit only">
+                            <span class="bg-red-900 text-white px-2.5 py-2 font-extrabold text-xs">K-</span>
+                            <input type="number" id="keyNo" min="1" max="90" class="w-full p-2 outline-none font-extrabold text-blue-800" placeholder="Digit">
                         </div>
                     </div>
                 </div>
@@ -204,8 +207,8 @@
                     <input type="tel" id="guardianMobile" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="w-full border border-slate-300 p-2 rounded-lg" placeholder="Optional">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">📧 Email ID (For Gmail Notice)</label>
-                    <input type="email" id="emailId" class="w-full border border-slate-300 p-2 rounded-lg" placeholder="Optional email">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">📧 Email ID (Optional)</label>
+                    <input type="email" id="emailId" class="w-full border border-slate-300 p-2 rounded-lg" placeholder="For Gmail reminder">
                 </div>
 
                 <div>
@@ -228,7 +231,6 @@
                     <input type="text" id="otherCourseInput" class="w-full border-2 border-indigo-400 p-2 rounded-lg" placeholder="Type course...">
                 </div>
 
-                <!-- Shift Timing (Clean Label without Price on ID Card) -->
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-bold text-slate-700 mb-1">⏱️ Shift Timing *</label>
                     <select id="shiftPlan" onchange="recalcAdmissionBill()" required class="w-full border border-slate-300 p-2 rounded-lg font-bold">
@@ -241,8 +243,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">🗓️ Package Duration (28d/M)</label>
-                    <select id="durationMonths" onchange="update28DayValidity()" class="w-full border border-slate-300 p-2 rounded-lg font-semibold">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">🗓️ Plan Duration (28d/M) *</label>
+                    <select id="durationMonths" onchange="update28DayValidity()" class="w-full border border-slate-300 p-2 rounded-lg font-bold text-indigo-900 bg-indigo-50">
                         <option value="1">1 Month (28 Days)</option>
                         <option value="3">3 Months (84 Days - 5% Off)</option>
                         <option value="6">6 Months (168 Days - 10% Off)</option>
@@ -251,19 +253,23 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-red-800 mb-1">📅 Admission Date * (Locked)</label>
-                    <input type="date" id="startDate" onchange="update28DayValidity()" required class="w-full border border-slate-300 p-2 rounded-lg font-bold bg-amber-50">
+                    <label class="block text-xs font-bold text-red-800 mb-1">📅 Original Admission Date *</label>
+                    <input type="date" id="admissionDateInput" required class="w-full border border-slate-300 p-2 rounded-lg font-bold bg-amber-50">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">⏳ Valid Upto (28-Day Auto) *</label>
+                    <label class="block text-xs font-bold text-blue-800 mb-1">▶️ Current Cycle Start Date *</label>
+                    <input type="date" id="cycleStartDate" onchange="update28DayValidity()" required class="w-full border-2 border-blue-400 p-2 rounded-lg font-extrabold bg-blue-50">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-emerald-800 mb-1">⏳ Valid Upto (Auto +28d/M) *</label>
                     <input type="date" id="validUpto" required class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-red-700 bg-slate-100">
                 </div>
 
-                <!-- Optional 5% GST Tick Box -->
                 <div class="flex items-center gap-2 bg-amber-50 p-2.5 rounded-xl border border-amber-300">
                     <input type="checkbox" id="applyGstCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-red-900 cursor-pointer">
-                    <label for="applyGstCheck" class="text-xs font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Tax Bill)</label>
+                    <label for="applyGstCheck" class="text-xs font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Optional)</label>
                 </div>
 
                 <div>
@@ -291,19 +297,18 @@
                     </select>
                 </div>
 
-                <!-- High-Definition Compressed Uploads -->
                 <div class="sm:col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">📷 Student Square HD Photo</label>
-                        <input type="file" id="studentPhotoInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'photoBase64', 600, 0.82)">
+                        <input type="file" id="studentPhotoInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'photoBase64', 650, 0.85)">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">🆔 ID Proof / Doc Front (HD)</label>
-                        <input type="file" id="docFrontInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'frontBase64', 1000, 0.85)">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">🆔 Document Front (HD)</label>
+                        <input type="file" id="docFrontInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'frontBase64', 1100, 0.85)">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">🆔 ID Proof / Doc Back (HD)</label>
-                        <input type="file" id="docBackInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'backBase64', 1000, 0.85)">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">🆔 Document Back (HD)</label>
+                        <input type="file" id="docBackInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'backBase64', 1100, 0.85)">
                     </div>
                 </div>
 
@@ -314,19 +319,10 @@
             </form>
         </div>
 
-        <!-- 6. Filter Tabs -->
-        <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-3">
-            <button onclick="setTab('all')" id="tab-all" class="px-3.5 py-2 rounded-xl text-xs font-extrabold theme-maroon text-white shadow">👥 All Members</button>
-            <button onclick="setTab('active')" id="tab-active" class="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-white text-slate-700 shadow">🟢 Live Active</button>
-            <button onclick="setTab('expired')" id="tab-expired" class="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-white text-slate-700 shadow">🔴 Expired</button>
-            <button onclick="setTab('dues')" id="tab-dues" class="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-white text-slate-700 shadow">⚠️ Dues Pending</button>
-            <button onclick="setTab('promise')" id="tab-promise" class="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-white text-slate-700 shadow">📅 Promise Alerts <span id="promiseCountBadge" class="bg-red-600 text-white px-1.5 py-0.5 rounded-full text-[10px] ml-1 hidden">0</span></button>
-        </div>
-
-        <!-- 7. Compact Single-Row / Responsive Grid Student List -->
+        <!-- 7. Compact Student List Container -->
         <div id="studentListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
 
-        <!-- Load More Button for 1500+ Students Speed Optimization -->
+        <!-- Load More Button -->
         <div id="loadMoreWrap" class="text-center mt-5 hidden">
             <button onclick="loadMoreMembers()" class="bg-slate-800 text-white px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-md hover:bg-slate-700">⬇️ Show Next 50 Members</button>
         </div>
@@ -339,10 +335,10 @@
     <div id="vacantModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-3">
         <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
-                <h3 class="text-base sm:text-lg font-extrabold theme-maroon-text">💺 Live Vacant Resource Finder (Green = Vacant, Red = Occupied)</h3>
+                <h3 class="text-base sm:text-lg font-extrabold theme-maroon-text">💺 Live Vacant Resource Finder (250 Seats | 250 Chairs | 90 Lockers)</h3>
                 <button onclick="closeVacantModal()" class="text-slate-500 hover:text-red-600 font-bold text-xl">✖</button>
             </div>
-            <div class="flex gap-2 mb-3">
+            <div class="flex flex-wrap gap-2 mb-3">
                 <button onclick="renderVacantGrid('seat')" id="vTab-seat" class="px-3 py-1.5 rounded-lg text-xs font-extrabold theme-maroon text-white">💺 Seats (S-1 to S-250)</button>
                 <button onclick="renderVacantGrid('chair')" id="vTab-chair" class="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-slate-200 text-slate-700">🪑 Chairs (C-1 to C-250)</button>
                 <button onclick="renderVacantGrid('locker')" id="vTab-locker" class="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-slate-200 text-slate-700">🗄️ Lockers (L-1 to L-90)</button>
@@ -352,99 +348,114 @@
         </div>
     </div>
 
-    <!-- Modal B: Compact HD ID Card with Single Native Image Share Button -->
-    <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-3">
-        <!-- Compact ID Card Area to be Captured as HD PNG -->
-        <div id="idCardCaptureArea" onclick="toggleIdCardBtns()" class="bg-white w-72 rounded-2xl shadow-2xl overflow-hidden border-2 border-amber-500 cursor-pointer select-none">
-            <!-- Header -->
-            <div class="theme-maroon text-white p-3 text-center relative border-b-2 border-amber-400">
-                <div class="w-11 h-11 bg-white rounded-full mx-auto mb-1 flex items-center justify-center text-lg border-2 border-amber-300 overflow-hidden shadow">
-                    <img id="idCardLogoImg" src="" class="w-full h-full object-cover hidden">
-                    <span id="idCardLogoEmoji">🏛️</span>
-                </div>
-                <h2 class="text-base font-extrabold tracking-wider leading-none">BUDDHA LIBRARY</h2>
-                <p class="text-[10px] text-yellow-300 font-bold mt-0.5">A Unit of Flair Foundation</p>
-                <p class="text-[9px] text-slate-200">Kachchhi Dargah, Patna | 📞 7050668855</p>
-            </div>
-
-            <!-- Body -->
-            <div class="p-3.5 text-center bg-gradient-to-b from-white to-slate-50">
-                <!-- Square HD Photo -->
-                <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl mx-auto object-cover border-2 border-red-900 shadow-sm bg-slate-100">
-                
-                <div class="mt-2 inline-block theme-maroon-solid text-white text-xs font-extrabold px-3 py-0.5 rounded-md shadow-sm" id="idCardUniId">ID: 1</div>
-                <h3 id="idCardName" class="text-base font-extrabold text-slate-900 mt-1 leading-snug">Student Name</h3>
-                <p id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5">📞 0000000000</p>
-                <p id="idCardAddress" class="text-[11px] font-semibold text-slate-600 mt-0.5 line-clamp-1">📍 Address</p>
-
-                <!-- Clean Details Box (No Course, No Price) -->
-                <div class="mt-2.5 text-left bg-white p-2.5 rounded-xl border border-slate-200 text-[11px] space-y-1 shadow-inner">
-                    <div class="flex justify-between items-center"><span class="text-slate-500 font-bold">⏱️ Shift:</span> <b id="idCardShift" class="text-slate-900 text-right"></b></div>
-                    <div class="flex justify-between items-center border-t pt-1"><span class="text-slate-500 font-bold">💺 Allocation:</span> <b id="idCardResources" class="text-indigo-800"></b></div>
-                    <div class="flex justify-between items-center border-t pt-1"><span class="text-slate-500 font-bold">📅 Start Date:</span> <b id="idCardStart" class="text-slate-800"></b></div>
-                    <div class="flex justify-between items-center border-t pt-1"><span class="text-slate-500 font-bold">⏳ Valid Upto:</span> <b id="idCardEnd" class="text-emerald-700 font-extrabold"></b></div>
-                    <div id="idCardDueRow" class="flex justify-between items-center border-t pt-1 text-red-600 hidden"><span class="font-extrabold">⚠️ Pending Due:</span> <b id="idCardDueAmt" class="font-extrabold"></b></div>
+    <!-- Modal B: Zero-Crop HD ID Card Modal (With Padded Frame so Corners Never Cut) -->
+    <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2 overflow-y-auto">
+        <!-- Outer Padded Capture Frame (Prevents Corner Clipping on WhatsApp Share) -->
+        <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
+            <div class="bg-white w-[310px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
+                <!-- Header -->
+                <div class="theme-maroon text-white p-3.5 text-center border-b-2 border-amber-400">
+                    <div class="w-12 h-12 bg-white rounded-full mx-auto mb-1.5 flex items-center justify-center text-xl border-2 border-amber-300 overflow-hidden shadow">
+                        <img id="idCardLogoImg" src="" class="w-full h-full object-cover hidden">
+                        <span id="idCardLogoEmoji">🏛️</span>
+                    </div>
+                    <h2 class="text-lg font-extrabold tracking-wider id-text-safe">BUDDHA LIBRARY</h2>
+                    <p class="text-[11px] text-yellow-300 font-bold id-text-safe">A Unit of Flair Foundation</p>
+                    <p class="text-[10px] text-slate-200 id-text-safe">Kachchhi Dargah, Patna | 📞 7050668855</p>
                 </div>
 
-                <div class="mt-2.5 pt-1 flex justify-between items-center text-[9px] text-slate-400 font-bold">
-                    <span>28-Day Cycle</span>
-                    <span>Authorized Signatory</span>
+                <!-- Body: Photo + Side ID & Name (No Clipping) -->
+                <div class="p-4 bg-gradient-to-b from-white to-slate-50">
+                    <div class="flex items-center gap-3.5 mb-3">
+                        <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl object-cover border-2 border-red-900 shadow-sm bg-slate-100 flex-shrink-0">
+                        <div class="text-left min-w-0 flex-grow">
+                            <span id="idCardUniId" class="inline-block theme-maroon-solid text-white text-xs font-extrabold px-3 py-1 rounded-lg shadow-sm id-text-safe">ID: 1</span>
+                            <h3 id="idCardName" class="text-base font-extrabold text-slate-900 mt-1.5 id-text-safe">Student Name</h3>
+                            <p id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-text-safe">📞 0000000000</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 mb-3 text-left">
+                        <p id="idCardAddress" class="text-xs font-bold text-slate-700 id-text-safe">📍 Address</p>
+                    </div>
+
+                    <!-- Clean Details Box (Dual-Color Allocation, Cycle Start & Valid Upto, Due / Not Due, No Footer Text) -->
+                    <div class="text-left bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-2 shadow-sm">
+                        <div class="flex justify-between items-start gap-2">
+                            <span class="text-slate-500 font-bold flex-shrink-0">⏱️ Shift:</span>
+                            <b id="idCardShift" class="text-slate-900 text-right id-text-safe"></b>
+                        </div>
+                        <div class="flex justify-between items-center border-t pt-1.5">
+                            <span class="text-slate-500 font-bold">💺 Seat/Locker:</span>
+                            <span id="idCardResources" class="font-extrabold text-right id-text-safe"></span>
+                        </div>
+                        <div class="flex justify-between items-center border-t pt-1.5">
+                            <span class="text-slate-500 font-bold">▶️ Start Date:</span>
+                            <b id="idCardStart" class="text-blue-800 font-extrabold id-text-safe"></b>
+                        </div>
+                        <div class="flex justify-between items-center border-t pt-1.5">
+                            <span class="text-slate-500 font-bold">⏳ Valid Upto:</span>
+                            <b id="idCardEnd" class="text-emerald-700 font-extrabold id-text-safe"></b>
+                        </div>
+                        <div class="flex justify-between items-center border-t pt-1.5">
+                            <span class="text-slate-500 font-bold">💰 Fee Status:</span>
+                            <b id="idCardDueStatus" class="font-extrabold id-text-safe"></b>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Single Share Option + Close -->
-        <div id="idCardBtnBar" class="mt-4 flex gap-3 justify-center no-print">
+        <div id="idCardBtnBar" class="mt-3 flex gap-3 justify-center no-print">
             <button onclick="shareIdCardAsImage()" id="shareIdBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-lg flex items-center gap-1.5">
                 📤 Share ID Card
             </button>
             <button onclick="closeIdCardModal()" class="bg-slate-600 hover:bg-slate-500 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">✖ Close</button>
         </div>
-        <p id="idCardHint" class="text-[11px] text-slate-300 mt-2 text-center no-print">💡 कार्ड पर टच करने से नीचे के बटन छुप/दिख जाएंगे।</p>
+        <p id="idCardHint" class="text-[11px] text-slate-300 mt-1.5 text-center no-print">💡 कार्ड पर टच करने से बटन छुप/दिख जाएंगे।</p>
     </div>
 
-    <!-- Modal C: Smart 28-Day Renewal & Optional GST Modal -->
+    <!-- Modal C: Smart 1M / 3M / 6M / 12M Renewal Modal with Manual Start Date -->
     <div id="renewModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-3">
         <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-md fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
-                <h3 class="text-base font-extrabold theme-maroon-text">🔄 Renew Plan (28-Day Cycle)</h3>
+                <h3 class="text-base font-extrabold theme-maroon-text">🔄 Plan Renewal (1M / 3M / 6M / 12M)</h3>
                 <button onclick="closeRenewModal()" class="text-slate-400 hover:text-red-600 font-bold">✖</button>
             </div>
             <input type="hidden" id="renewStudentIdx" value="">
             <div id="renewStudentInfo" class="bg-slate-50 p-3 rounded-xl border text-xs mb-3 font-semibold"></div>
 
             <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block font-bold text-slate-700 mb-1">📅 Start Renewal From:</label>
-                    <select id="renewStartMode" onchange="recalcRenewalModal()" class="w-full border p-2 rounded-lg font-bold">
-                        <option value="expiry">Continue from Previous Expiry Date</option>
-                        <option value="today">Start Fresh from Today's Date</option>
-                    </select>
-                </div>
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">🗓️ Duration (28d/M)</label>
-                        <select id="renewMonths" onchange="recalcRenewalModal()" class="w-full border p-2 rounded-lg font-bold">
-                            <option value="1">1 Month (28 Days)</option>
-                            <option value="3">3 Months (5% Off)</option>
-                            <option value="6">6 Months (10% Off)</option>
-                            <option value="12">12 Months (15% Off)</option>
-                        </select>
+                        <label class="block font-bold text-blue-800 mb-1">▶️ Start Date (Manual / Auto) *</label>
+                        <input type="date" id="renewStartDate" onchange="recalcRenewalDates()" class="w-full border-2 border-blue-400 p-2 rounded-lg font-extrabold bg-blue-50">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">⏳ New Valid Upto</label>
-                        <input type="date" id="renewNewValid" class="w-full border p-2 rounded-lg font-extrabold text-red-700 bg-amber-50">
+                        <label class="block font-bold text-slate-700 mb-1">🗓️ Select Plan Package *</label>
+                        <select id="renewMonths" onchange="recalcRenewalDates(); recalcRenewalBill();" class="w-full border p-2 rounded-lg font-extrabold text-indigo-900 bg-indigo-50">
+                            <option value="1">1 Month (28 Days)</option>
+                            <option value="3">3 Months (84 Days - 5% Off)</option>
+                            <option value="6">6 Months (168 Days - 10% Off)</option>
+                            <option value="12">12 Months (336 Days - 15% Off)</option>
+                        </select>
                     </div>
                 </div>
 
+                <div class="flex justify-between items-center bg-slate-100 p-2.5 rounded-xl border">
+                    <span class="font-bold text-slate-700">⏳ New Valid Upto (End Date):</span>
+                    <input type="date" id="renewNewValid" class="border border-slate-300 p-1.5 rounded-lg font-extrabold text-red-700 bg-white">
+                </div>
+
                 <div class="flex items-center gap-2 bg-amber-50 p-2.5 rounded-xl border border-amber-300">
-                    <input type="checkbox" id="renewGstCheck" onchange="recalcRenewalModal()" class="w-4 h-4 accent-red-900">
-                    <label for="renewGstCheck" class="font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (HSN 999299)</label>
+                    <input type="checkbox" id="renewGstCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-red-900">
+                    <label for="renewGstCheck" class="font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Optional Tax Bill)</label>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">💵 Bill (₹)</label>
+                        <label class="block font-bold text-slate-700 mb-1">💵 Plan Bill (₹)</label>
                         <input type="number" id="renewBillAmt" oninput="recalcRenewDue()" class="w-full border p-2 rounded-lg font-extrabold">
                     </div>
                     <div>
@@ -452,7 +463,7 @@
                         <input type="number" id="renewPaidAmt" oninput="recalcRenewDue()" class="w-full border border-emerald-400 p-2 rounded-lg font-extrabold text-emerald-700">
                     </div>
                     <div>
-                        <label class="block font-bold text-red-600 mb-1">⚠️ New Due</label>
+                        <label class="block font-bold text-red-600 mb-1">⚠️ Balance Due</label>
                         <input type="number" id="renewDueAmt" readonly class="w-full border p-2 rounded-lg bg-slate-100 font-extrabold text-red-600">
                     </div>
                 </div>
@@ -474,16 +485,16 @@
 
             <div class="flex justify-end gap-2 mt-4 pt-3 border-t">
                 <button onclick="closeRenewModal()" class="bg-slate-400 text-white px-4 py-2 rounded-xl text-xs font-bold">Cancel</button>
-                <button onclick="confirmRenewalSubmit()" class="theme-maroon text-white px-5 py-2 rounded-xl text-xs font-extrabold shadow">✅ Save & Generate Bill</button>
+                <button onclick="confirmRenewalSubmit()" class="theme-maroon text-white px-5 py-2 rounded-xl text-xs font-extrabold shadow">✅ Save Renewal & Bill</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal D: Complete Profile, Tenure, Ledger & HD Police Verification Docs -->
+    <!-- Modal D: Complete Profile, Quick Date Editor, Reminder Counter & HD Docs -->
     <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center hidden p-2.5 sm:p-4 overflow-y-auto">
         <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-base sm:text-lg font-extrabold theme-maroon-text">👤 Complete Student Profile, Docs & Lifetime Ledger</h3>
+                <h3 class="text-base sm:text-lg font-extrabold theme-maroon-text">👤 Complete Student Profile, Dates & Lifetime Ledger</h3>
                 <button onclick="closeProfileModal()" class="text-slate-500 hover:text-red-600 font-bold text-xl">✖</button>
             </div>
             <div id="profileModalBody"></div>
@@ -496,28 +507,40 @@
             <div id="invoiceBodyContent"></div>
         </div>
         <div class="mt-4 flex flex-wrap gap-2.5 justify-center no-print">
-            <button onclick="shareInvoiceAsImage()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">📤 Share Bill Image</button>
+            <button onclick="shareInvoiceAsImage()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">📤 Share Bill</button>
             <button onclick="window.print()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">🖨️ Print / Save PDF</button>
             <button onclick="closeInvoiceModal()" class="bg-slate-600 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">✖ Close</button>
         </div>
     </div>
 
-    <!-- Modal F: Multi-Channel Reminder (WhatsApp + Normal SMS + Gmail) -->
-    <div id="reminderModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center hidden p-4">
+    <!-- Modal F: Multi-Channel Reminder with Auto Hindi Name & Sent Counter -->
+    <div id="reminderModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-sm text-center fade-in">
-            <h3 class="text-base font-extrabold theme-maroon-text mb-1">🔔 Send Payment / Due Reminder</h3>
-            <p id="reminderStudentLabel" class="text-xs text-slate-600 font-bold mb-3"></p>
-            <textarea id="reminderTextBox" rows="5" class="w-full border p-2.5 rounded-xl text-xs text-justify-clean mb-3 bg-slate-50 font-medium"></textarea>
+            <h3 class="text-base font-extrabold theme-maroon-text mb-1">🔔 Send Due / Renewal Reminder</h3>
+            <p id="reminderStudentLabel" class="text-xs text-slate-700 font-bold mb-1"></p>
+            <div id="reminderStatsBadge" class="text-[11px] bg-amber-50 text-amber-900 border border-amber-200 rounded-lg py-1 px-2 mb-2.5 font-extrabold"></div>
+            <textarea id="reminderTextBox" rows="5" class="w-full border p-2.5 rounded-xl text-xs mb-3 bg-slate-50 font-semibold"></textarea>
             <div class="grid grid-cols-1 gap-2 text-xs font-extrabold">
                 <button id="remBtnWhatsapp" class="bg-emerald-600 text-white py-2.5 rounded-xl shadow hover:bg-emerald-500">💬 Send via WhatsApp</button>
                 <button id="remBtnSms" class="bg-blue-600 text-white py-2.5 rounded-xl shadow hover:bg-blue-500">✉️ Send Normal Text SMS (Keypad Phone)</button>
                 <button id="remBtnGmail" class="bg-red-600 text-white py-2.5 rounded-xl shadow hover:bg-red-500">📧 Send via Email / Gmail</button>
-                <button onclick="document.getElementById('reminderModal').classList.add('hidden')" class="bg-slate-300 text-slate-800 py-2 rounded-xl mt-1">Cancel</button>
+                <button onclick="document.getElementById('reminderModal').classList.add('hidden')" class="bg-slate-300 text-slate-800 py-2 rounded-xl mt-1">Close</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal G: HD Photo / Document Zoom Viewer -->
+    <!-- Modal G: Today's Birthdays List Modal (With Wished Tracking & Hindi Name) -->
+    <div id="birthdayModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col fade-in">
+            <div class="flex justify-between items-center border-b pb-2.5 mb-3">
+                <h3 class="text-base font-extrabold text-pink-600">🎂 Today's Student Birthdays</h3>
+                <button onclick="document.getElementById('birthdayModal').classList.add('hidden')" class="text-slate-500 font-bold">✖</button>
+            </div>
+            <div id="birthdayListContainer" class="space-y-2.5 overflow-y-auto flex-grow text-xs"></div>
+        </div>
+    </div>
+
+    <!-- Modal H: HD Zoom, Logo, Cloud Sync & Expense Modals -->
     <div id="zoomModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center hidden p-3" onclick="closeZoomModal()">
         <div class="bg-white p-3 rounded-2xl max-w-2xl w-full text-center relative shadow-2xl" onclick="event.stopPropagation()">
             <button onclick="closeZoomModal()" class="absolute top-2 right-3 text-slate-600 hover:text-red-600 font-bold text-xl">✖</button>
@@ -526,7 +549,6 @@
         </div>
     </div>
 
-    <!-- Modal H: Logo, Cloud Sync & Expense Modals -->
     <div id="logoModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white p-5 rounded-2xl shadow-xl w-80 text-center">
             <h3 class="text-base font-extrabold theme-maroon-text mb-2">🖼️ Set Library Official Logo</h3>
@@ -576,18 +598,52 @@
         let expenses = [];
         let currentTab = 'all';
         let displayLimit = 50;
-        let openMenuStudentIdx = null;
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
         let tempUploads = { photoBase64: '', frontBase64: '', backBase64: '' };
+        let hindiNameCache = {};
 
         try { students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]'); } catch(e) { students = []; }
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
 
-        // Strip digits if user previously saved "S-10" instead of "10"
         function cleanResNum(val) {
             if(!val) return '';
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
+        }
+
+        // Automatic English-to-Hindi Name Transliteration (Online Google Input Tools + Offline Fallback Dictionary)
+        const commonHindiNames = {
+            "pintu": "पिंटू", "kumar": "कुमार", "singh": "सिंह", "ramesh": "रमेश", "suresh": "सुरेश",
+            "rahul": "राहुल", "rohit": "रोहित", "aman": "अमन", "ankित": "अंकित", "ankit": "अंकित",
+            "vikas": "विकास", "saket": "साकेत", "abhishek": "अभिषेक", "golu": "गोलू", "manish": "मनीष",
+            "randhir": "रणधीर", "shiv": "शिव", "ram": "राम", "priya": "प्रिया", "kumari": "कुमारी",
+            "neha": "नेहा", "pooja": "पूजा", "arti": "आरती", "anjali": "अंजलि", "sonu": "सोनू",
+            "monu": "मोनू", "ravi": "रवि", "amit": "अमित", "sumit": "सुमित", "deepak": "दीपक",
+            "ajay": "अजय", "vijay": "विजय", "sanjay": "संजय", "nitish": "नीतीश", "vishal": "विशाल",
+            "aditya": "आदित्य", "aryan": "आर्यन", "vivek": "विवेक", "gaurav": "गौरव", "saurabh": "सौरभ"
+        };
+
+        async function toHindiName(engName) {
+            if(!engName) return "";
+            const clean = engName.trim();
+            if(/[\u0900-\u097F]/.test(clean)) return clean; // Already in Hindi
+            if(hindiNameCache[clean]) return hindiNameCache[clean];
+
+            try {
+                const res = await fetch(`https://inputtools.google.com/request?text=${encodeURIComponent(clean)}&itc=hi-t-i0-und&num=1`);
+                const data = await res.json();
+                if(data && data[0] === 'SUCCESS' && data[1] && data[1][0] && data[1][0][1] && data[1][0][1][0]) {
+                    const hi = data[1][0][1][0];
+                    hindiNameCache[clean] = hi;
+                    return hi;
+                }
+            } catch(e) {}
+
+            // Offline fallback word-by-word
+            const words = clean.split(/\s+/);
+            const conv = words.map(w => commonHindiNames[w.toLowerCase()] || w).join(' ');
+            hindiNameCache[clean] = conv;
+            return conv;
         }
 
         window.onload = function() {
@@ -596,7 +652,7 @@
             }
         };
 
-        // 1. Security PIN & Zero-Cost Admin Recovery
+        // 1. Security PIN & Admin Recovery
         function verifyAppPin() {
             const entered = document.getElementById('appPinInput').value.trim();
             const savedPin = localStorage.getItem('buddha_library_pin') || '7050';
@@ -657,9 +713,33 @@
             document.getElementById('headerDropdown').classList.toggle('hidden');
         }
 
-        function initSystem() {
+        // Backfill missing start dates in old student records so '-' never shows
+        function normalizeStudentDates() {
             const today = new Date().toISOString().split('T')[0];
-            document.getElementById('startDate').value = today;
+            students.forEach(s => {
+                if(!s.cycleStartDate) {
+                    if(s.admissionDate) {
+                        s.cycleStartDate = s.admissionDate;
+                    } else if(s.validUpto) {
+                        let d = new Date(s.validUpto);
+                        d.setDate(d.getDate() - 28);
+                        s.cycleStartDate = d.toISOString().split('T')[0];
+                        s.admissionDate = s.cycleStartDate;
+                    } else {
+                        s.cycleStartDate = today;
+                        s.admissionDate = today;
+                    }
+                }
+                if(!s.admissionDate) s.admissionDate = s.cycleStartDate;
+                if(!s.reminderStats) s.reminderStats = { wa: 0, sms: 0, mail: 0 };
+            });
+        }
+
+        function initSystem() {
+            normalizeStudentDates();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('admissionDateInput').value = today;
+            document.getElementById('cycleStartDate').value = today;
             document.getElementById('expDate').value = today;
             if(libraryLogo) applyLogoToUi(libraryLogo);
             update28DayValidity();
@@ -673,11 +753,10 @@
 
         // 2. 28-Day Exact Cycle & Optional 5% GST Calculation
         function update28DayValidity() {
-            const startVal = document.getElementById('startDate').value;
+            const startVal = document.getElementById('cycleStartDate').value;
             if(!startVal) return;
             const startObj = new Date(startVal);
             const months = parseInt(document.getElementById('durationMonths').value) || 1;
-            // Exact 28-day month calculation (inclusive of start date: +27 days for 1st month, or +28*months)
             startObj.setDate(startObj.getDate() + (28 * months));
             document.getElementById('validUpto').value = startObj.toISOString().split('T')[0];
             recalcAdmissionBill();
@@ -731,15 +810,15 @@
                 document.getElementById('editIndex').value = '';
                 document.getElementById('formHeading').innerText = "📝 New Student Admission Form (28-Day Cycle)";
                 document.getElementById('uniId').value = getNextAvailableId();
-                document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
-                document.getElementById('startDate').removeAttribute('readonly');
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('admissionDateInput').value = today;
+                document.getElementById('cycleStartDate').value = today;
                 document.getElementById('otherCourseWrap').classList.add('hidden');
                 tempUploads = { photoBase64: '', frontBase64: '', backBase64: '' };
                 update28DayValidity();
             }
         }
 
-        // HD Image Compression
         function compressHdImage(input, key, maxDim, quality) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -763,7 +842,7 @@
             }
         }
 
-        // 3. Strict Validation & Save Student
+        // 3. Save Student Record
         function saveStudentRecord(e) {
             e.preventDefault();
             const editIdx = document.getElementById('editIndex').value;
@@ -785,7 +864,8 @@
 
             const shiftPlan = document.getElementById('shiftPlan').value;
             const durationMonths = parseInt(document.getElementById('durationMonths').value) || 1;
-            const startDate = document.getElementById('startDate').value;
+            const admissionDate = document.getElementById('admissionDateInput').value;
+            const cycleStartDate = document.getElementById('cycleStartDate').value;
             const validUpto = document.getElementById('validUpto').value;
             const isGst = document.getElementById('applyGstCheck').checked;
             const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
@@ -794,24 +874,15 @@
             const promiseDate = remainingDue > 0 ? document.getElementById('promiseDate').value : '';
             const paymentMode = document.getElementById('paymentMode').value;
 
-            // Validation 1: ID 1 to 1000
             if(isNaN(uniId) || uniId < 1 || uniId > 1000) {
                 alert("❌ Invalid Unique ID! आईडी नंबर केवल 1 से 1000 के बीच ही हो सकता है।");
                 return;
             }
-            // Validation 2: Exact 10-digit Mobile
             if(!/^\d{10}$/.test(mobile)) {
                 alert("❌ Invalid Mobile Number! मोबाइल नंबर ठीक 10 अंकों का होना चाहिए।");
                 return;
             }
-            // Validation 3: Promise Date check if due > 0
-            const todayStr = new Date().toISOString().split('T')[0];
-            if(remainingDue > 0 && promiseDate && promiseDate < todayStr && editIdx === "") {
-                alert("❌ प्रॉमिस डेट आज या भविष्य की तारीख होनी चाहिए, बीती हुई तारीख नहीं!");
-                return;
-            }
 
-            // Validation 4: No Duplicate ID or Mobile
             for(let i = 0; i < students.length; i++) {
                 if(editIdx !== "" && parseInt(editIdx) === i) continue;
                 if(parseInt(students[i].uniId) === uniId) {
@@ -823,6 +894,8 @@
                     return;
                 }
             }
+
+            const todayStr = new Date().toISOString().split('T')[0];
 
             if(editIdx !== "") {
                 let st = students[editIdx];
@@ -836,6 +909,8 @@
                 st.guardianMobile = guardianMobile; st.emailId = emailId; st.dob = dob; st.address = address;
                 st.seatNo = seatNo; st.chairNo = chairNo; st.lockerNo = lockerNo; st.keyNo = keyNo;
                 st.studyCourse = studyCourse; st.shiftPlan = shiftPlan;
+                st.admissionDate = admissionDate;
+                st.cycleStartDate = cycleStartDate;
                 st.validUpto = validUpto; st.totalBill = totalBill;
                 st.remainingDue = remainingDue; st.promiseDate = promiseDate;
                 if(tempUploads.photoBase64) st.photo = tempUploads.photoBase64;
@@ -846,22 +921,28 @@
                 let newSt = {
                     uniId, fullName, mobile, guardianMobile, emailId, dob, address,
                     seatNo, chairNo, lockerNo, keyNo, studyCourse, shiftPlan,
-                    admissionDate: startDate, validUpto, totalBill, paidNow, remainingDue,
+                    admissionDate: admissionDate,
+                    cycleStartDate: cycleStartDate,
+                    validUpto, totalBill, paidNow, remainingDue,
                     promiseDate: promiseDate,
                     promiseHistory: [],
+                    reminderStats: { wa: 0, sms: 0, mail: 0 },
+                    lastBdayWishYear: '',
                     photo: tempUploads.photoBase64 || '',
                     aadhaarFront: tempUploads.frontBase64 || '',
                     aadhaarBack: tempUploads.backBase64 || '',
                     paymentHistory: [{
                         invNo: invNo,
-                        date: startDate,
+                        date: cycleStartDate,
+                        startDate: cycleStartDate,
+                        endDate: validUpto,
                         amount: paidNow,
                         totalBill: totalBill,
                         dueAfter: remainingDue,
                         isGst: isGst,
                         months: durationMonths,
                         mode: paymentMode,
-                        period: `${startDate} to ${validUpto}`,
+                        period: `${cycleStartDate} to ${validUpto} (${durationMonths}M)`,
                         type: 'Admission'
                     }]
                 };
@@ -873,7 +954,30 @@
             renderStudentList();
         }
 
-        // 4. Precision Search, Ascending Sort & Compact List Rendering
+        // 4. Dual-Color Resource Formatting (Alphabet Maroon, Digit Blue)
+        function formatResDualColorHtml(s) {
+            let parts = [];
+            if(cleanResNum(s.seatNo)) parts.push(`<span class="text-red-800 font-extrabold">S-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.seatNo)}</span>`);
+            if(cleanResNum(s.chairNo)) parts.push(`<span class="text-red-800 font-extrabold">C-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.chairNo)}</span>`);
+            if(cleanResNum(s.lockerNo)) parts.push(`<span class="text-red-800 font-extrabold">L-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.lockerNo)}</span>`);
+            if(cleanResNum(s.keyNo)) parts.push(`<span class="text-red-800 font-extrabold">K-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.keyNo)}</span>`);
+            return parts.length > 0 ? parts.join(' <span class="text-slate-300">|</span> ') : '<span class="text-slate-400">No Seat/Locker</span>';
+        }
+
+        function formatResPlain(s) {
+            let parts = [];
+            if(cleanResNum(s.seatNo)) parts.push(`S-${cleanResNum(s.seatNo)}`);
+            if(cleanResNum(s.chairNo)) parts.push(`C-${cleanResNum(s.chairNo)}`);
+            if(cleanResNum(s.lockerNo)) parts.push(`L-${cleanResNum(s.lockerNo)}`);
+            if(cleanResNum(s.keyNo)) parts.push(`K-${cleanResNum(s.keyNo)}`);
+            return parts.length > 0 ? parts.join(' | ') : 'N/A';
+        }
+
+        function cleanShiftName(shiftStr) {
+            if(!shiftStr) return '';
+            return shiftStr.split(' - ₹')[0].split(' — [')[0].trim();
+        }
+
         function resetLimitAndRender() {
             displayLimit = 50;
             renderStudentList();
@@ -884,20 +988,7 @@
             renderStudentList();
         }
 
-        function formatResBadge(s) {
-            let parts = [];
-            if(cleanResNum(s.seatNo)) parts.push(`S-${cleanResNum(s.seatNo)}`);
-            if(cleanResNum(s.chairNo)) parts.push(`C-${cleanResNum(s.chairNo)}`);
-            if(cleanResNum(s.lockerNo)) parts.push(`L-${cleanResNum(s.lockerNo)}`);
-            if(cleanResNum(s.keyNo)) parts.push(`K-${cleanResNum(s.keyNo)}`);
-            return parts.length > 0 ? parts.join(' | ') : 'No Seat/Locker';
-        }
-
-        function cleanShiftName(shiftStr) {
-            if(!shiftStr) return '';
-            return shiftStr.split(' - ₹')[0].split(' — [')[0].trim();
-        }
-
+        // 5. Exact ID Search & Multi-Match Name Search
         function renderStudentList() {
             const container = document.getElementById('studentListContainer');
             const rawQuery = document.getElementById('searchInput').value.trim();
@@ -906,7 +997,6 @@
 
             const today = new Date().toISOString().split('T')[0];
 
-            // Sort students by Unique ID Ascending (or by Promise Date Ascending if on Promise Tab)
             let workingList = students.map((item, idx) => ({ item, originalIdx: idx }));
 
             if(currentTab === 'promise') {
@@ -916,23 +1006,22 @@
             }
 
             let filtered = workingList.filter(({ item: s }) => {
-                // Tab filter
                 const isActive = s.validUpto >= today;
                 if(currentTab === 'active' && !isActive) return false;
                 if(currentTab === 'expired' && isActive) return false;
                 if(currentTab === 'dues' && !(parseFloat(s.remainingDue) > 0)) return false;
                 if(currentTab === 'promise' && !(parseFloat(s.remainingDue) > 0)) return false;
 
-                // Precision Search Logic
                 if(!rawQuery) return true;
                 if(/^\d+$/.test(rawQuery)) {
-                    // Pure digits: if <= 4 digits, match Exact Unique ID (e.g. 1 -> ID 1, 99 -> ID 99) or Exact Seat No
+                    // Pure digits <= 4: STRICTLY match ONLY Exact Unique ID (so typing 1 returns ONLY ID: 1)
                     if(rawQuery.length <= 4) {
-                        return parseInt(s.uniId) === parseInt(rawQuery) || cleanResNum(s.seatNo) === rawQuery;
+                        return parseInt(s.uniId) === parseInt(rawQuery);
                     }
-                    // If > 4 digits, match mobile number
+                    // > 4 digits: match mobile number
                     return (s.mobile && s.mobile.includes(rawQuery));
                 }
+                // Name or Address search (returns all matching students e.g. all 10 Ramesh)
                 return (s.fullName && s.fullName.toLowerCase().includes(qLower)) ||
                        (s.address && s.address.toLowerCase().includes(qLower));
             });
@@ -951,68 +1040,73 @@
                 const dueAmt = parseFloat(s.remainingDue) || 0;
                 const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
                 const shiftClean = cleanShiftName(s.shiftPlan);
-                const resText = formatResBadge(s);
+                const resDualHtml = formatResDualColorHtml(s);
                 const failList = s.promiseHistory || [];
                 const lastFail = failList.length > 0 ? failList[failList.length - 1].failedDate : null;
+                const rem = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
+                const totalRem = (rem.wa || 0) + (rem.sms || 0) + (rem.mail || 0);
+                const startShow = s.cycleStartDate || s.admissionDate || '-';
 
                 let card = document.createElement('div');
-                card.className = `bg-white p-3 sm:p-3.5 rounded-2xl shadow-sm hover:shadow-md transition border-l-4 ${isActive ? 'border-emerald-600' : 'border-rose-600'} relative`;
+                card.className = `bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition border-l-4 ${isActive ? 'border-emerald-600' : 'border-rose-600'} relative`;
 
                 card.innerHTML = `
                     <div class="flex items-start gap-3">
                         <!-- Square HD Photo -->
                         <div class="relative flex-shrink-0">
-                            <img src="${avatar}" onclick="zoomHdImage('${avatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover border-2 border-red-900 cursor-pointer shadow-sm bg-slate-100" title="Click to Zoom HD Photo">
+                            <img src="${avatar}" onclick="zoomHdImage('${avatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl object-cover border-2 border-red-900 cursor-pointer shadow-sm bg-slate-100" title="Click to Zoom HD Photo">
                             <span class="absolute -top-1.5 -left-1.5 bg-slate-800 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded shadow">#${serialIdx + 1}</span>
                         </div>
 
-                        <!-- Core Compact Info (No Gender, No Course, No Shift Price) -->
+                        <!-- Student Details (No Truncate Cut) -->
                         <div class="flex-grow min-w-0">
-                            <div class="flex items-center justify-between gap-1">
-                                <div class="flex items-center gap-1.5 truncate">
-                                    <span class="theme-maroon-solid text-white text-xs px-2 py-0.5 rounded font-extrabold">ID: ${s.uniId}</span>
-                                    <h3 onclick="openProfileModal(${originalIdx})" class="font-extrabold text-slate-900 text-sm sm:text-base truncate cursor-pointer hover:text-red-800 underline">${s.fullName}</h3>
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="theme-maroon-solid text-white text-xs px-2.5 py-0.5 rounded-md font-extrabold">ID: ${s.uniId}</span>
+                                    <h3 onclick="openProfileModal(${originalIdx})" class="font-extrabold text-slate-900 text-sm sm:text-base cursor-pointer hover:text-red-800">${s.fullName}</h3>
                                 </div>
-                                <!-- Hidden Action Menu Toggle Button -->
-                                <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition flex-shrink-0" title="Manage Student">⚙️ Options</button>
+                                <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition flex-shrink-0">⚙️ Options</button>
                             </div>
 
-                            <p class="text-xs text-slate-700 font-semibold mt-0.5 truncate">
-                                📞 <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold underline">${s.mobile}</a>
+                            <p class="text-xs text-slate-700 font-semibold mt-1">
+                                📞 <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold no-underline hover:underline">${s.mobile}</a>
                                 <span class="text-slate-300 mx-1">|</span>
                                 📍 ${s.address || 'Patna'}
                             </p>
 
-                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] mt-1 font-bold">
-                                <span class="text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded">⏱️ ${shiftClean}</span>
-                                <span class="text-purple-900 bg-purple-50 px-2 py-0.5 rounded">💺 ${resText}</span>
+                            <div class="flex flex-wrap items-center gap-2 text-[11px] mt-1.5 font-bold">
+                                <span class="text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">⏱️ ${shiftClean}</span>
+                                <span class="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">💺 ${resDualHtml}</span>
                             </div>
 
-                            <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] mt-1.5 pt-1.5 border-t border-slate-100">
-                                <span class="text-slate-600 font-semibold">📅 Start: <b>${s.admissionDate || '-'}</b> → End: <b class="${isActive ? 'text-emerald-700' : 'text-rose-600'}">${s.validUpto}</b></span>
-                                ${dueAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-extrabold">⚠️ Due: ₹${dueAmt}</span>` : `<span class="text-emerald-700 font-extrabold">✅ No Due</span>`}
+                            <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] mt-2 pt-1.5 border-t border-slate-100">
+                                <span class="text-slate-700 font-bold">▶️ Start: <b class="text-blue-800">${startShow}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-rose-600'}">${s.validUpto}</b></span>
+                                ${dueAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-extrabold">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`}
                             </div>
 
-                            ${dueAmt > 0 ? `
+                            ${(dueAmt > 0 || totalRem > 0) ? `
                                 <div class="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 text-[11px] flex flex-wrap items-center justify-between gap-1">
                                     <span class="font-extrabold text-red-800">
-                                        📅 Promise: ${s.promiseDate || 'Not Set'}
+                                        ${dueAmt > 0 ? `📅 Promise: ${s.promiseDate || 'Not Set'}` : ''}
                                         ${lastFail ? `<span class="line-through text-slate-400 ml-1">(${lastFail})</span> <span class="bg-red-600 text-white px-1.5 py-0.2 rounded text-[10px] ml-1">❌ ${failList.length} बार वादा फेल</span>` : ''}
                                     </span>
-                                    <button onclick="openPromiseUpdatePrompt(${originalIdx})" class="text-blue-700 underline font-extrabold">Change Date</button>
+                                    <span class="text-[10px] font-extrabold text-indigo-900 bg-white px-2 py-0.5 rounded border">
+                                        🔔 Sent: ${totalRem} (WA:${rem.wa||0} | SMS:${rem.sms||0} | Mail:${rem.mail||0})
+                                    </span>
                                 </div>
                             ` : ''}
                         </div>
                     </div>
 
-                    <!-- Collapsible Hidden Action Bar (Opens only when ⚙️ Options is clicked) -->
+                    <!-- Collapsible Action Bar -->
                     <div id="cardMenu-${originalIdx}" class="hidden mt-3 pt-2.5 border-t border-slate-200 flex flex-wrap gap-1.5 justify-between items-center bg-slate-50 p-2 rounded-xl fade-in">
                         <div class="flex flex-wrap gap-1.5">
                             <button onclick="openIdCardModal(${originalIdx})" class="theme-maroon text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🪪 ID Card</button>
-                            <button onclick="openProfileModal(${originalIdx})" class="bg-purple-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">👤 Full Profile & Docs</button>
-                            <button onclick="openRenewModal(${originalIdx})" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔄 Renew (28d)</button>
+                            <button onclick="openProfileModal(${originalIdx})" class="bg-purple-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">👤 Profile & Dates</button>
+                            <button onclick="openRenewModal(${originalIdx})" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔄 Renew Plan</button>
                             <button onclick="openLatestInvoice(${originalIdx})" class="bg-teal-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🧾 GST Bill</button>
-                            <button onclick="openReminderModal(${originalIdx})" class="bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔔 Reminder (WA/SMS/Mail)</button>
+                            <button onclick="openPromiseUpdatePrompt(${originalIdx})" class="bg-rose-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">📅 Promise Date</button>
+                            <button onclick="openReminderModal(${originalIdx})" class="bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔔 Send Reminder</button>
                             <button onclick="editStudentRecord(${originalIdx})" class="bg-amber-500 text-black px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">✏️ Edit</button>
                         </div>
                         <button onclick="deleteStudentRecord(${originalIdx})" class="bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-bold">🗑️</button>
@@ -1027,12 +1121,12 @@
             if(el) el.classList.toggle('hidden');
         }
 
-        // 5. Promise Date Strike & Fail Counter Logic
+        // 6. Promise Date Strike & Fail Counter Logic
         function openPromiseUpdatePrompt(index) {
             let s = students[index];
             const today = new Date().toISOString().split('T')[0];
             const fails = s.promiseHistory ? s.promiseHistory.length : 0;
-            const input = prompt(`⚠️ ${s.fullName} (बकाया: ₹${s.remainingDue})\nपिछली प्रॉमिस डेट: ${s.promiseDate || 'None'} (वादा तोड़ा: ${fails} बार)\n\nनई प्रॉमिस तारीख (YYYY-MM-DD) दर्ज करें, या यदि बकाया पैसा मिल गया है तो '0' लिखें:`, today);
+            const input = prompt(`⚠️ ${s.fullName} (बकाया: ₹${s.remainingDue || 0})\nपिछली प्रॉमिस डेट: ${s.promiseDate || 'None'} (वादा तोड़ा: ${fails} बार)\n\nनई प्रॉमिस तारीख (YYYY-MM-DD) दर्ज करें, या यदि पूरा बकाया पैसा मिल गया है तो '0' लिखें:`, s.promiseDate || today);
             if(input === null) return;
 
             if(input.trim() === '0') {
@@ -1042,13 +1136,15 @@
                 s.paymentHistory.push({
                     invNo: invNo,
                     date: today,
+                    startDate: s.cycleStartDate || s.admissionDate,
+                    endDate: s.validUpto,
                     amount: paidAmt,
                     totalBill: paidAmt,
                     dueAfter: 0,
                     isGst: false,
                     months: 0,
                     mode: mode,
-                    period: `Due Cleared`,
+                    period: `${s.cycleStartDate || s.admissionDate} to ${s.validUpto} (Due Cleared)`,
                     type: 'Due Cleared'
                 });
                 s.remainingDue = 0;
@@ -1056,8 +1152,8 @@
                 alert(`✅ ₹${paidAmt} बकाया जमा हो गया!`);
             } else {
                 const newD = input.trim();
-                if(!/^\d{4}-\d{2}-\d{2}$/.test(newD) || newD < today) {
-                    alert("❌ गलत तारीख! कृपया आज या भविष्य की सही तारीख (YYYY-MM-DD) डालें।");
+                if(!/^\d{4}-\d{2}-\d{2}$/.test(newD)) {
+                    alert("❌ गलत तारीख फॉर्मेट! कृपया YYYY-MM-DD (जैसे 2026-11-16) लिखें।");
                     return;
                 }
                 if(!s.promiseHistory) s.promiseHistory = [];
@@ -1070,7 +1166,7 @@
             renderStudentList();
         }
 
-        // 6. Vacant Seat (250), Chair (250), Locker (90) Finder
+        // 7. Vacant Seat (250), Chair (250), Locker (90) Finder
         function openVacantModal() {
             document.getElementById('vacantModal').classList.remove('hidden');
             renderVacantGrid('seat');
@@ -1106,8 +1202,8 @@
                 const box = document.createElement('div');
                 if(holder) {
                     box.className = "bg-rose-100 border border-rose-400 text-rose-900 p-1.5 rounded-lg text-center cursor-pointer hover:bg-rose-200 transition";
-                    box.innerHTML = `<div class="text-xs font-extrabold">${prefix}${i}</div><div class="text-[9px] truncate font-bold">ID:${holder.uniId}</div>`;
-                    box.onclick = () => alert(`🔴 ${prefix}${i} पहले से आवंटित है:\n• ID: ${holder.uniId}\n• नाम: ${holder.fullName}\n• शिफ्ट: ${cleanShiftName(holder.shiftPlan)}\n• वैधता: ${holder.validUpto}`);
+                    box.innerHTML = `<div class="text-xs font-extrabold"><span class="text-red-800">${prefix}</span><span class="text-blue-900">${i}</span></div><div class="text-[9px] truncate font-bold">ID:${holder.uniId}</div>`;
+                    box.onclick = () => alert(`🔴 ${prefix}${i} आवंटित है:\n• ID: ${holder.uniId}\n• नाम: ${holder.fullName}\n• शिफ्ट: ${cleanShiftName(holder.shiftPlan)}\n• वैधता: ${holder.validUpto}`);
                 } else {
                     box.className = "bg-emerald-50 border border-emerald-300 text-emerald-800 p-1.5 rounded-lg text-center font-extrabold text-xs";
                     box.innerHTML = `<div>${prefix}${i}</div><div class="text-[9px] font-semibold">Vacant</div>`;
@@ -1116,7 +1212,7 @@
             }
         }
 
-        // 7. Compact HD ID Card & Native Image-Only Sharing
+        // 8. Zero-Crop HD ID Card (Side ID, Dual-Color S-/C-/L-/K-, Start & Valid Date, Due / Not Due)
         function openIdCardModal(index) {
             const s = students[index];
             const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
@@ -1131,20 +1227,20 @@
             document.getElementById('idCardMobile').innerText = `📞 ${s.mobile}`;
             document.getElementById('idCardAddress').innerText = `📍 ${s.address || 'Kachchhi Dargah, Patna'}`;
             document.getElementById('idCardShift').innerText = cleanShiftName(s.shiftPlan);
-            document.getElementById('idCardResources').innerText = formatResBadge(s);
-            document.getElementById('idCardStart').innerText = s.admissionDate || '-';
+            document.getElementById('idCardResources').innerHTML = formatResDualColorHtml(s);
+            document.getElementById('idCardStart').innerText = s.cycleStartDate || s.admissionDate || '-';
             document.getElementById('idCardEnd').innerText = s.validUpto;
 
             const due = parseFloat(s.remainingDue) || 0;
-            const dueRow = document.getElementById('idCardDueRow');
+            const dueEl = document.getElementById('idCardDueStatus');
             if(due > 0) {
-                dueRow.classList.remove('hidden');
-                document.getElementById('idCardDueAmt').innerText = `₹${due}`;
+                dueEl.className = "text-red-600 font-extrabold id-text-safe";
+                dueEl.innerText = `⚠️ Pending Due: ₹${due}`;
             } else {
-                dueRow.classList.add('hidden');
+                dueEl.className = "text-emerald-700 font-extrabold id-text-safe";
+                dueEl.innerText = `✅ Not Due (No Dues)`;
             }
 
-            document.getElementById('idCardModal').setAttribute('data-student-name', s.fullName);
             document.getElementById('idCardModal').setAttribute('data-student-id', s.uniId);
             document.getElementById('idCardBtnBar').classList.remove('hidden');
             document.getElementById('idCardModal').classList.remove('hidden');
@@ -1160,26 +1256,29 @@
         }
 
         async function shareIdCardAsImage() {
-            const cardEl = document.getElementById('idCardCaptureArea');
-            const sName = document.getElementById('idCardModal').getAttribute('data-student-name') || 'Student';
+            const captureWrap = document.getElementById('idCardOuterCapture');
             const sId = document.getElementById('idCardModal').getAttribute('data-student-id') || '1';
             const btn = document.getElementById('shareIdBtn');
-            btn.innerText = "⏳ Preparing HD Card...";
+            btn.innerText = "⏳ Creating HD Card...";
 
             try {
-                const canvas = await html2canvas(cardEl, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
+                const canvas = await html2canvas(captureWrap, {
+                    scale: 3,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    scrollX: 0,
+                    scrollY: -window.scrollY
+                });
                 canvas.toBlob(async (blob) => {
                     btn.innerText = "📤 Share ID Card";
                     const fileName = `Buddha_Library_ID_${sId}.png`;
                     const file = new File([blob], fileName, { type: 'image/png' });
 
-                    // Share ONLY the ID Card Image via Native Share Sheet (WhatsApp, Telegram, etc.)
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
                             await navigator.share({ files: [file] });
-                        } catch (err) { console.log('Share closed'); }
+                        } catch (err) {}
                     } else {
-                        // Fallback automatic HD Image download on Desktop
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
                         link.download = fileName;
@@ -1188,20 +1287,24 @@
                 }, 'image/png', 1.0);
             } catch (e) {
                 btn.innerText = "📤 Share ID Card";
-                alert("❌ फोटो तैयार करने में त्रुटि हुई।");
+                alert("❌ फोटो तैयार करने में समस्या आई।");
             }
         }
 
-        // 8. 28-Day Renewal & Professional GST Invoice Generator
+        // 9. Smart Manual/Auto Renewal (1M, 3M, 6M, 12M) & Bill Generator
         function openRenewModal(index) {
             const s = students[index];
             document.getElementById('renewStudentIdx').value = index;
             document.getElementById('renewStudentInfo').innerHTML = `<b>ID: ${s.uniId} — ${s.fullName}</b><br>Shift: ${cleanShiftName(s.shiftPlan)} | Previous Expiry: <span class="text-red-600">${s.validUpto}</span>`;
-            document.getElementById('renewStartMode').value = 'expiry';
+            
+            // Default Start Date = Previous Expiry Date (Editable manually by user)
+            const defaultStart = s.validUpto || new Date().toISOString().split('T')[0];
+            document.getElementById('renewStartDate').value = defaultStart;
             document.getElementById('renewMonths').value = '1';
             document.getElementById('renewGstCheck').checked = false;
             document.getElementById('renewPromiseDate').value = '';
-            recalcRenewalModal();
+            recalcRenewalDates();
+            recalcRenewalBill();
             document.getElementById('renewModal').classList.remove('hidden');
         }
 
@@ -1215,17 +1318,20 @@
             return 299;
         }
 
-        function recalcRenewalModal() {
+        function recalcRenewalDates() {
+            const startStr = document.getElementById('renewStartDate').value;
+            if(!startStr) return;
+            const months = parseInt(document.getElementById('renewMonths').value) || 1;
+            let d = new Date(startStr);
+            d.setDate(d.getDate() + (28 * months));
+            document.getElementById('renewNewValid').value = d.toISOString().split('T')[0];
+        }
+
+        function recalcRenewalBill() {
             const idx = document.getElementById('renewStudentIdx').value;
             if(idx === "") return;
             const s = students[idx];
-            const mode = document.getElementById('renewStartMode').value;
             const months = parseInt(document.getElementById('renewMonths').value) || 1;
-
-            let baseDate = (mode === 'expiry' && s.validUpto) ? new Date(s.validUpto) : new Date();
-            baseDate.setDate(baseDate.getDate() + (28 * months));
-            document.getElementById('renewNewValid').value = baseDate.toISOString().split('T')[0];
-
             const rate = getBaseRateFromShift(s.shiftPlan);
             let sub = rate * months;
             if(months === 3) sub = Math.round(sub * 0.95);
@@ -1249,8 +1355,9 @@
         function confirmRenewalSubmit() {
             const idx = document.getElementById('renewStudentIdx').value;
             const s = students[idx];
-            const months = parseInt(document.getElementById('renewMonths').value) || 1;
+            const startD = document.getElementById('renewStartDate').value;
             const newValid = document.getElementById('renewNewValid').value;
+            const months = parseInt(document.getElementById('renewMonths').value) || 1;
             const isGst = document.getElementById('renewGstCheck').checked;
             const billAmt = parseFloat(document.getElementById('renewBillAmt').value) || 0;
             const paidAmt = parseFloat(document.getElementById('renewPaidAmt').value) || 0;
@@ -1259,7 +1366,7 @@
             const promiseD = document.getElementById('renewPromiseDate').value;
             const today = new Date().toISOString().split('T')[0];
 
-            const oldValid = s.validUpto;
+            s.cycleStartDate = startD;
             s.validUpto = newValid;
             s.remainingDue = (parseFloat(s.remainingDue) || 0) + newDue;
             if(promiseD && s.remainingDue > 0) s.promiseDate = promiseD;
@@ -1269,14 +1376,16 @@
             s.paymentHistory.push({
                 invNo: invNo,
                 date: today,
+                startDate: startD,
+                endDate: newValid,
                 amount: paidAmt,
                 totalBill: billAmt,
                 dueAfter: s.remainingDue,
                 isGst: isGst,
                 months: months,
                 mode: payMode,
-                period: `${oldValid} to ${newValid} (${months * 28} Days)`,
-                type: 'Renewal'
+                period: `${startD} to ${newValid} (${months}M / ${months * 28} Days)`,
+                type: `Renewal (${months}M)`
             });
 
             syncAndSaveData();
@@ -1303,6 +1412,8 @@
             const baseAmt = isGst ? (totalBill / 1.05).toFixed(2) : totalBill.toFixed(2);
             const cgst = isGst ? ((totalBill - baseAmt) / 2).toFixed(2) : "0.00";
             const sgst = cgst;
+            const pStart = p.startDate || s.cycleStartDate || s.admissionDate || '-';
+            const pEnd = p.endDate || s.validUpto || '-';
 
             const logoHtml = libraryLogo ? `<img src="${libraryLogo}" class="w-12 h-12 rounded-full object-cover border border-red-900">` : `<div class="w-12 h-12 rounded-full theme-maroon text-white flex items-center justify-center text-xl">🏛️</div>`;
 
@@ -1320,7 +1431,7 @@
                     <div class="text-right">
                         <span class="bg-red-900 text-white px-2.5 py-1 rounded text-[10px] font-extrabold">${isGst ? 'TAX INVOICE' : 'FEE RECEIPT'}</span>
                         <p class="text-[10px] font-bold mt-1">Inv No: <b>${p.invNo || 'BL-001'}</b></p>
-                        <p class="text-[10px] text-slate-600">Date: <b>${p.date}</b></p>
+                        <p class="text-[10px] text-slate-600">Billing Date: <b>${p.date}</b></p>
                     </div>
                 </div>
 
@@ -1332,7 +1443,7 @@
                     </div>
                     <div class="text-right">
                         <p>Shift: <b>${cleanShiftName(s.shiftPlan)}</b></p>
-                        <p>Allocation: <b>${formatResBadge(s)}</b></p>
+                        <p>Allocation: <b>${formatResPlain(s)}</b></p>
                         <p>Payment Count: <b>#${payIdx + 1} (Total ${totalPayCount} times)</b></p>
                     </div>
                 </div>
@@ -1340,15 +1451,15 @@
                 <table class="w-full border-collapse border border-slate-300 text-[11px] mb-3">
                     <thead class="bg-slate-100">
                         <tr>
-                            <th class="border p-1.5 text-left">Description & Validity Period</th>
+                            <th class="border p-1.5 text-left">Plan Description & Validity (28-Day Cycle)</th>
                             <th class="border p-1.5 text-right">Amount (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td class="border p-1.5">
-                                <b>Library Membership (${p.type})</b><br>
-                                <span class="text-[10px] text-slate-600">Period: ${p.period || s.validUpto} (28-Day Cycle)</span>
+                                <b>Library Membership — ${p.type}</b><br>
+                                <span class="text-[10px] text-blue-800 font-bold">Start Date: ${pStart} ➔ Valid Upto: ${pEnd}</span>
                             </td>
                             <td class="border p-1.5 text-right font-bold">₹${baseAmt}</td>
                         </tr>
@@ -1378,8 +1489,8 @@
                 </table>
 
                 <div class="flex justify-between items-end pt-2 text-[10px] text-slate-500">
-                    <div>* नियम एवं शर्तें लागू। यह कंप्यूटर जनित रसीद है।</div>
-                    <div class="text-right font-bold text-slate-800">Authorized Signatory<br>Buddha Library</div>
+                    <div>* यह कंप्यूटर जनित आधिकारिक रसीद है।</div>
+                    <div class="text-right font-bold text-slate-800">Buddha Library, Patna</div>
                 </div>
             `;
             document.getElementById('invoiceModal').classList.remove('hidden');
@@ -1403,15 +1514,38 @@
             });
         }
 
-        // 9. Complete Student Profile, Student Tenure (How Many Months Old) & HD Docs for Police/Admin Verification
+        // 10. Complete Profile with Direct Editable Admission & Cycle Dates + Reminder History
         function calculateStudentTenure(admDateStr) {
-            if(!admDateStr) return "N/A";
+            if(!admDateStr) return "0 Months, 0 Days";
             const start = new Date(admDateStr);
             const now = new Date();
             const diffDays = Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
             const months = Math.floor(diffDays / 28);
             const remDays = diffDays % 28;
-            return `${months} Months, ${remDays} Days (${diffDays} Total Days)`;
+            return `${months} Months, ${remDays} Days (${diffDays} Days)`;
+        }
+
+        function saveQuickDatesFromProfile(index) {
+            const s = students[index];
+            const adm = document.getElementById('profEditAdmDate').value;
+            const cyc = document.getElementById('profEditCycleStart').value;
+            const val = document.getElementById('profEditValidUpto').value;
+            if(adm) s.admissionDate = adm;
+            if(cyc) s.cycleStartDate = cyc;
+            if(val) s.validUpto = val;
+            syncAndSaveData();
+            renderStudentList();
+            openProfileModal(index);
+            alert("✅ तारीखें सफलतापूर्वक अपडेट हो गईं!");
+        }
+
+        function autoCalcProfileValidDate() {
+            const cyc = document.getElementById('profEditCycleStart').value;
+            const m = parseInt(document.getElementById('profQuickMonths').value) || 1;
+            if(!cyc) return;
+            let d = new Date(cyc);
+            d.setDate(d.getDate() + (28 * m));
+            document.getElementById('profEditValidUpto').value = d.toISOString().split('T')[0];
         }
 
         function openProfileModal(index) {
@@ -1422,9 +1556,10 @@
             const cashCount = history.filter(r => r.mode === 'Cash').length;
             const onlineCount = history.length - cashCount;
             const tenureStr = calculateStudentTenure(s.admissionDate);
+            const rem = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
 
             const failHtml = (s.promiseHistory || []).map((f, i) => `
-                <li class="text-xs text-red-700 font-semibold">❌ <b>वादा #${i+1} फेल:</b> ${f.failedDate} को नहीं दिया → नई तारीख <b>${f.newDate}</b> ली (अपडेट: ${f.updatedOn})</li>
+                <li class="text-xs text-red-700 font-semibold">❌ <b>वादा #${i+1} फेल:</b> ${f.failedDate} को नहीं दिया ➔ नई तारीख <b>${f.newDate}</b> ली (अपडेट: ${f.updatedOn})</li>
             `).join('');
 
             const ledgerRows = history.map((p, i) => `
@@ -1444,36 +1579,67 @@
                     <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl">
                         <p class="text-[11px] font-bold text-purple-800">⏳ Student Tenure (कितना पुराना)</p>
                         <h4 class="text-sm font-extrabold text-purple-900 mt-0.5">${tenureStr}</h4>
-                        <p class="text-[10px] text-slate-500">Locked Joined Date: <b>${s.admissionDate}</b></p>
+                        <p class="text-[10px] text-slate-600">Joined: <b>${s.admissionDate || '-'}</b></p>
                     </div>
                     <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
                         <p class="text-[11px] font-bold text-emerald-800">💰 Total Lifetime Paid</p>
                         <h4 class="text-lg font-extrabold text-emerald-700">₹${totalPaid}</h4>
                         <p class="text-[10px] text-slate-600">Paid <b>${history.length} Times</b> (${onlineCount} Online, ${cashCount} Cash)</p>
                     </div>
-                    <div class="bg-red-50 border border-red-200 p-3 rounded-xl">
-                        <p class="text-[11px] font-bold text-red-800">⚠️ Current Balance Due</p>
-                        <h4 class="text-lg font-extrabold text-red-600">₹${s.remainingDue || 0}</h4>
-                        <p class="text-[10px] text-slate-600">Promise Date: <b>${s.promiseDate || 'None'}</b></p>
+                    <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+                        <p class="text-[11px] font-bold text-amber-900">🔔 Reminders Sent Count</p>
+                        <h4 class="text-sm font-extrabold text-amber-900 mt-1">💬 WA: ${rem.wa||0} | ✉️ SMS: ${rem.sms||0} | 📧 Mail: ${rem.mail||0}</h4>
+                        <p class="text-[10px] text-red-600 font-bold mt-0.5">Current Due: ₹${s.remainingDue || 0}</p>
+                    </div>
+                </div>
+
+                <!-- Direct Date Editor Box inside Profile (As Requested) -->
+                <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 mb-4 text-xs">
+                    <h4 class="font-extrabold text-blue-900 mb-2">📅 Direct Admission & Plan Date Editor (यहाँ से सीधे तारीख सुधारें)</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Original Admission Date</label>
+                            <input type="date" id="profEditAdmDate" value="${s.admissionDate || ''}" class="w-full border p-1.5 rounded-lg font-bold bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-blue-800 mb-1">Current Plan Start Date</label>
+                            <input type="date" id="profEditCycleStart" value="${s.cycleStartDate || s.admissionDate || ''}" onchange="autoCalcProfileValidDate()" class="w-full border p-1.5 rounded-lg font-bold bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-indigo-800 mb-1">Auto Add (28d/M)</label>
+                            <select id="profQuickMonths" onchange="autoCalcProfileValidDate()" class="w-full border p-1.5 rounded-lg font-bold bg-white">
+                                <option value="1">+1 Month (28d)</option>
+                                <option value="3">+3 Months (84d)</option>
+                                <option value="6">+6 Months (168d)</option>
+                                <option value="12">+12 Months (336d)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-emerald-800 mb-1">Valid Upto (End Date)</label>
+                            <input type="date" id="profEditValidUpto" value="${s.validUpto || ''}" class="w-full border p-1.5 rounded-lg font-extrabold text-red-700 bg-white">
+                        </div>
+                    </div>
+                    <div class="mt-2.5 text-right">
+                        <button onclick="saveQuickDatesFromProfile(${index})" class="bg-blue-700 text-white px-4 py-1.5 rounded-lg font-extrabold shadow hover:bg-blue-600">💾 Update Dates</button>
                     </div>
                 </div>
 
                 <!-- Personal & Official Details -->
                 <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border mb-4 text-xs">
-                    <img src="${avatar}" onclick="zoomHdImage('${avatar}', '${s.fullName}')" class="w-24 h-24 rounded-xl object-cover border-2 border-red-900 shadow cursor-pointer" title="Click for HD Zoom">
+                    <img src="${avatar}" onclick="zoomHdImage('${avatar}', '${s.fullName}')" class="w-24 h-24 rounded-xl object-cover border-2 border-red-900 shadow cursor-pointer">
                     <div class="space-y-1 w-full">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="theme-maroon-solid text-white px-2.5 py-0.5 rounded font-extrabold">ID: ${s.uniId}</span>
                             <h2 class="text-lg font-extrabold text-slate-900">${s.fullName}</h2>
                         </div>
-                        <p>📞 Student Mobile: <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold underline">${s.mobile}</a> | 🏠 Guardian: <b>${s.guardianMobile || 'N/A'}</b></p>
+                        <p>📞 Student Mobile: <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold">${s.mobile}</a> | 🏠 Guardian: <b>${s.guardianMobile || 'N/A'}</b></p>
                         <p>📍 Full Address: <b class="text-slate-800">${s.address}</b></p>
                         <p>🎂 DOB: <b>${s.dob || 'N/A'}</b> | 📧 Email: <b>${s.emailId || 'N/A'}</b> | 📚 Course: <b>${s.studyCourse}</b></p>
-                        <p>⏱️ Shift: <b>${cleanShiftName(s.shiftPlan)}</b> | 💺 Allocation: <b>${formatResBadge(s)}</b></p>
+                        <p>⏱️ Shift: <b>${cleanShiftName(s.shiftPlan)}</b> | 💺 Allocation: ${formatResDualColorHtml(s)}</p>
                     </div>
                 </div>
 
-                <!-- HD Documents for Police / Official Verification -->
+                <!-- HD Documents for Official Verification -->
                 <h4 class="text-xs sm:text-sm font-extrabold theme-maroon-text mb-2">🆔 Uploaded Verification Documents (Click Image for Full HD Zoom)</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div class="border-2 border-slate-200 p-2.5 rounded-xl bg-slate-50 text-center">
@@ -1508,38 +1674,115 @@
 
         function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
 
-        // 10. Multi-Channel Reminder (WhatsApp + Normal Text SMS + Gmail)
-        function openReminderModal(index) {
+        // 11. Multi-Channel Reminder with Automatic Hindi Name & Sent Counter
+        async function openReminderModal(index) {
             const s = students[index];
+            if(!s.reminderStats) s.reminderStats = { wa: 0, sms: 0, mail: 0 };
             const due = parseFloat(s.remainingDue) || 0;
             const failCount = s.promiseHistory ? s.promiseHistory.length : 0;
 
+            document.getElementById('reminderStudentLabel').innerText = `ID: ${s.uniId} — ${s.fullName} (📞 ${s.mobile})`;
+            updateReminderBadgeUI(s);
+            document.getElementById('reminderModal').classList.remove('hidden');
+
+            const hindiName = await toHindiName(s.fullName);
             let msg = '';
             if(due > 0) {
-                msg = `प्रिय ${s.fullName} (ID: ${s.uniId}), नमस्ते!\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी फीस का ₹${due} बकाया है${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${s.promiseDate} थी` : ''}${failCount > 0 ? ` (आप ${failCount} बार तारीख बढ़ा चुके हैं)` : ''}। कृपया तुरंत बकाया राशि जमा करें।\nसंपर्क: 7050668855`;
+                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी लाइब्रेरी फीस का ₹${due} बकाया है${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${s.promiseDate} थी` : ''}${failCount > 0 ? ` (आप ${failCount} बार तारीख बढ़ा चुके हैं)` : ''}। कृपया यथाशीघ्र बकाया राशि जमा करने का कष्ट करें।\nसंपर्क: 7050668855`;
             } else {
-                msg = `प्रिय ${s.fullName} (ID: ${s.uniId}), नमस्ते!\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी लाइब्रेरी मेंबरशिप की वैधता ${s.validUpto} को समाप्त हो रही है। कृपया समय पर अपना प्लान रिन्यू करा लें।\nसंपर्क: 7050668855`;
+                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी मेंबरशिप की वैधता ${s.validUpto} को समाप्त हो रही है। कृपया समय पर अपना प्लान रिन्यू करा लें।\nसंपर्क: 7050668855`;
             }
-
-            document.getElementById('reminderStudentLabel').innerText = `ID: ${s.uniId} — ${s.fullName} (📞 ${s.mobile})`;
             document.getElementById('reminderTextBox').value = msg;
 
             document.getElementById('remBtnWhatsapp').onclick = () => {
+                s.reminderStats.wa = (s.reminderStats.wa || 0) + 1;
+                syncAndSaveData();
+                updateReminderBadgeUI(s);
+                renderStudentList();
                 const text = document.getElementById('reminderTextBox').value;
                 window.open(`https://wa.me/91${s.mobile}?text=${encodeURIComponent(text)}`, '_blank');
             };
             document.getElementById('remBtnSms').onclick = () => {
+                s.reminderStats.sms = (s.reminderStats.sms || 0) + 1;
+                syncAndSaveData();
+                updateReminderBadgeUI(s);
+                renderStudentList();
                 const text = document.getElementById('reminderTextBox').value;
                 window.open(`sms:+91${s.mobile}?body=${encodeURIComponent(text)}`, '_self');
             };
             document.getElementById('remBtnGmail').onclick = () => {
+                s.reminderStats.mail = (s.reminderStats.mail || 0) + 1;
+                syncAndSaveData();
+                updateReminderBadgeUI(s);
+                renderStudentList();
                 const text = document.getElementById('reminderTextBox').value;
                 const mailTo = s.emailId || '';
-                const subj = `Buddha Library Fee Notice - ${s.fullName} (ID: ${s.uniId})`;
+                const subj = `बुद्धा लाइब्रेरी शुल्क सूचना - ${hindiName} (ID: ${s.uniId})`;
                 window.open(`mailto:${mailTo}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`, '_blank');
             };
+        }
 
-            document.getElementById('reminderModal').classList.remove('hidden');
+        function updateReminderBadgeUI(s) {
+            const r = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
+            const tot = (r.wa || 0) + (r.sms || 0) + (r.mail || 0);
+            document.getElementById('reminderStatsBadge').innerText = `📊 अब तक कुल भेजे गए रिमाइंडर: ${tot} (💬 WA: ${r.wa||0} | ✉️ SMS: ${r.sms||0} | 📧 Mail: ${r.mail||0})`;
+        }
+
+        // 12. Today's Birthdays Modal (Full List, Hindi Name Conversion & Wished Status Tracking)
+        async function openBirthdayModal() {
+            const todayIso = new Date().toISOString().split('T')[0];
+            const currentYear = todayIso.slice(0, 4);
+            const mdToday = todayIso.slice(5);
+
+            const bdayStudents = students.map((s, idx) => ({ s, idx })).filter(x => x.s.dob && x.s.dob.slice(5) === mdToday);
+            const box = document.getElementById('birthdayListContainer');
+            box.innerHTML = '';
+
+            if(bdayStudents.length === 0) {
+                box.innerHTML = `<div class="p-6 text-center text-slate-500 font-bold">🎂 आज किसी भी छात्र का जन्मदिन नहीं है।</div>`;
+                document.getElementById('birthdayModal').classList.remove('hidden');
+                return;
+            }
+
+            for(const { s, idx } of bdayStudents) {
+                const isWished = (s.lastBdayWishYear === currentYear);
+                const hiName = await toHindiName(s.fullName);
+                const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+
+                const row = document.createElement('div');
+                row.className = `p-3 rounded-xl border flex items-center justify-between gap-2 ${isWished ? 'bg-emerald-50 border-emerald-300' : 'bg-pink-50 border-pink-200'}`;
+                row.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <img src="${avatar}" class="w-11 h-11 rounded-lg object-cover border border-pink-400">
+                        <div>
+                            <span class="bg-pink-600 text-white text-[10px] font-extrabold px-2 py-0.2 rounded">ID: ${s.uniId}</span>
+                            <h4 class="font-extrabold text-slate-900 text-xs mt-0.5">${hiName} <span class="text-slate-500 font-normal">(${s.fullName})</span></h4>
+                            <p class="text-[11px] text-slate-600 font-bold">📞 ${s.mobile}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        ${isWished ? `<span class="inline-block bg-emerald-600 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-lg mb-1">✅ बधाई भेज दी गई</span><br>` : ''}
+                        <button onclick="sendHindiBirthdayWish(${idx})" class="bg-pink-600 hover:bg-pink-500 text-white px-3 py-1.5 rounded-lg text-[11px] font-extrabold shadow">
+                            ${isWished ? '🔄 फिर से भेजें' : '🎂 बधाई भेजें (WA)'}
+                        </button>
+                    </div>
+                `;
+                box.appendChild(row);
+            }
+            document.getElementById('birthdayModal').classList.remove('hidden');
+        }
+
+        async function sendHindiBirthdayWish(index) {
+            const s = students[index];
+            const currentYear = new Date().toISOString().split('T')[0].slice(0, 4);
+            const hiName = await toHindiName(s.fullName);
+
+            s.lastBdayWishYear = currentYear;
+            syncAndSaveData();
+            openBirthdayModal();
+
+            const msg = `प्रिय ${hiName}, नमस्ते! 🎂🎉\n\n*बुद्धा लाइब्रेरी (A Unit of Flair Foundation)* परिवार की ओर से आपको जन्मदिन की हार्दिक शुभकामनाएँ! ईश्वर से प्रार्थना है कि आप सदैव स्वस्थ रहें और अपनी पढ़ाई व लक्ष्य में शीघ्र बड़ी सफलता प्राप्त करें। 🌟📚\n\n📍 कच्ची दरगाह, पटना | 📞 7050668855`;
+            window.open(`https://wa.me/91${s.mobile}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         // Edit & Delete Student
@@ -1562,8 +1805,8 @@
 
             document.getElementById('studyCourse').value = s.studyCourse || 'General Competition';
             document.getElementById('shiftPlan').value = s.shiftPlan;
-            document.getElementById('startDate').value = s.admissionDate;
-            document.getElementById('startDate').setAttribute('readonly', true); // Locked Original Admission Date
+            document.getElementById('admissionDateInput').value = s.admissionDate || s.cycleStartDate || '';
+            document.getElementById('cycleStartDate').value = s.cycleStartDate || s.admissionDate || '';
             document.getElementById('validUpto').value = s.validUpto;
             document.getElementById('totalBill').value = s.totalBill || 0;
             document.getElementById('paidNow').value = s.paidNow || 0;
@@ -1583,20 +1826,19 @@
             }
         }
 
-        // 11. 5-Box Financial Analytics & Vacant Summary Calculation
+        // Dashboard Analytics
         function updateDashboardStats() {
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
-            const thisMonthPrefix = todayStr.slice(0, 7); // YYYY-MM
-            const thisYearPrefix = todayStr.slice(0, 4);  // YYYY
+            const thisMonthPrefix = todayStr.slice(0, 7);
+            const thisYearPrefix = todayStr.slice(0, 4);
 
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
-            let activeCount = 0;
-            let expiredCount = 0;
+            let activeCount = 0, expiredCount = 0;
             let colToday = 0, colThisMonth = 0, colLastMonth = 0, colThisYear = 0, totalDues = 0;
-            let usedSeats = new Set(), usedLockers = new Set();
+            let usedSeats = new Set(), usedChairs = new Set(), usedLockers = new Set();
 
             students.forEach(s => {
                 if(s.validUpto >= todayStr) activeCount++;
@@ -1606,6 +1848,8 @@
 
                 let sNum = parseInt(cleanResNum(s.seatNo));
                 if(sNum >= 1 && sNum <= TOTAL_SEATS) usedSeats.add(sNum);
+                let cNum = parseInt(cleanResNum(s.chairNo));
+                if(cNum >= 1 && cNum <= TOTAL_CHAIRS) usedChairs.add(cNum);
                 let lNum = parseInt(cleanResNum(s.lockerNo));
                 if(lNum >= 1 && lNum <= TOTAL_LOCKERS) usedLockers.add(lNum);
 
@@ -1622,7 +1866,7 @@
             document.getElementById('statTotalMembers').innerText = students.length;
             document.getElementById('statActiveMembers').innerText = activeCount;
             document.getElementById('statExpiredMembers').innerText = expiredCount;
-            document.getElementById('statVacantSummary').innerText = `S: ${TOTAL_SEATS - usedSeats.size} | L: ${TOTAL_LOCKERS - usedLockers.size}`;
+            document.getElementById('statVacantSummary').innerText = `S: ${TOTAL_SEATS - usedSeats.size} | C: ${TOTAL_CHAIRS - usedChairs.size} | L: ${TOTAL_LOCKERS - usedLockers.size}`;
 
             document.getElementById('colToday').innerText = `₹${colToday}`;
             document.getElementById('colThisMonth').innerText = `₹${colThisMonth}`;
@@ -1630,13 +1874,11 @@
             document.getElementById('colThisYear').innerText = `₹${colThisYear}`;
             document.getElementById('colTotalDues').innerText = `₹${totalDues}`;
 
-            // Promise Alert Counter
             const promiseCount = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0).length;
             const pBadge = document.getElementById('promiseCountBadge');
             pBadge.innerText = promiseCount;
             pBadge.classList.toggle('hidden', promiseCount === 0);
 
-            // Birthday Counter
             const mdToday = todayStr.slice(5);
             const bCount = students.filter(s => s.dob && s.dob.slice(5) === mdToday).length;
             const bBadge = document.getElementById('bdayCountBadge');
@@ -1649,7 +1891,7 @@
             displayLimit = 50;
             ['all', 'active', 'expired', 'dues', 'promise'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
-                btn.className = (t === tab) ? "px-3.5 py-2 rounded-xl text-xs font-extrabold theme-maroon text-white shadow" : "px-3.5 py-2 rounded-xl text-xs font-extrabold bg-white text-slate-700 shadow";
+                btn.className = (t === tab) ? "px-3 py-1.5 rounded-xl text-xs font-extrabold theme-maroon text-white shadow-sm" : "px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700";
             });
             renderStudentList();
         }
@@ -1662,7 +1904,7 @@
         }
         function closeZoomModal() { document.getElementById('zoomModal').classList.add('hidden'); }
 
-        // Logo, Expenses, Birthday, Cloud Sync & CSV Export
+        // Logo, Expenses, Cloud Sync & CSV Export
         function openLogoModal() { document.getElementById('logoModal').classList.remove('hidden'); }
         function uploadLibraryLogo(input) {
             if (input.files && input.files[0]) {
@@ -1674,7 +1916,7 @@
                         const canvas = document.createElement('canvas');
                         canvas.width = 240; canvas.height = 240;
                         canvas.getContext('2d').drawImage(img, 0, 0, 240, 240);
-                        libraryLogo = canvas.toDataURL('image/jpeg', 0.85);
+                        libraryLogo = canvas.toDataURL('image/jpeg', 0.88);
                         localStorage.setItem('buddha_library_logo', libraryLogo);
                         applyLogoToUi(libraryLogo);
                         document.getElementById('logoModal').classList.add('hidden');
@@ -1711,17 +1953,6 @@
             });
         }
 
-        function openBirthdayModal() {
-            const mdToday = new Date().toISOString().split('T')[0].slice(5);
-            const list = students.filter(s => s.dob && s.dob.slice(5) === mdToday);
-            if(list.length === 0) { alert("🎂 आज किसी भी छात्र का जन्मदिन नहीं है।"); return; }
-            const b = list[0];
-            if(confirm(`🎂 आज प्रिय ${b.fullName} (ID: ${b.uniId}) का जन्मदिन है!\nक्या आप उन्हें WhatsApp पर शुभकामना संदेश भेजना चाहते हैं?`)) {
-                const msg = `प्रिय ${b.fullName}, नमस्ते! 🎂🎉\n\n*बुद्धा लाइब्रेरी (A Unit of Flair Foundation)* परिवार की ओर से आपको जन्मदिन की हार्दिक शुभकामनाएँ! आप अपने लक्ष्य में शीघ्र सफल हों। 🌟📚\n\n📍 कच्ची दरगाह, पटना`;
-                window.open(`https://wa.me/91${b.mobile}?text=${encodeURIComponent(msg)}`, '_blank');
-            }
-        }
-
         function openCloudSyncModal() {
             document.getElementById('firebaseUrlInput').value = firebaseDbUrl;
             document.getElementById('cloudModal').classList.remove('hidden');
@@ -1752,6 +1983,7 @@
             fetch(url).then(r => r.json()).then(data => {
                 if(data && Array.isArray(data)) {
                     students = data;
+                    normalizeStudentDates();
                     localStorage.setItem('buddha_library_students', JSON.stringify(students));
                     renderStudentList();
                     updateDashboardStats();
@@ -1776,6 +2008,7 @@
                 reader.onload = ev => {
                     try {
                         students = JSON.parse(ev.target.result);
+                        normalizeStudentDates();
                         syncAndSaveData();
                         renderStudentList();
                         alert("✅ बैकअप सफलतापूर्वक रीस्टोर हो गया!");
@@ -1786,9 +2019,10 @@
         }
 
         function exportExcelCsv() {
-            let csv = "Unique ID,Full Name,Mobile,Address,Shift,Seat,Chair,Locker,Key,Admission Date,Valid Upto,Remaining Due,Promise Date\n";
+            let csv = "Unique ID,Full Name,Mobile,Address,Shift,Seat,Chair,Locker,Key,Admission Date,Cycle Start Date,Valid Upto,Remaining Due,Promise Date,Reminders Sent\n";
             students.forEach(s => {
-                csv += `${s.uniId},"${s.fullName}",${s.mobile},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.admissionDate},${s.validUpto},${s.remainingDue || 0},${s.promiseDate || ''}\n`;
+                const r = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
+                csv += `${s.uniId},"${s.fullName}",${s.mobile},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.admissionDate || ''},${s.cycleStartDate || ''},${s.validUpto},${s.remainingDue || 0},${s.promiseDate || ''},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
