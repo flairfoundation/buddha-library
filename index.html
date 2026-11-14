@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buddha Library - Management System</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; }
@@ -15,7 +14,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-    <!-- App Security / PIN Lock Modal (Only if not logged in) -->
+    <!-- App Security / PIN Lock Modal -->
     <div id="pinModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
         <div class="bg-white p-6 rounded-xl shadow-2xl w-80 text-center">
             <h2 class="text-xl font-bold mb-2 theme-maroon-text">🏛️ Buddha Library Security</h2>
@@ -40,10 +39,10 @@
                 </div>
             </div>
             <div class="flex flex-wrap gap-2 items-center">
-                <button onclick="openCloudSyncModal()" class="bg-yellow-500 text-black text-xs font-semibold px-3 py-1.5 rounded-lg shadow hover:bg-yellow-400">☁️ Cloud Sync</button>
-                <button onclick="exportDriveBackup()" class="bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow hover:bg-blue-500">💾 Backup</button>
-                <button onclick="triggerRestore()" class="bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow hover:bg-green-500">📂 Restore</button>
-                <button onclick="logoutApp()" class="bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow hover:bg-red-600">🔒 Logout</button>
+                <button onclick="openCloudSyncModal()" class="bg-yellow-500 text-black text-xs font-semibold px-3 py-1.5 rounded-lg shadow">☁️ Cloud Sync</button>
+                <button onclick="exportDriveBackup()" class="bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow">💾 Backup</button>
+                <button onclick="triggerRestore()" class="bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow">📂 Restore</button>
+                <button onclick="logoutApp()" class="bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow">🔒 Logout</button>
             </div>
         </header>
 
@@ -78,15 +77,15 @@
             <button onclick="toggleAdmissionForm()" class="theme-maroon text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:opacity-90">
                 ➕ New Admission Form
             </button>
-            <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:bg-indigo-600">
+            <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow">
                 📊 Expense Tracker
             </button>
-            <button onclick="openBirthdayList()" class="bg-pink-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:bg-pink-500">
+            <button onclick="openBirthdayList()" class="bg-pink-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow">
                 🎂 Today's Birthdays
             </button>
         </div>
 
-        <!-- Collapsible Admission Form (Hidden by default, Optional Fields) -->
+        <!-- Collapsible Admission Form (Optional Fields, No Force Required) -->
         <div id="admissionFormContainer" class="bg-white p-4 rounded-xl shadow-md mb-4 hidden border-2 theme-border">
             <h2 id="formTitle" class="text-lg font-bold mb-3 theme-maroon-text border-b pb-2">📝 Student Admission & Registration Form</h2>
             <form id="studentForm" onsubmit="saveStudent(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
@@ -235,9 +234,7 @@
         </div>
 
         <!-- Student List Container -->
-        <div id="studentList" class="space-y-3">
-            <!-- Populated Dynamically -->
-        </div>
+        <div id="studentList" class="space-y-3"></div>
 
     </div>
 
@@ -305,7 +302,6 @@
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let tempImages = { photoBase64: '', frontBase64: '', backBase64: '' };
 
-        // Permanent Login Check
         window.onload = function() {
             if(localStorage.getItem('buddha_library_logged_in') === 'true') {
                 document.getElementById('pinModal').classList.add('hidden');
@@ -398,7 +394,6 @@
             document.getElementById('remainingDue').value = total - paid;
         }
 
-        // Image Compression for Optimization
         function compressImage(input, key) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -454,7 +449,6 @@
             const promiseDate = document.getElementById('promiseDate').value;
             const paymentMode = document.getElementById('paymentMode').value;
 
-            // Unique ID check
             const editIndex = document.getElementById('editIndex').value;
             for(let i=0; i<students.length; i++) {
                 if(editIndex !== "" && parseInt(editIndex) === i) continue;
@@ -587,9 +581,7 @@
             document.getElementById('zoomedImg').src = src;
             document.getElementById('zoomModal').classList.remove('hidden');
         }
-        function closeZoom() {
-            document.getElementById('zoomModal').classList.add('hidden');
-        }
+        function closeZoom() { document.getElementById('zoomModal').classList.add('hidden'); }
 
         function viewProfile(index) {
             let s = students[index];
@@ -707,7 +699,6 @@
             }
         }
 
-        // Expense Tracker
         function openExpenseModal() { document.getElementById('expenseModal').classList.remove('hidden'); renderExpenses(); }
         function closeExpenseModal() { document.getElementById('expenseModal').classList.add('hidden'); }
         function saveExpense(e) {
