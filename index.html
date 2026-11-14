@@ -1,1476 +1,765 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buddha Library - Live Cloud Management System</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <title>Buddha Library - Management System</title>
+    <!-- Tailwind CSS for Professional Clean UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --maroon: #7A0016;
-            --maroon-dark: #4D000E;
-            --gold: #F4C430;
-            --gold-dark: #C59B27;
-            --bg-page: #EDF1F5;
-            --white: #FFFFFF;
-            --black: #000000;
-            --text-main: #111111;
-            --border-strong: #B0BEC5;
-            --green: #0F7B32;
-            --red: #C62828;
-            --blue: #0D47A1;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, Helvetica, sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-page);
-            color: var(--text-main);
-            padding-bottom: 40px;
-        }
-
-        /* High Contrast Top Header */
-        .app-header {
-            background: linear-gradient(135deg, var(--maroon-dark), var(--maroon));
-            color: var(--white);
-            padding: 12px 16px;
-            border-bottom: 4px solid var(--gold);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.25);
-        }
-
-        .header-inner {
-            max-width: 1240px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .brand-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-circle {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            border: 2px solid var(--gold);
-            background: var(--white);
-            object-fit: cover;
-            flex-shrink: 0;
-        }
-
-        .brand-title h1 {
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: 0.5px;
-            color: var(--gold);
-            text-shadow: 1px 1px 2px #000;
-        }
-
-        .brand-title p {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--white);
-        }
-
-        .top-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .top-btn {
-            background: var(--gold);
-            color: var(--black);
-            border: 1px solid #fff;
-            padding: 7px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 800;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .top-btn:hover {
-            background: #ffda66;
-        }
-
-        /* Search Bar right under header */
-        .search-bar-wrap {
-            max-width: 1240px;
-            margin: 10px auto 0 auto;
-            background: var(--white);
-            border: 2px solid var(--gold);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-        }
-
-        .search-bar-wrap i {
-            color: var(--maroon);
-            font-size: 18px;
-            margin-right: 10px;
-        }
-
-        .search-bar-wrap input {
-            flex: 1;
-            border: none;
-            outline: none;
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--black);
-        }
-
-        .container {
-            max-width: 1240px;
-            margin: 14px auto;
-            padding: 0 12px;
-        }
-
-        /* Dashboard Clickable Stats */
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-
-        .stat-box {
-            background: var(--white);
-            border: 2px solid var(--border-strong);
-            border-left: 6px solid var(--maroon);
-            border-radius: 8px;
-            padding: 10px;
-            cursor: pointer;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-        }
-
-        .stat-box:hover {
-            border-color: var(--maroon);
-            background: #FFFDF7;
-        }
-
-        .stat-box h3 {
-            font-size: 20px;
-            font-weight: 900;
-            color: var(--black);
-        }
-
-        .stat-box p {
-            font-size: 12px;
-            font-weight: 800;
-            color: #333;
-            margin-top: 2px;
-        }
-
-        /* Promise Alert Strip */
-        .alert-strip {
-            background: #FFF3CD;
-            border: 2px solid #FF9800;
-            color: var(--black);
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 800;
-            font-size: 13px;
-            cursor: pointer;
-        }
-
-        /* Main Grid */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 370px 1fr;
-            gap: 18px;
-        }
-
-        @media (max-width: 900px) {
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .panel {
-            background: var(--white);
-            border: 2px solid var(--border-strong);
-            border-radius: 10px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
-
-        .panel-header {
-            background: var(--maroon);
-            color: var(--white);
-            padding: 10px 14px;
-            border-radius: 6px;
-            font-size: 15px;
-            font-weight: 800;
-            margin-bottom: 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .form-group {
-            margin-bottom: 10px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            font-weight: 800;
-            color: var(--black);
-            margin-bottom: 4px;
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 8px 10px;
-            border: 2px solid #888;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--black);
-            background: var(--white);
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            border-color: var(--maroon);
-            outline: none;
-        }
-
-        .row-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .row-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
-        }
-
-        .check-pill {
-            background: #FFF9E6;
-            border: 2px solid var(--gold-dark);
-            padding: 7px 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--black);
-        }
-
-        .check-pill input {
-            width: 17px;
-            height: 17px;
-        }
-
-        .save-btn {
-            background: var(--maroon);
-            color: var(--white);
-            border: 2px solid var(--gold);
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 900;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-
-        .save-btn:hover {
-            background: var(--maroon-dark);
-        }
-
-        /* Filter Tabs */
-        .filter-tabs {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-        }
-
-        .f-tab {
-            flex: 1;
-            min-width: 90px;
-            padding: 9px 10px;
-            background: var(--white);
-            border: 2px solid #888;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--black);
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .f-tab.active {
-            background: var(--maroon);
-            color: var(--white);
-            border-color: var(--maroon);
-        }
-
-        /* Student Directory Card - High Contrast */
-        .st-card {
-            background: var(--white);
-            border: 2px solid #999;
-            border-left: 6px solid var(--maroon);
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 12px;
-        }
-
-        .st-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .st-user {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .st-user img {
-            width: 58px;
-            height: 58px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 2px solid var(--maroon);
-            cursor: pointer;
-        }
-
-        .st-user-info h4 {
-            font-size: 16px;
-            font-weight: 900;
-            color: var(--black);
-        }
-
-        .st-user-info p {
-            font-size: 12px;
-            font-weight: 700;
-            color: #222;
-            margin-top: 2px;
-        }
-
-        .call-link {
-            display: inline-block;
-            margin-top: 3px;
-            color: var(--blue);
-            font-weight: 900;
-            font-size: 13px;
-            text-decoration: none;
-        }
-
-        .id-badge-top {
-            background: var(--maroon);
-            color: var(--gold);
-            padding: 5px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 900;
-            border: 1px solid var(--gold);
-        }
-
-        .st-mid-grid {
-            background: #F8F9FA;
-            border: 1px solid #CCC;
-            border-radius: 6px;
-            padding: 10px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 8px;
-            margin-bottom: 10px;
-            font-size: 12px;
-        }
-
-        .st-mid-grid div strong {
-            display: block;
-            color: #444;
-            font-size: 11px;
-        }
-
-        .st-mid-grid div span {
-            font-weight: 900;
-            color: var(--black);
-            font-size: 13px;
-        }
-
-        .st-actions {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            border-top: 1px solid #DDD;
-            padding-top: 10px;
-        }
-
-        .s-btn {
-            flex: 1;
-            min-width: 75px;
-            padding: 7px 6px;
-            border: 1px solid #888;
-            border-radius: 5px;
-            background: #FFF;
-            color: var(--black);
-            font-size: 12px;
-            font-weight: 800;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-
-        .s-btn:hover {
-            background: #EEE;
-        }
-
-        /* Modal Overlay */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-        }
-
-        .modal-box {
-            background: var(--white);
-            border-radius: 12px;
-            width: 100%;
-            max-width: 350px;
-            padding: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            max-height: 96vh;
-            overflow-y: auto;
-        }
-
-        /* COMPACT LINED PREMIUM ID CARD (Fits any mobile screen) */
-        .compact-id-card {
-            background: #FFFFFF;
-            border: 3px solid var(--maroon);
-            outline: 2px solid var(--gold);
-            outline-offset: -6px;
-            border-radius: 10px;
-            overflow: hidden;
-            color: #000000;
-        }
-
-        .id-header {
-            background: var(--maroon);
-            color: #FFFFFF;
-            padding: 8px 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 3px solid var(--gold);
-        }
-
-        .id-header img {
-            width: 46px;
-            height: 46px;
-            border-radius: 50%;
-            border: 2px solid var(--gold);
-            background: #FFF;
-            flex-shrink: 0;
-            object-fit: cover;
-        }
-
-        .id-header-text {
-            text-align: left;
-        }
-
-        .id-header-text h3 {
-            font-size: 15px;
-            font-weight: 900;
-            color: var(--gold);
-            letter-spacing: 0.5px;
-            line-height: 1.1;
-        }
-
-        .id-header-text p {
-            font-size: 9.5px;
-            font-weight: 700;
-            color: #FFFFFF;
-            line-height: 1.25;
-            margin-top: 2px;
-        }
-
-        .id-body {
-            padding: 10px 12px;
-            background: repeating-linear-gradient(
-                0deg,
-                #FFFFFF,
-                #FFFFFF 22px,
-                #F9FBFD 22px,
-                #F9FBFD 44px
-            );
-        }
-
-        .id-photo-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--maroon);
-        }
-
-        .id-photo-row img {
-            width: 68px;
-            height: 76px;
-            border-radius: 6px;
-            border: 2px solid var(--maroon);
-            object-fit: cover;
-            flex-shrink: 0;
-            cursor: pointer;
-        }
-
-        .id-title-block {
-            flex: 1;
-        }
-
-        .id-pill-row {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 4px;
-        }
-
-        .id-tag {
-            background: var(--maroon);
-            color: #FFF;
-            font-size: 11px;
-            font-weight: 900;
-            padding: 2px 7px;
-            border-radius: 4px;
-        }
-
-        .seat-tag {
-            background: var(--gold);
-            color: #000;
-            font-size: 11px;
-            font-weight: 900;
-            padding: 2px 7px;
-            border-radius: 4px;
-            border: 1px solid #000;
-        }
-
-        .id-st-name {
-            font-size: 15px;
-            font-weight: 900;
-            color: var(--maroon);
-            text-transform: uppercase;
-            line-height: 1.2;
-        }
-
-        .id-st-mob {
-            font-size: 12px;
-            font-weight: 900;
-            color: #000;
-            margin-top: 2px;
-        }
-
-        .id-grid-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11.5px;
-        }
-
-        .id-grid-table td {
-            padding: 4px 5px;
-            border: 1px solid #B0BEC5;
-            font-weight: 800;
-            color: #000000;
-        }
-
-        .id-grid-table td.k {
-            background: #EFEFEF;
-            width: 36%;
-            color: #222;
-        }
-
-        .id-footer-strip {
-            background: var(--maroon-dark);
-            color: var(--gold);
-            text-align: center;
-            font-size: 10px;
-            font-weight: 800;
-            padding: 5px;
-            letter-spacing: 0.3px;
-        }
-
-        .modal-btn-bar {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
-            margin-top: 10px;
-        }
-
-        .m-btn {
-            padding: 8px;
-            border: none;
-            border-radius: 6px;
-            font-size: 11.5px;
-            font-weight: 900;
-            cursor: pointer;
-            color: #FFF;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-
-        /* Lightbox */
-        #lightbox {
-            display: none;
-            position: fixed;
-            z-index: 4000;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            justify-content: center;
-            align-items: center;
-        }
-        #lightbox img {
-            max-width: 94%;
-            max-height: 94%;
-            border: 3px solid #FFF;
-            border-radius: 6px;
-        }
-
-        @media print {
-            body * { visibility: hidden; }
-            #idCardCaptureArea, #idCardCaptureArea * { visibility: visible; }
-            #idCardCaptureArea { position: fixed; left: 10px; top: 10px; width: 320px; }
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; }
+        .theme-maroon { background-color: #5c061c; }
+        .theme-maroon-text { color: #5c061c; }
+        .theme-border { border-color: #5c061c; }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen">
 
-<div class="app-header">
-    <div class="header-inner">
-        <div class="brand-box">
-            <img id="mainHeaderLogo" class="logo-circle" alt="Buddha Library">
-            <div class="brand-title">
-                <h1>BUDDHA LIBRARY</h1>
-                <p>A Unit of Flair Foundation | Kachchi Dargah, Patna | 7050668855</p>
+    <!-- App Security / PIN Lock Modal -->
+    <div id="pinModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-80 text-center">
+            <h2 class="text-xl font-bold mb-2 theme-maroon-text">Buddha Library Security</h2>
+            <p class="text-sm text-gray-600 mb-4">सुरक्षा के लिए 4-डिजिट पिन दर्ज करें:</p>
+            <input type="password" id="appPin" maxlength="4" class="w-full text-center text-2xl tracking-widest border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-red-900" placeholder="••••">
+            <button onclick="verifyPin()" class="w-full theme-maroon text-white py-2 rounded-lg font-semibold hover:opacity-90">Unlock App</button>
+            <p id="pinError" class="text-red-500 text-xs mt-2 hidden">गलत पिन! कृपया सही पिन डालें (डिफ़ॉल्ट: 2026)</p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="mainApp" class="max-w-5xl mx-auto p-4 hidden">
+        
+        <!-- Header Section -->
+        <header class="theme-maroon text-white p-4 rounded-xl shadow-md mb-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="text-center md:text-left mb-2 md:mb-0">
+                <h1 class="text-2xl font-bold tracking-wide">BUDDHA LIBRARY</h1>
+                <p class="text-xs text-yellow-200">A Unit of Flair Foundation | Kachchhi Dargah, Patna | 7050668855</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="openCloudSyncModal()" class="bg-yellow-500 text-black text-xs font-semibold px-3 py-1.5 rounded-lg shadow hover:bg-yellow-400">Live Cloud Sync</button>
+                <button onclick="exportDriveBackup()" class="bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow hover:bg-blue-500">Drive Backup</button>
+                <button onclick="triggerRestore()" class="bg-green-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow hover:bg-green-500">Restore</button>
+            </div>
+        </header>
+
+        <!-- Search & Quick Filter Bar -->
+        <div class="bg-white p-3 rounded-xl shadow-sm mb-4 flex items-center gap-2">
+            <span class="text-gray-400 font-bold">🔍</span>
+            <input type="text" id="searchInput" oninput="filterStudents()" placeholder="Search by Student Name, Exact ID, Mobile, Seat/Chair No..." class="w-full text-sm outline-none">
+        </div>
+
+        <!-- Analytics & Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600">
+                <p class="text-xs text-gray-500">Total Registered</p>
+                <h3 id="statTotal" class="text-xl font-bold">0</h3>
+            </div>
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-green-600">
+                <p class="text-xs text-gray-500">Live / Active</p>
+                <h3 id="statActive" class="text-xl font-bold text-green-700">0</h3>
+            </div>
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-amber-600">
+                <p class="text-xs text-gray-500">This Month Collection</p>
+                <h3 id="statCollection" class="text-xl font-bold text-amber-700">₹0</h3>
+            </div>
+            <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600">
+                <p class="text-xs text-gray-500">Total Dues</p>
+                <h3 id="statDues" class="text-xl font-bold text-red-600">₹0</h3>
             </div>
         </div>
-        <div class="top-actions">
-            <button class="top-btn" onclick="openCloudSetup()"><i class="fa-solid fa-cloud"></i> Live Cloud Sync</button>
-            <button class="top-btn" onclick="exportBackup()"><i class="fa-solid fa-download"></i> Drive Backup</button>
-            <button class="top-btn" onclick="document.getElementById('restoreInput').click()"><i class="fa-solid fa-upload"></i> Restore</button>
-            <input type="file" id="restoreInput" style="display:none" onchange="importBackup(event)">
-        </div>
-    </div>
 
-    <div class="search-bar-wrap">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="searchInput" placeholder="Search by Student Name, Exact ID (1-1000), Mobile, Seat No, or Parent..." oninput="renderDirectory()">
-        <button onclick="document.getElementById('searchInput').value=''; renderDirectory();" style="background:none; border:none; font-size:16px; font-weight:900; color:var(--maroon); cursor:pointer;">✕</button>
-    </div>
-</div>
+        <!-- Action Bar: Toggle Admission Form & Expenses -->
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button onclick="toggleAdmissionForm()" class="theme-maroon text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:opacity-90 flex items-center gap-2">
+                <span>➕ New Admission / Form</span>
+            </button>
+            <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:bg-indigo-600">
+                📊 Expense Tracker
+            </button>
+            <button onclick="openBirthdayList()" class="bg-pink-600 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:bg-pink-500">
+                🎂 Today's Birthdays
+            </button>
+        </div>
 
-<div class="container">
-    <!-- Clickable Dashboard Summary -->
-    <div class="stats-row">
-        <div class="stat-box" onclick="setTab('all')">
-            <h3 id="stTotal">0</h3>
-            <p>Total Registered</p>
-        </div>
-        <div class="stat-box" onclick="setTab('live')" style="border-left-color:var(--green);">
-            <h3 id="stLive" style="color:var(--green);">0</h3>
-            <p>Live / Active</p>
-        </div>
-        <div class="stat-box" onclick="setTab('expired')" style="border-left-color:var(--red);">
-            <h3 id="stExpired" style="color:var(--red);">0</h3>
-            <p>Expired / Left</p>
-        </div>
-        <div class="stat-box" onclick="setTab('paid')" style="border-left-color:var(--blue);">
-            <h3 id="stPaid" style="color:var(--blue);">₹0</h3>
-            <p>Total Collection</p>
-        </div>
-        <div class="stat-box" onclick="setTab('due')" style="border-left-color:#E65100;">
-            <h3 id="stDue" style="color:var(--red);">₹0</h3>
-            <p>Total Dues</p>
-        </div>
-    </div>
-
-    <!-- Promise Alert Banner -->
-    <div class="alert-strip" onclick="setTab('promise')">
-        <div>
-            <i class="fa-solid fa-bell" style="color:var(--maroon);"></i>
-            <span id="promiseBannerText">Checking today's promised fee recoveries...</span>
-        </div>
-        <span style="color:var(--maroon); text-decoration:underline;">Click to Filter List</span>
-    </div>
-
-    <div class="main-grid">
-        <!-- Left Form -->
-        <div class="panel">
-            <div class="panel-header">
-                <span id="formTitle"><i class="fa-solid fa-user-plus"></i> Student Admission / Edit</span>
-                <button type="button" onclick="resetForm()" style="background:var(--gold); border:none; padding:3px 8px; border-radius:4px; font-weight:800; cursor:pointer;">New</button>
-            </div>
-
-            <form id="studentForm" onsubmit="saveRecord(event)">
-                <input type="hidden" id="editIdx" value="">
-
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>Unique ID (1-1000) *</label>
-                        <input type="number" id="idNo" required min="1" max="2000">
-                    </div>
-                    <div class="form-group">
-                        <label>Seat No *</label>
-                        <input type="text" id="seatNo" required placeholder="e.g. 12">
-                    </div>
+        <!-- Collapsible Admission Form (Hidden by default) -->
+        <div id="admissionFormContainer" class="bg-white p-4 rounded-xl shadow-md mb-4 hidden border-2 theme-border">
+            <h2 id="formTitle" class="text-lg font-bold mb-3 theme-maroon-text border-b pb-2">Student Admission Form</h2>
+            <form id="studentForm" onsubmit="saveStudent(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <input type="hidden" id="editIndex" value="">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Unique ID *</label>
+                    <input type="number" id="uniId" required class="w-full border p-2 rounded-lg" placeholder="1-1000">
                 </div>
-
-                <div class="form-group">
-                    <label>Student Full Name *</label>
-                    <input type="text" id="name" required placeholder="Enter full name">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Seat No & Chair No *</label>
+                    <input type="text" id="seatNo" required class="w-full border p-2 rounded-lg" placeholder="Seat 12 / Chair 15">
                 </div>
-
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>Student Mobile *</label>
-                        <input type="tel" id="mobile" required placeholder="10-digit mobile" pattern="[0-9]{10}">
-                    </div>
-                    <div class="form-group">
-                        <label>Guardian Name/Mobile (Office Use)</label>
-                        <input type="text" id="parentInfo" placeholder="Hidden from ID Card">
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Locker No & Key No</label>
+                    <input type="text" id="lockerNo" class="w-full border p-2 rounded-lg" placeholder="Locker 5 / Key 5">
                 </div>
-
-                <div class="form-group">
-                    <label>Address / Village *</label>
-                    <input type="text" id="address" required placeholder="e.g. Kachchi Dargah, Patna">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Student Full Name *</label>
+                    <input type="text" id="fullName" required class="w-full border p-2 rounded-lg" placeholder="Full Name">
                 </div>
-
-                <div class="form-group">
-                    <label>Shift & Timing Plan *</label>
-                    <select id="shiftPlan" onchange="recalcFromPlan()" required>
-                        <option value="">-- Select Shift --</option>
-                        <option value="Morning (06AM - 10AM)|299">Morning (06AM - 10AM) - ₹299</option>
-                        <option value="Afternoon (10AM - 02PM)|399">Afternoon (10AM - 02PM) - ₹399</option>
-                        <option value="Evening (02PM - 06PM)|399">Evening (02PM - 06PM) - ₹399</option>
-                        <option value="Night (10PM - 05AM)|399">Night (10PM - 05AM) - ₹399</option>
-                        <option value="12 Hours Full Day (06AM - 06PM)|499">12 Hours Full Day (06AM - 06PM) - ₹499</option>
-                        <option value="24 Hours Full Day (06AM - 06AM)|799">24 Hours Full Day (06AM - 06AM) - ₹799</option>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Gender *</label>
+                    <select id="gender" required class="w-full border p-2 rounded-lg">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
                     </select>
                 </div>
-
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>Start Date *</label>
-                        <input type="date" id="startDate" required onchange="autoSetEndDate()">
-                    </div>
-                    <div class="form-group">
-                        <label>Valid Upto (End Date) *</label>
-                        <input type="date" id="endDate" required>
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Student Mobile *</label>
+                    <input type="tel" id="mobile" required maxlength="10" class="w-full border p-2 rounded-lg" placeholder="10-digit mobile">
                 </div>
-
-                <div class="check-pill">
-                    <input type="checkbox" id="admFeeCheck" onchange="recalcFromPlan()">
-                    <label for="admFeeCheck" style="margin:0; cursor:pointer;">Add Admission Fee (+₹199)</label>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Guardian Mobile (Office Use)</label>
+                    <input type="tel" id="guardianMobile" maxlength="10" class="w-full border p-2 rounded-lg" placeholder="Hidden from ID Card">
                 </div>
-
-                <div class="check-pill">
-                    <input type="checkbox" id="lockerCheck" onchange="recalcFromPlan()">
-                    <label for="lockerCheck" style="margin:0; cursor:pointer;">Add Locker Fee (+₹250)</label>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Date of Birth (DOB)</label>
+                    <input type="date" id="dob" class="w-full border p-2 rounded-lg">
                 </div>
-
-                <!-- Manual Editable Bill & Paid Box -->
-                <div style="background:#F4F6F9; border:2px solid var(--maroon); padding:10px; border-radius:8px; margin-bottom:10px;">
-                    <div class="row-2">
-                        <div class="form-group">
-                            <label>Discount (₹)</label>
-                            <input type="number" id="discountAmt" value="0" min="0" oninput="recalcFromPlan()">
-                        </div>
-                        <div class="form-group">
-                            <label>Total Bill (Editable) *</label>
-                            <input type="number" id="totalBill" required min="0" oninput="calcRemainingDue()" style="border-color:var(--maroon); font-weight:900;">
-                        </div>
-                    </div>
-                    <div class="row-2">
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label>Paid Now (Editable) *</label>
-                            <input type="number" id="paidNow" required min="0" oninput="calcRemainingDue()" style="border-color:var(--green); color:var(--green); font-weight:900;">
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label>Remaining Due (₹)</label>
-                            <input type="number" id="dueAmount" readonly value="0" style="background:#FFEBEE; color:var(--red); font-weight:900;">
-                        </div>
-                    </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Address / Village *</label>
+                    <input type="text" id="address" required class="w-full border p-2 rounded-lg" placeholder="Kachchhi Dargah, Patna">
                 </div>
-
-                <div class="row-2">
-                    <div class="form-group">
-                        <label>Due Promise Date</label>
-                        <input type="date" id="promiseDate">
-                    </div>
-                    <div class="form-group">
-                        <label>Payment Mode</label>
-                        <select id="payMode">
-                            <option value="Cash">Cash</option>
-                            <option value="Online UPI">Online UPI</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Study Purpose / Course</label>
+                    <select id="studyCourse" class="w-full border p-2 rounded-lg">
+                        <option value="General Competition">General Competition</option>
+                        <option value="10th / 12th Board">10th / 12th Board</option>
+                        <option value="Computer Course">Computer Course</option>
+                        <option value="Self Study / Other">Self Study / Other</option>
+                    </select>
                 </div>
-
-                <div class="row-3">
-                    <div class="form-group">
-                        <label style="font-size:11px;">Student Photo</label>
-                        <input type="file" id="stPhoto" accept="image/*" style="font-size:11px; padding:4px;">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-size:11px;">Aadhaar Front</label>
-                        <input type="file" id="aadhaarF" accept="image/*" style="font-size:11px; padding:4px;">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-size:11px;">Aadhaar Back</label>
-                        <input type="file" id="aadhaarB" accept="image/*" style="font-size:11px; padding:4px;">
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Shift & Timing Plan *</label>
+                    <select id="shiftPlan" onchange="calculateBill()" required class="w-full border p-2 rounded-lg">
+                        <option value="">-- Select Shift --</option>
+                        <option value="Morning (06AM - 10AM) - ₹499">Morning (06AM - 10AM) - ₹499</option>
+                        <option value="Evening (02PM - 06PM) - ₹499">Evening (02PM - 06PM) - ₹499</option>
+                        <option value="Full Day (06AM - 06PM) - ₹799">Full Day (06AM - 06PM) - ₹799</option>
+                    </select>
                 </div>
-
-                <button type="submit" class="save-btn" id="saveBtn"><i class="fa-solid fa-floppy-disk"></i> Save & Sync Student</button>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Admission Start Date *</label>
+                    <input type="date" id="startDate" onchange="updateValidUpto()" required class="w-full border p-2 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valid Upto (28 Days Auto)</label>
+                    <input type="date" id="validUpto" readonly class="w-full border p-2 rounded-lg bg-gray-100">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="addAdmissionFee" onchange="calculateBill()" class="w-4 h-4">
+                    <label class="text-xs font-semibold">Add Admission Fee (+₹199)</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="addLockerFee" onchange="calculateBill()" class="w-4 h-4">
+                    <label class="text-xs font-semibold">Add Locker Security (+₹200 refundable)</label>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Duration (Months Discount)</label>
+                    <select id="durationMonths" onchange="calculateBill()" class="w-full border p-2 rounded-lg">
+                        <option value="1">1 Month (Standard)</option>
+                        <option value="3">3 Months (5% Off)</option>
+                        <option value="6">6 Months (10% Off)</option>
+                        <option value="12">12 Months (15% Off)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Total Bill (with 5% GST)</label>
+                    <input type="number" id="totalBill" readonly class="w-full border p-2 rounded-lg bg-gray-100 font-bold text-red-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Paid Now (Editable) *</label>
+                    <input type="number" id="paidNow" oninput="calculateDues()" required class="w-full border p-2 rounded-lg font-bold text-green-700">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Remaining Due</label>
+                    <input type="number" id="remainingDue" readonly class="w-full border p-2 rounded-lg bg-gray-100 font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Due Promise Date</label>
+                    <input type="date" id="promiseDate" class="w-full border p-2 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Payment Mode</label>
+                    <select id="paymentMode" class="w-full border p-2 rounded-lg">
+                        <option value="Cash">Cash</option>
+                        <option value="Online / UPI">Online / UPI</option>
+                    </select>
+                </div>
+                <div class="md:col-span-3 flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="toggleAdmissionForm()" class="bg-gray-400 text-white px-4 py-2 rounded-lg">Cancel</button>
+                    <button type="submit" class="theme-maroon text-white px-6 py-2 rounded-lg font-semibold shadow">Save & Sync Student</button>
+                </div>
             </form>
         </div>
 
-        <!-- Right Directory -->
-        <div>
-            <div class="filter-tabs">
-                <button class="f-tab active" id="tab-all" onclick="setTab('all')">All Members</button>
-                <button class="f-tab" id="tab-live" onclick="setTab('live')">Live Members</button>
-                <button class="f-tab" id="tab-expired" onclick="setTab('expired')">Expired</button>
-                <button class="f-tab" id="tab-due" onclick="setTab('due')">Dues Pending</button>
-                <button class="f-tab" id="tab-promise" onclick="setTab('promise')">Promise Today</button>
+        <!-- Filter Tabs -->
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button onclick="setTab('all')" id="tab-all" class="px-4 py-2 rounded-xl text-xs font-bold theme-maroon text-white shadow">All Members</button>
+            <button onclick="setTab('active')" id="tab-active" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow">Live Members</button>
+            <button onclick="setTab('expired')" id="tab-expired" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow">Expired</button>
+            <button onclick="setTab('dues')" id="tab-dues" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow">Dues Pending</button>
+            <button onclick="setTab('promise')" id="tab-promise" class="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow">Promise Today</button>
+        </div>
+
+        <!-- Student List Container -->
+        <div id="studentList" class="space-y-3">
+            <!-- Populated Dynamically -->
+        </div>
+
+    </div>
+
+    <!-- Cloud Sync Config Modal -->
+    <div id="cloudModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-xl shadow-xl w-96">
+            <h3 class="text-lg font-bold mb-2 theme-maroon-text">Live Cloud Sync (Firebase)</h3>
+            <p class="text-xs text-gray-600 mb-3">अपना Firebase Realtime Database URL यहाँ दर्ज करें ताकि मोबाइल और लैपटॉप आपस में लाइव जुड़ सकें:</p>
+            <input type="text" id="firebaseUrlInput" class="w-full border p-2 rounded-lg text-xs mb-3" placeholder="https://your-app-default-rtdb.firebaseio.com">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeCloudSyncModal()" class="bg-gray-300 text-xs px-3 py-1.5 rounded-lg">Cancel</button>
+                <button onclick="saveCloudUrl()" class="theme-maroon text-white text-xs px-4 py-1.5 rounded-lg font-semibold">Save & Connect</button>
             </div>
-
-            <div id="directoryList"></div>
         </div>
     </div>
-</div>
 
-<!-- Compact ID Card Modal -->
-<div id="idModal" class="modal">
-    <div class="modal-box">
-        <div id="idCardCaptureArea" class="compact-id-card">
-            <!-- Injected dynamically -->
-        </div>
-
-        <div class="modal-btn-bar">
-            <button class="m-btn" style="background:#25D366;" onclick="shareIdCardImage()"><i class="fa-brands fa-whatsapp"></i> WhatsApp ID</button>
-            <button class="m-btn" style="background:var(--blue);" onclick="window.print()"><i class="fa-solid fa-print"></i> Print / PDF</button>
-            <button class="m-btn" style="background:#444;" onclick="document.getElementById('idModal').style.display='none'">Close</button>
-        </div>
-    </div>
-</div>
-
-<!-- Full Details & Aadhaar Viewer Modal -->
-<div id="docsModal" class="modal">
-    <div class="modal-box" style="max-width:480px;">
-        <div class="panel-header" style="margin-bottom:10px;">
-            <span id="docsModalTitle">Student Complete Record & Docs</span>
-            <button onclick="document.getElementById('docsModal').style.display='none'" style="background:none; border:none; color:#FFF; font-size:16px; cursor:pointer;">✕</button>
-        </div>
-        <div id="docsModalBody" style="font-size:13px; font-weight:700; line-height:1.6;"></div>
-    </div>
-</div>
-
-<!-- Cloud Sync Modal -->
-<div id="cloudModal" class="modal">
-    <div class="modal-box" style="max-width:420px; padding:18px;">
-        <div class="panel-header">
-            <span><i class="fa-solid fa-cloud"></i> Live Cloud Sync (Mobile + Laptop + TV)</span>
-            <button onclick="document.getElementById('cloudModal').style.display='none'" style="background:none; border:none; color:#FFF; cursor:pointer;">✕</button>
-        </div>
-        <p style="font-size:12px; font-weight:700; color:#333; margin-bottom:10px;">
-            Paste a free <b>Firebase Realtime Database URL</b> (e.g. <code>https://your-project-default-rtdb.firebaseio.com</code>) below on both your Mobile and Laptop to keep data 100% live across all devices automatically!
-        </p>
-        <div class="form-group">
-            <label>Cloud Database URL</label>
-            <input type="url" id="cloudUrlInput" placeholder="https://buddha-library-default-rtdb.firebaseio.com">
-        </div>
-        <div style="display:flex; gap:8px; margin-top:12px;">
-            <button class="save-btn" style="margin:0;" onclick="saveCloudConfig()">Save & Sync Now</button>
-            <button class="save-btn" style="margin:0; background:#555;" onclick="pullFromCloud(true)">Pull Latest Data</button>
+    <!-- Expense Tracker Modal -->
+    <div id="expenseModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold mb-3 theme-maroon-text border-b pb-2">Library Expense Tracker</h3>
+            <form id="expenseForm" onsubmit="saveExpense(event)" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Expense Item / Title *</label>
+                    <input type="text" id="expTitle" required class="w-full border p-2 rounded-lg" placeholder="Electricity Bill / Wi-Fi">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Amount (₹) *</label>
+                    <input type="number" id="expAmount" required class="w-full border p-2 rounded-lg" placeholder="1500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Date *</label>
+                    <input type="date" id="expDate" required class="w-full border p-2 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Payment Mode</label>
+                    <select id="expMode" class="w-full border p-2 rounded-lg">
+                        <option value="Cash">Cash</option>
+                        <option value="Online / UPI">Online / UPI</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2 flex justify-end">
+                    <button type="submit" class="bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-semibold">Add Expense</button>
+                </div>
+            </form>
+            <div id="expenseList" class="space-y-2 text-xs mb-4">
+                <!-- Expenses List -->
+            </div>
+            <div class="flex justify-end">
+                <button onclick="closeExpenseModal()" class="bg-gray-400 text-white text-xs px-4 py-2 rounded-lg">Close</button>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="lightbox" onclick="this.style.display='none'">
-    <img id="lightboxImg" src="">
-</div>
+    <!-- JavaScript Logic & Firebase Sync -->
+    <script>
+        let students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]');
+        let expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]');
+        let currentTab = 'all';
+        let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
 
-<script>
-    // Built-in SVG fallback logo matching Buddha Library Golden & Maroon Emblem
-    const EMBEDDED_LOGO = "data:image/svg+xml;utf8," + encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-        <circle cx="100" cy="100" r="96" fill="#F4C430" stroke="#7A0016" stroke-width="6"/>
-        <circle cx="100" cy="100" r="64" fill="#FFFFFF" stroke="#7A0016" stroke-width="3"/>
-        <text x="100" y="34" font-family="Arial" font-size="16" font-weight="900" fill="#7A0016" text-anchor="middle">BUDDHA LIBRARY</text>
-        <circle cx="100" cy="82" r="14" fill="#F4C430" opacity="0.5"/>
-        <path d="M85 120 C85 95, 115 95, 115 120 Z" fill="#37474F"/>
-        <circle cx="100" cy="82" r="9" fill="#37474F"/>
-        <rect x="64" y="96" width="16" height="26" fill="#8D6E63"/>
-        <rect x="120" y="96" width="16" height="26" fill="#8D6E63"/>
-        <text x="100" y="138" font-family="Arial" font-size="10" font-weight="bold" fill="#7A0016" text-anchor="middle">बुद्धं शरणं गच्छामि</text>
-        <text x="100" y="182" font-family="Arial" font-size="11" font-weight="900" fill="#000000" text-anchor="middle">FLAIR FOUNDATION</text>
-    </svg>`);
+        // App Security PIN
+        function verifyPin() {
+            const pin = document.getElementById('appPin').value;
+            if(pin === '2026' || pin === '7050') {
+                document.getElementById('pinModal').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                initApp();
+            } else {
+                document.getElementById('pinError').classList.remove('hidden');
+            }
+        }
 
-    let LOGO_SRC = "1000038642.png";
-    const headerLogoEl = document.getElementById('mainHeaderLogo');
-    headerLogoEl.src = LOGO_SRC;
-    headerLogoEl.onerror = function() {
-        LOGO_SRC = EMBEDDED_LOGO;
-        this.src = EMBEDDED_LOGO;
-    };
+        function initApp() {
+            document.getElementById('startDate').valueAsDate = new Date();
+            document.getElementById('expDate').valueAsDate = new Date();
+            updateValidUpto();
+            if(firebaseDbUrl) {
+                fetchFromFirebase();
+            }
+            renderStudents();
+            updateStats();
+        }
 
-    let students = JSON.parse(localStorage.getItem('buddha_library_students')) || [];
-    let currentTab = 'all';
-    let activeCardIndex = null;
+        // Toggle Admission Form
+        function toggleAdmissionForm() {
+            const form = document.getElementById('admissionFormContainer');
+            form.classList.toggle('hidden');
+            document.getElementById('studentForm').reset();
+            document.getElementById('editIndex').value = '';
+            document.getElementById('formTitle').innerText = "Student Admission Form";
+            document.getElementById('startDate').valueAsDate = new Date();
+            updateValidUpto();
+        }
 
-    document.getElementById('startDate').valueAsDate = new Date();
-    autoSetEndDate();
-    setNextAvailableId();
+        // 28-Day Cycle Calculation
+        function updateValidUpto() {
+            const startVal = document.getElementById('startDate').value;
+            if(!startVal) return;
+            const startDate = new Date(startVal);
+            const months = parseInt(document.getElementById('durationMonths').value) || 1;
+            startDate.setDate(startDate.getDate() + (28 * months));
+            document.getElementById('validUpto').value = startDate.toISOString().split('T')[0];
+            calculateBill();
+        }
 
-    function setNextAvailableId() {
-        if (document.getElementById('editIdx').value !== "") return;
-        let used = students.map(s => parseInt(s.idNo)).filter(n => !isNaN(n));
-        let next = 1;
-        while (used.includes(next)) next++;
-        document.getElementById('idNo').value = next;
-    }
+        // Billing & GST Calculation
+        function calculateBill() {
+            const shift = document.getElementById('shiftPlan').value;
+            let baseRate = 499;
+            if(shift.includes('799')) baseRate = 799;
 
-    function autoSetEndDate() {
-        let s = document.getElementById('startDate').value;
-        if (!s) return;
-        let d = new Date(s);
-        d.setDate(d.getDate() + 30);
-        document.getElementById('endDate').value = d.toISOString().split('T')[0];
-    }
+            const months = parseInt(document.getElementById('durationMonths').value) || 1;
+            let subtotal = baseRate * months;
 
-    function recalcFromPlan() {
-        let val = document.getElementById('shiftPlan').value;
-        if (!val) return;
-        let base = parseInt(val.split('|')[1]) || 0;
-        if (document.getElementById('admFeeCheck').checked) base += 199;
-        if (document.getElementById('lockerCheck').checked) base += 250;
-        let disc = parseInt(document.getElementById('discountAmt').value) || 0;
-        let net = Math.max(0, base - disc);
-        let totalWithGst = Math.round(net * 1.05);
+            // Discounts
+            if(months === 3) subtotal *= 0.95;
+            else if(months === 6) subtotal *= 0.90;
+            else if(months === 12) subtotal *= 0.85;
 
-        document.getElementById('totalBill').value = totalWithGst;
-        document.getElementById('paidNow').value = totalWithGst;
-        calcRemainingDue();
-    }
+            if(document.getElementById('addAdmissionFee').checked) subtotal += 199;
+            if(document.getElementById('addLockerFee').checked) subtotal += 200;
 
-    function calcRemainingDue() {
-        let tot = parseInt(document.getElementById('totalBill').value) || 0;
-        let paid = parseInt(document.getElementById('paidNow').value) || 0;
-        document.getElementById('dueAmount').value = Math.max(0, tot - paid);
-    }
+            // 5% GST
+            const totalWithGst = Math.round(subtotal * 1.05);
+            document.getElementById('totalBill').value = totalWithGst;
+            document.getElementById('paidNow').value = totalWithGst;
+            calculateDues();
+        }
 
-    // Ultra-light Image Compressor (35KB per photo so 2000 students take <60MB)
-    function compressImage(file, maxW = 360, quality = 0.65) {
-        return new Promise((resolve) => {
-            if (!file) { resolve(""); return; }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width, h = img.height;
-                    if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
-                    canvas.width = w; canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    resolve(canvas.toDataURL('image/jpeg', quality));
+        function calculateDues() {
+            const total = parseFloat(document.getElementById('totalBill').value) || 0;
+            const paid = parseFloat(document.getElementById('paidNow').value) || 0;
+            const due = total - paid;
+            document.getElementById('remainingDue').value = due;
+        }
+
+        // Conflict Checks (Seat, Chair, Locker)
+        function checkConflicts(uniId, seat, locker) {
+            for(let i=0; i<students.length; i++) {
+                const s = students[i];
+                const editIdx = document.getElementById('editIndex').value;
+                if(editIdx !== "" && parseInt(editIdx) === i) continue;
+
+                if(s.uniId == uniId) {
+                    alert(`⚠️ Error: Unique ID #${uniId} is already assigned to ${s.fullName}!`);
+                    return false;
+                }
+                if(seat && s.seatNo && s.seatNo.toLowerCase() === seat.toLowerCase() && isStudentActive(s)) {
+                    alert(`⚠️ Warning: Seat/Chair "${seat}" is currently active with Student ID #${s.uniId} (${s.fullName})!`);
+                }
+                if(locker && s.lockerNo && s.lockerNo.toLowerCase() === locker.toLowerCase() && isStudentActive(s)) {
+                    alert(`⚠️ Warning: Locker "${locker}" is currently assigned to Student ID #${s.uniId} (${s.fullName})!`);
+                }
+            }
+            return true;
+        }
+
+        function isStudentActive(s) {
+            const today = new Date().toISOString().split('T')[0];
+            return s.validUpto >= today;
+        }
+
+        // Save Student
+        function saveStudent(e) {
+            e.preventDefault();
+            const uniId = document.getElementById('uniId').value;
+            const seatNo = document.getElementById('seatNo').value;
+            const lockerNo = document.getElementById('lockerNo').value;
+            const fullName = document.getElementById('fullName').value;
+            const gender = document.getElementById('gender').value;
+            const mobile = document.getElementById('mobile').value;
+            const guardianMobile = document.getElementById('guardianMobile').value;
+            const dob = document.getElementById('dob').value;
+            const address = document.getElementById('address').value;
+            const studyCourse = document.getElementById('studyCourse').value;
+            const shiftPlan = document.getElementById('shiftPlan').value;
+            const startDate = document.getElementById('startDate').value;
+            const validUpto = document.getElementById('validUpto').value;
+            const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+            const paidNow = parseFloat(document.getElementById('paidNow').value) || 0;
+            const remainingDue = parseFloat(document.getElementById('remainingDue').value) || 0;
+            const promiseDate = document.getElementById('promiseDate').value;
+            const paymentMode = document.getElementById('paymentMode').value;
+
+            if(!checkConflicts(uniId, seatNo, lockerNo)) return;
+
+            const editIndex = document.getElementById('editIndex').value;
+            let paymentRecord = { date: startDate, amount: paidNow, mode: paymentMode, type: 'Admission/Renewal' };
+
+            if(editIndex !== "") {
+                let st = students[editIndex];
+                st.uniId = uniId;
+                st.seatNo = seatNo;
+                st.lockerNo = lockerNo;
+                st.fullName = fullName;
+                st.gender = gender;
+                st.mobile = mobile;
+                st.guardianMobile = guardianMobile;
+                st.dob = dob;
+                st.address = address;
+                st.studyCourse = studyCourse;
+                st.shiftPlan = shiftPlan;
+                st.validUpto = validUpto;
+                st.remainingDue = remainingDue;
+                st.promiseDate = promiseDate;
+                if(paidNow > 0) st.paymentHistory.push(paymentRecord);
+            } else {
+                let newStudent = {
+                    uniId, seatNo, lockerNo, fullName, gender, mobile, guardianMobile, dob, address, studyCourse, shiftPlan,
+                    admissionDate: startDate,
+                    validUpto,
+                    totalBill,
+                    paidNow,
+                    remainingDue,
+                    promiseDate,
+                    paymentHistory: [paymentRecord]
                 };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    async function saveRecord(e) {
-        e.preventDefault();
-        let editIdx = document.getElementById('editIdx').value;
-        let idNo = document.getElementById('idNo').value.trim();
-
-        let dup = students.some((s, i) => s.idNo.toString() === idNo && i.toString() !== editIdx.toString());
-        if (dup) {
-            alert("ID No " + idNo + " already exists! Please choose another ID.");
-            return;
-        }
-
-        let fPhoto = document.getElementById('stPhoto').files[0];
-        let fAadhaarF = document.getElementById('aadhaarF').files[0];
-        let fAadhaarB = document.getElementById('aadhaarB').files[0];
-
-        let old = (editIdx !== "" && students[editIdx]) ? students[editIdx] : {};
-
-        let photoData = fPhoto ? await compressImage(fPhoto, 300, 0.7) : (old.photo || "");
-        let aadhaarFront = fAadhaarF ? await compressImage(fAadhaarF, 600, 0.65) : (old.aadhaarFront || "");
-        let aadhaarBack = fAadhaarB ? await compressImage(fAadhaarB, 600, 0.65) : (old.aadhaarBack || "");
-
-        let record = {
-            idNo,
-            seatNo: document.getElementById('seatNo').value.trim(),
-            name: document.getElementById('name').value.trim(),
-            mobile: document.getElementById('mobile').value.trim(),
-            parentInfo: document.getElementById('parentInfo').value.trim(),
-            address: document.getElementById('address').value.trim(),
-            shiftPlan: document.getElementById('shiftPlan').value,
-            startDate: document.getElementById('startDate').value,
-            endDate: document.getElementById('endDate').value,
-            admFeeCheck: document.getElementById('admFeeCheck').checked,
-            lockerCheck: document.getElementById('lockerCheck').checked,
-            discountAmt: parseInt(document.getElementById('discountAmt').value) || 0,
-            totalAmount: parseInt(document.getElementById('totalBill').value) || 0,
-            amountPaid: parseInt(document.getElementById('paidNow').value) || 0,
-            remainingDue: parseInt(document.getElementById('dueAmount').value) || 0,
-            promiseDate: document.getElementById('promiseDate').value,
-            payMode: document.getElementById('payMode').value,
-            photo: photoData,
-            aadhaarFront,
-            aadhaarBack
-        };
-
-        if (editIdx === "") {
-            students.unshift(record);
-        } else {
-            students[parseInt(editIdx)] = record;
-        }
-
-        localStorage.setItem('buddha_library_students', JSON.stringify(students));
-        pushToCloud();
-        resetForm();
-        renderDirectory();
-    }
-
-    function resetForm() {
-        document.getElementById('studentForm').reset();
-        document.getElementById('editIdx').value = "";
-        document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-user-plus"></i> Student Admission / Edit`;
-        document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Save & Sync Student`;
-        document.getElementById('startDate').valueAsDate = new Date();
-        autoSetEndDate();
-        setNextAvailableId();
-    }
-
-    function fmtDate(d) {
-        if (!d) return "N/A";
-        let p = d.split('-');
-        return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : d;
-    }
-
-    function setTab(t) {
-        currentTab = t;
-        document.querySelectorAll('.f-tab').forEach(b => b.classList.remove('active'));
-        let btn = document.getElementById('tab-' + t);
-        if (btn) btn.classList.add('active');
-        renderDirectory();
-    }
-
-    function renderDirectory() {
-        let list = document.getElementById('directoryList');
-        list.innerHTML = '';
-
-        let q = document.getElementById('searchInput').value.toLowerCase().trim();
-        let today = new Date().toISOString().split('T')[0];
-
-        let total = students.length, live = 0, exp = 0, coll = 0, dues = 0;
-        let promiseMatches = [];
-
-        students.forEach((st, idx) => {
-            let isLive = st.endDate >= today;
-            if (isLive) live++; else exp++;
-
-            let paid = parseInt(st.amountPaid) || 0;
-            let due = parseInt(st.remainingDue) || 0;
-            coll += paid;
-            dues += due;
-
-            if (due > 0 && st.promiseDate && st.promiseDate <= today) {
-                promiseMatches.push(`${st.name} (#${st.idNo}: ₹${due})`);
+                students.push(newStudent);
             }
 
-            if (currentTab === 'live' && !isLive) return;
-            if (currentTab === 'expired' && isLive) return;
-            if (currentTab === 'due' && due <= 0) return;
-            if (currentTab === 'paid' && paid <= 0) return;
-            if (currentTab === 'promise' && !(due > 0 && st.promiseDate && st.promiseDate <= today)) return;
+            syncAndSave();
+            toggleAdmissionForm();
+            renderStudents();
+            updateStats();
+        }
 
-            if (q) {
-                let mId = st.idNo.toString().toLowerCase().includes(q);
-                let mName = st.name.toLowerCase().includes(q);
-                let mMob = st.mobile.includes(q);
-                let mSeat = st.seatNo.toLowerCase().includes(q);
-                let mPar = (st.parentInfo || '').toLowerCase().includes(q);
-                if (!mId && !mName && !mMob && !mSeat && !mPar) return;
+        // Render Students List
+        function renderStudents() {
+            const listContainer = document.getElementById('studentList');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            listContainer.innerHTML = '';
+
+            let filtered = students.filter(s => {
+                const matchSearch = s.fullName.toLowerCase().includes(search) || s.uniId.toString().includes(search) || s.mobile.includes(search) || s.seatNo.toLowerCase().includes(search);
+                if(!matchSearch) return false;
+
+                const today = new Date().toISOString().split('T')[0];
+                const isActive = s.validUpto >= today;
+
+                if(currentTab === 'active') return isActive;
+                if(currentTab === 'expired') return !isActive;
+                if(currentTab === 'dues') return s.remainingDue > 0;
+                if(currentTab === 'promise') return s.promiseDate === today;
+                return true;
+            });
+
+            if(filtered.length === 0) {
+                listContainer.innerHTML = `<div class="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">कोई छात्र रिकॉर्ड नहीं मिला।</div>`;
+                return;
             }
 
-            let shiftName = st.shiftPlan ? st.shiftPlan.split('|')[0] : 'Standard Shift';
-            let imgSrc = st.photo || EMBEDDED_LOGO;
+            filtered.forEach((s, idx) => {
+                const originalIndex = students.indexOf(s);
+                const today = new Date().toISOString().split('T')[0];
+                const isActive = s.validUpto >= today;
+                const totalPaid = s.paymentHistory.reduce((acc, cur) => acc + cur.amount, 0);
 
-            let card = document.createElement('div');
-            card.className = 'st-card';
-            card.innerHTML = `
-                <div class="st-top">
-                    <div class="st-user">
-                        <img src="${imgSrc}" onclick="zoomImg('${imgSrc}')">
-                        <div class="st-user-info">
-                            <h4>${st.name}</h4>
-                            <p><i class="fa-solid fa-location-dot"></i> ${st.address || 'Patna'} | <b>Seat: ${st.seatNo}</b></p>
-                            <a class="call-link" href="tel:+91${st.mobile}"><i class="fa-solid fa-phone"></i> +91 ${st.mobile}</a>
-                            ${st.parentInfo ? `<span style="font-size:12px; font-weight:800; color:#444; margin-left:6px;">| Guardian: ${st.parentInfo}</span>` : ''}
+                let card = document.createElement('div');
+                card.className = `bg-white p-4 rounded-xl shadow-md border-l-4 ${isActive ? 'border-green-600' : 'border-red-600'}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="bg-red-900 text-white text-xs px-2 py-0.5 rounded font-bold">ID #${s.uniId}</span>
+                                <h3 class="font-bold text-gray-800 text-base">${s.fullName} (${s.gender})</h3>
+                                <span class="text-xs text-gray-500">📍 Seat: ${s.seatNo}</span>
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1">📞 +91 ${s.mobile} | 🏡 ${s.address}</p>
+                            <p class="text-xs text-indigo-700 font-semibold mt-0.5">📚 ${s.studyCourse} | ⏱️ ${s.shiftPlan}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs px-2 py-1 rounded font-semibold ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${isActive ? '🟢 Active' : '🔴 Expired'}
+                            </span>
+                            <p class="text-xs text-gray-500 mt-1">Valid Upto: <b>${s.validUpto}</b></p>
                         </div>
                     </div>
-                    <div class="id-badge-top">ID #${st.idNo}</div>
-                </div>
-
-                <div class="st-mid-grid">
-                    <div>
-                        <strong>Shift & Time</strong>
-                        <span>${shiftName}</span>
+                    <div class="mt-3 pt-2 border-t grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                        <div><span class="text-gray-500">Total Paid:</span> <b class="text-green-700">₹${totalPaid}</b></div>
+                        <div><span class="text-gray-500">Remaining Due:</span> <b class="text-red-600">₹${s.remainingDue}</b></div>
+                        <div><span class="text-gray-500">Promise Date:</span> <b>${s.promiseDate || 'None'}</b></div>
+                        <div><span class="text-gray-500">Locker:</span> <b>${s.lockerNo || 'None'}</b></div>
                     </div>
-                    <div>
-                        <strong>Start / Valid Upto</strong>
-                        <span>${fmtDate(st.startDate)} to <b style="color:var(--red);">${fmtDate(st.endDate)}</b></span>
+                    <div class="mt-3 flex flex-wrap gap-2 justify-between items-center">
+                        <div class="flex flex-wrap gap-1">
+                            <button onclick="renewStudent(${originalIndex})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold">🔄 Renew / Reset</button>
+                            <button onclick="sendWhatsAppReminder(${originalIndex})" class="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold">💬 WhatsApp Dues</button>
+                            <button onclick="viewHistory(${originalIndex})" class="bg-gray-700 text-white px-3 py-1 rounded text-xs font-semibold">📜 Payment History</button>
+                            <button onclick="editStudent(${originalIndex})" class="bg-amber-600 text-white px-3 py-1 rounded text-xs font-semibold">✏️ Edit</button>
+                        </div>
+                        <button onclick="deleteStudent(${originalIndex})" class="bg-red-600 text-white px-2 py-1 rounded text-xs">🗑️ Delete</button>
                     </div>
-                    <div>
-                        <strong>Bill / Paid</strong>
-                        <span>₹${st.totalAmount} / <b style="color:var(--green);">₹${paid}</b></span>
-                    </div>
-                    <div>
-                        <strong>Remaining Due</strong>
-                        <span style="color:${due > 0 ? 'var(--red)' : 'var(--green)'};">₹${due} ${st.promiseDate && due > 0 ? `(${fmtDate(st.promiseDate)})` : ''}</span>
-                    </div>
-                </div>
-
-                <div class="st-actions">
-                    <button class="s-btn" style="background:var(--maroon); color:#FFF;" onclick="showCompactId(${idx})">
-                        <i class="fa-solid fa-id-card"></i> ID Card
-                    </button>
-                    <button class="s-btn" onclick="openDocsModal(${idx})">
-                        <i class="fa-solid fa-folder-open"></i> Docs / Full Info
-                    </button>
-                    <button class="s-btn" onclick="editRecord(${idx})">
-                        <i class="fa-solid fa-pen"></i> Edit
-                    </button>
-                    <button class="s-btn" style="color:var(--green);" onclick="collectDue(${idx})">
-                        <i class="fa-solid fa-indian-rupee-sign"></i> Pay Due
-                    </button>
-                    <button class="s-btn" style="color:var(--red);" onclick="removeRecord(${idx})">
-                        <i class="fa-solid fa-trash"></i> Delete
-                    </button>
-                </div>
-            `;
-            list.appendChild(card);
-        });
-
-        document.getElementById('stTotal').innerText = total;
-        document.getElementById('stLive').innerText = live;
-        document.getElementById('stExpired').innerText = exp;
-        document.getElementById('stPaid').innerText = '₹' + coll;
-        document.getElementById('stDue').innerText = '₹' + dues;
-
-        if (promiseMatches.length > 0) {
-            document.getElementById('promiseBannerText').innerHTML = `🚨 <b>PROMISE DUE TODAY (${promiseMatches.length}):</b> ${promiseMatches.slice(0, 3).join(', ')}`;
-        } else {
-            document.getElementById('promiseBannerText').innerText = "No pending fee promises due for today.";
+                `;
+                listContainer.appendChild(card);
+            });
         }
-    }
 
-    function showCompactId(idx) {
-        activeCardIndex = idx;
-        let st = students[idx];
-        let shiftName = st.shiftPlan ? st.shiftPlan.split('|')[0] : 'Standard Shift';
-        let photoSrc = st.photo || EMBEDDED_LOGO;
-        let due = parseInt(st.remainingDue) || 0;
-
-        document.getElementById('idCardCaptureArea').innerHTML = `
-            <div class="id-header">
-                <img src="${LOGO_SRC}" onerror="this.src=EMBEDDED_LOGO">
-                <div class="id-header-text">
-                    <h3>BUDDHA LIBRARY</h3>
-                    <p>A Unit of "Flair Foundation" | Kachchi Dargah,<br>Near Durga Mandir, Patna-803201<br>Helpline: 7050668855, 0612-2641161</p>
-                </div>
-            </div>
-            <div class="id-body">
-                <div class="id-photo-row">
-                    <img src="${photoSrc}" onclick="zoomImg('${photoSrc}')" title="Tap to zoom">
-                    <div class="id-title-block">
-                        <div class="id-pill-row">
-                            <span class="id-tag">ID: #${st.idNo}</span>
-                            <span class="seat-tag">SEAT: ${st.seatNo}</span>
-                        </div>
-                        <div class="id-st-name">${st.name}</div>
-                        <div class="id-st-mob"><i class="fa-solid fa-phone"></i> +91 ${st.mobile}</div>
-                    </div>
-                </div>
-                <table class="id-grid-table">
-                    <tr>
-                        <td class="k">Shift & Time</td>
-                        <td>${shiftName}</td>
-                    </tr>
-                    <tr>
-                        <td class="k">Start Date</td>
-                        <td>${fmtDate(st.startDate)}</td>
-                    </tr>
-                    <tr>
-                        <td class="k">Valid Upto</td>
-                        <td style="background:#FFEBEE; color:#C62828; font-size:12.5px;">${fmtDate(st.endDate)}</td>
-                    </tr>
-                    <tr>
-                        <td class="k">Address</td>
-                        <td>${st.address || 'Patna'}</td>
-                    </tr>
-                    <tr>
-                        <td class="k">Balance Due</td>
-                        <td style="color:${due > 0 ? '#C62828' : '#0F7B32'}; font-size:12.5px;">
-                            ${due > 0 ? `₹${due} PENDING` : `₹0 (NO DUE)`}
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <div class="id-footer-strip">
-                Authorized Digital Identity Card • Buddha Library Patna
-            </div>
-        `;
-        document.getElementById('idModal').style.display = 'flex';
-    }
-
-    async function shareIdCardImage() {
-        if (activeCardIndex === null) return;
-        let st = students[activeCardIndex];
-        let cardEl = document.getElementById('idCardCaptureArea');
-
-        try {
-            let canvas = await html2canvas(cardEl, { scale: 2, useCORS: true });
-            canvas.toBlob(async (blob) => {
-                let file = new File([blob], `Buddha_Library_ID_${st.idNo}.png`, { type: 'image/png' });
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: `Buddha Library ID #${st.idNo}`
-                    });
+        function setTab(tab) {
+            currentTab = tab;
+            ['all', 'active', 'expired', 'dues', 'promise'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if(t === tab) {
+                    btn.className = "px-4 py-2 rounded-xl text-xs font-bold theme-maroon text-white shadow";
                 } else {
-                    // Fallback: Download compact ID image & open WhatsApp chat
-                    let link = document.createElement('a');
-                    link.download = `Buddha_Library_ID_${st.idNo}.png`;
-                    link.href = URL.createObjectURL(blob);
-                    link.click();
-
-                    let due = parseInt(st.remainingDue) || 0;
-                    let shiftName = st.shiftPlan ? st.shiftPlan.split('|')[0] : '';
-                    let txt = `*BUDDHA LIBRARY - DIGITAL ID CARD*\n*ID:* #${st.idNo} | *Seat:* ${st.seatNo}\n*Name:* ${st.name}\n*Mobile:* ${st.mobile}\n*Shift:* ${shiftName}\n*Start:* ${fmtDate(st.startDate)}\n*Valid Upto:* *${fmtDate(st.endDate)}*\n*Balance Due:* ₹${due}\n*Helpline:* 7050668855`;
-                    window.open(`https://api.whatsapp.com/send?phone=91${st.mobile}&text=${encodeURIComponent(txt)}`, '_blank');
+                    btn.className = "px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 shadow";
                 }
             });
-        } catch (err) {
-            alert("Error generating card image.");
+            renderStudents();
         }
-    }
 
-    function openDocsModal(idx) {
-        let st = students[idx];
-        document.getElementById('docsModalTitle').innerText = `${st.name} (ID #${st.idNo}) - Complete Details`;
-        let html = `
-            <p><b>Full Name:</b> ${st.name}</p>
-            <p><b>Student Mobile:</b> <a href="tel:+91${st.mobile}">+91 ${st.mobile}</a></p>
-            <p><b>Guardian Info (Internal):</b> ${st.parentInfo || 'Not Provided'}</p>
-            <p><b>Address:</b> ${st.address || 'Patna'}</p>
-            <p><b>Shift & Plan:</b> ${st.shiftPlan ? st.shiftPlan.split('|')[0] : ''}</p>
-            <p><b>Total Bill:</b> ₹${st.totalAmount} | <b>Paid:</b> ₹${st.amountPaid} | <b>Due:</b> ₹${st.remainingDue}</p>
-            <hr style="margin:10px 0;">
-            <p style="margin-bottom:6px;"><b>Uploaded Documents (Click to Zoom):</b></p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div>
-                    <small>Aadhaar Front</small><br>
-                    ${st.aadhaarFront ? `<img src="${st.aadhaarFront}" style="width:100%; height:110px; object-fit:cover; border:2px solid var(--maroon); border-radius:6px; cursor:pointer;" onclick="zoomImg('${st.aadhaarFront}')">` : `<p style="color:#888;">No Front Image</p>`}
-                </div>
-                <div>
-                    <small>Aadhaar Back</small><br>
-                    ${st.aadhaarBack ? `<img src="${st.aadhaarBack}" style="width:100%; height:110px; object-fit:cover; border:2px solid var(--maroon); border-radius:6px; cursor:pointer;" onclick="zoomImg('${st.aadhaarBack}')">` : `<p style="color:#888;">No Back Image</p>`}
-                </div>
-            </div>
-        `;
-        document.getElementById('docsModalBody').innerHTML = html;
-        document.getElementById('docsModal').style.display = 'flex';
-    }
-
-    function editRecord(idx) {
-        let st = students[idx];
-        document.getElementById('editIdx').value = idx;
-        document.getElementById('idNo').value = st.idNo;
-        document.getElementById('seatNo').value = st.seatNo;
-        document.getElementById('name').value = st.name;
-        document.getElementById('mobile').value = st.mobile;
-        document.getElementById('parentInfo').value = st.parentInfo || '';
-        document.getElementById('address').value = st.address || '';
-        document.getElementById('shiftPlan').value = st.shiftPlan;
-        document.getElementById('startDate').value = st.startDate;
-        document.getElementById('endDate').value = st.endDate;
-        document.getElementById('admFeeCheck').checked = st.admFeeCheck || false;
-        document.getElementById('lockerCheck').checked = st.lockerCheck || false;
-        document.getElementById('discountAmt').value = st.discountAmt || 0;
-        document.getElementById('totalBill').value = st.totalAmount || 0;
-        document.getElementById('paidNow').value = st.amountPaid || 0;
-        document.getElementById('dueAmount').value = st.remainingDue || 0;
-        document.getElementById('promiseDate').value = st.promiseDate || '';
-        document.getElementById('payMode').value = st.payMode || 'Cash';
-
-        document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen"></i> Editing ID #${st.idNo}`;
-        document.getElementById('saveBtn').innerHTML = `<i class="fa-solid fa-check"></i> Update Record`;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function collectDue(idx) {
-        let st = students[idx];
-        let due = parseInt(st.remainingDue) || 0;
-        if (due <= 0) { alert("No pending dues for this student!"); return; }
-        let rec = prompt(`Pending Due for ${st.name} is ₹${due}.\nEnter amount received now (₹):`, due);
-        if (rec !== null) {
-            let add = parseInt(rec) || 0;
-            st.amountPaid = (parseInt(st.amountPaid) || 0) + add;
-            st.remainingDue = Math.max(0, st.totalAmount - st.amountPaid);
-            if (st.remainingDue === 0) st.promiseDate = "";
-            localStorage.setItem('buddha_library_students', JSON.stringify(students));
-            pushToCloud();
-            renderDirectory();
+        function filterStudents() {
+            renderStudents();
         }
-    }
 
-    function removeRecord(idx) {
-        if (confirm("Delete this student record permanently?")) {
-            students.splice(idx, 1);
-            localStorage.setItem('buddha_library_students', JSON.stringify(students));
-            pushToCloud();
-            setNextAvailableId();
-            renderDirectory();
+        // Renew Student Cycle
+        function renewStudent(index) {
+            let s = students[index];
+            let amount = prompt(`Enter renewal amount received for ${s.fullName}:`, "499");
+            if(amount === null) return;
+            let mode = confirm("Click OK for Cash, Cancel for Online/UPI") ? "Cash" : "Online / UPI";
+
+            let startDate = new Date(s.validUpto);
+            let today = new Date();
+            if(startDate < today) startDate = today; // If expired long ago, start from today
+
+            startDate.setDate(startDate.getDate() + 28);
+            let newValidUpto = startDate.toISOString().split('T')[0];
+
+            s.validUpto = newValidUpto;
+            s.paymentHistory.push({ date: new Date().toISOString().split('T')[0], amount: parseFloat(amount) || 0, mode, type: 'Renewal' });
+            
+            syncAndSave();
+            renderStudents();
+            updateStats();
+            alert(`✅ Renewal successful! Next expiry updated to ${newValidUpto}`);
         }
-    }
 
-    function zoomImg(src) {
-        document.getElementById('lightboxImg').src = src;
-        document.getElementById('lightbox').style.display = 'flex';
-    }
-
-    function exportBackup() {
-        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(students));
-        let a = document.createElement('a');
-        a.href = dataStr;
-        a.download = `Buddha_Library_Backup_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-    }
-
-    function importBackup(e) {
-        let f = e.target.files[0];
-        if (!f) return;
-        let r = new FileReader();
-        r.onload = function(evt) {
-            try {
-                let arr = JSON.parse(evt.target.result);
-                if (Array.isArray(arr)) {
-                    students = arr;
-                    localStorage.setItem('buddha_library_students', JSON.stringify(students));
-                    pushToCloud();
-                    setNextAvailableId();
-                    renderDirectory();
-                    alert("Backup restored successfully!");
-                }
-            } catch (err) { alert("Invalid backup file!"); }
-        };
-        r.readAsText(f);
-    }
-
-    // Live Cloud Sync Functions (Works across Mobile, Laptop, TV)
-    function openCloudSetup() {
-        document.getElementById('cloudUrlInput').value = localStorage.getItem('buddha_cloud_url') || '';
-        document.getElementById('cloudModal').style.display = 'flex';
-    }
-
-    function saveCloudConfig() {
-        let url = document.getElementById('cloudUrlInput').value.trim().replace(/\/$/, "");
-        localStorage.setItem('buddha_cloud_url', url);
-        pushToCloud(true);
-        document.getElementById('cloudModal').style.display = 'none';
-    }
-
-    async function pushToCloud(showAlert = false) {
-        let url = localStorage.getItem('buddha_cloud_url');
-        if (!url) return;
-        try {
-            await fetch(`${url}/buddha_students.json`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(students)
-            });
-            if (showAlert) alert("Data synced live to Cloud!");
-        } catch (e) {
-            if (showAlert) alert("Cloud sync failed. Check URL.");
+        // WhatsApp Dues Reminder
+        function sendWhatsAppReminder(index) {
+            let s = students[index];
+            let msg = `प्रिय ${s.fullName}, आपकी बुद्धा लाइब्रेरी की फीस बकाया है। आपका कुल ड्यूज ₹${s.remainingDue} है। कृपया जल्द से जल्द भुगतान करें। - बुद्धा लाइब्रेरी (7050668855)`;
+            let url = `https://wa.me/91${s.mobile}?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
         }
-    }
 
-    async function pullFromCloud(showAlert = false) {
-        let url = localStorage.getItem('buddha_cloud_url');
-        if (!url) return;
-        try {
-            let res = await fetch(`${url}/buddha_students.json`);
-            let data = await res.json();
-            if (Array.isArray(data)) {
-                students = data;
-                localStorage.setItem('buddha_library_students', JSON.stringify(students));
-                setNextAvailableId();
-                renderDirectory();
-                if (showAlert) alert("Latest live data loaded from Cloud!");
+        // View Payment History
+        function viewHistory(index) {
+            let s = students[index];
+            let historyText = s.paymentHistory.map((p, i) => `${i+1}. Date: ${p.date} | ₹${p.amount} (${p.mode}) - [${p.type}]`).join('\n');
+            let total = s.paymentHistory.reduce((acc, cur) => acc + cur.amount, 0);
+            alert(`📜 Payment Ledger for ${s.fullName} (ID #${s.uniId}):\n\n${historyText}\n\n------------------\nTotal Paid Till Date: ₹${total}`);
+        }
+
+        // Edit Student
+        function editStudent(index) {
+            let s = students[index];
+            document.getElementById('editIndex').value = index;
+            document.getElementById('formTitle').innerText = "Edit Student Record";
+            document.getElementById('uniId').value = s.uniId;
+            document.getElementById('seatNo').value = s.seatNo;
+            document.getElementById('lockerNo').value = s.lockerNo || '';
+            document.getElementById('fullName').value = s.fullName;
+            document.getElementById('gender').value = s.gender;
+            document.getElementById('mobile').value = s.mobile;
+            document.getElementById('guardianMobile').value = s.guardianMobile || '';
+            document.getElementById('dob').value = s.dob || '';
+            document.getElementById('address').value = s.address;
+            document.getElementById('studyCourse').value = s.studyCourse;
+            document.getElementById('shiftPlan').value = s.shiftPlan;
+            document.getElementById('startDate').value = s.admissionDate;
+            document.getElementById('validUpto').value = s.validUpto;
+            document.getElementById('totalBill').value = s.totalBill || 0;
+            document.getElementById('paidNow').value = s.paidNow || 0;
+            document.getElementById('remainingDue').value = s.remainingDue || 0;
+            document.getElementById('promiseDate').value = s.promiseDate || '';
+            
+            document.getElementById('admissionFormContainer').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Delete Student (Secured)
+        function deleteStudent(index) {
+            if(confirm("⚠️ क्या आप वाकई इस छात्र का रिकॉर्ड डिलीट करना चाहते हैं?")) {
+                students.splice(index, 1);
+                syncAndSave();
+                renderStudents();
+                updateStats();
             }
-        } catch (e) {
-            if (showAlert) alert("Could not fetch from Cloud.");
         }
-    }
 
-    // Auto-pull latest data on page load if Cloud URL is configured
-    pullFromCloud(false);
-    renderDirectory();
-</script>
+        // Expense Tracker Functions
+        function openExpenseModal() {
+            document.getElementById('expenseModal').classList.remove('hidden');
+            renderExpenses();
+        }
+        function closeExpenseModal() {
+            document.getElementById('expenseModal').classList.add('hidden');
+        }
+        function saveExpense(e) {
+            e.preventDefault();
+            let title = document.getElementById('expTitle').value;
+            let amount = parseFloat(document.getElementById('expAmount').value) || 0;
+            let date = document.getElementById('expDate').value;
+            let mode = document.getElementById('expMode').value;
 
+            expenses.push({ title, amount, date, mode });
+            localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
+            document.getElementById('expenseForm').reset();
+            document.getElementById('expDate').valueAsDate = new Date();
+            renderExpenses();
+            updateStats();
+        }
+        function renderExpenses() {
+            let container = document.getElementById('expenseList');
+            container.innerHTML = '';
+            if(expenses.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 text-center">कोई खर्च दर्ज नहीं है।</p>`;
+                return;
+            }
+            expenses.forEach((ex, i) => {
+                container.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded border">
+                        <div><b>${ex.title}</b> - ₹${ex.amount} (${ex.mode})</div>
+                        <div class="text-gray-500">${ex.date} <button onclick="deleteExpense(${i})" class="text-red-500 ml-2">❌</button></div>
+                    </div>
+                `;
+            });
+        }
+        function deleteExpense(i) {
+            expenses.splice(i, 1);
+            localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
+            renderExpenses();
+            updateStats();
+        }
+
+        // Today's Birthdays Popup
+        function openBirthdayList() {
+            const todayStr = new Date().toISOString().split('T')[0].slice(5); // MM-DD
+            let bdays = students.filter(s => s.dob && s.dob.slice(5) === todayStr);
+            if(bdays.length === 0) {
+                alert("🎂 आज किसी भी छात्र का जन्मदिन नहीं है।");
+                return;
+            }
+            let msg = bdays.map(b => `🎉 ${b.fullName} (ID #${b.uniId}, Mobile: ${b.mobile})`).join('\n');
+            alert(`🎂 Today's Birthday Students:\n\n${msg}`);
+        }
+
+        // Update Statistics Dashboard
+        function updateStats() {
+            document.getElementById('statTotal').innerText = students.length;
+            const today = new Date().toISOString().split('T')[0];
+            const activeCount = students.filter(s => s.validUpto >= today).length;
+            document.getElementById('statActive').innerText = activeCount;
+
+            // This month collection
+            const currentMonthPrefix = today.slice(0, 7);
+            let totalCol = 0;
+            students.forEach(s => {
+                s.paymentHistory.forEach(p => {
+                    if(p.date.startsWith(currentMonthPrefix)) totalCol += p.amount;
+                });
+            });
+            document.getElementById('statCollection').innerText = `₹${totalCol}`;
+
+            // Total Dues
+            let totalD = students.reduce((acc, cur) => acc + (cur.remainingDue || 0), 0);
+            document.getElementById('statDues').innerText = `₹${totalD}`;
+        }
+
+        // Cloud Sync Modal & Firebase
+        function openCloudSyncModal() {
+            document.getElementById('firebaseUrlInput').value = firebaseDbUrl;
+            document.getElementById('cloudModal').classList.remove('hidden');
+        }
+        function closeCloudSyncModal() {
+            document.getElementById('cloudModal').classList.add('hidden');
+        }
+        function saveCloudUrl() {
+            firebaseDbUrl = document.getElementById('firebaseUrlInput').value.trim();
+            localStorage.setItem('buddha_library_firebase_url', firebaseDbUrl);
+            closeCloudSyncModal();
+            if(firebaseDbUrl) fetchFromFirebase();
+            alert("✅ Cloud Sync URL Saved!");
+        }
+
+        function syncAndSave() {
+            localStorage.setItem('buddha_library_students', JSON.stringify(students));
+            updateStats();
+            if(firebaseDbUrl) {
+                pushToFirebase();
+            }
+        }
+
+        function pushToFirebase() {
+            if(!firebaseDbUrl) return;
+            let url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
+            fetch(url, {
+                method: 'PUT',
+                body: JSON.stringify(students)
+            }).catch(err => console.log('Firebase Sync Error:', err));
+        }
+
+        function fetchFromFirebase() {
+            if(!firebaseDbUrl) return;
+            let url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if(data) {
+                    students = data;
+                    localStorage.setItem('buddha_library_students', JSON.stringify(students));
+                    renderStudents();
+                    updateStats();
+                }
+            }).catch(err => console.log('Firebase Fetch Error:', err));
+        }
+
+        // Drive Backup & Restore
+        function exportDriveBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(students));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `buddha_library_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function triggerRestore() {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                let file = e.target.files[0];
+                let reader = new FileReader();
+                reader.readAsText(file, 'UTF-8');
+                reader.onload = readerEvent => {
+                    try {
+                        students = JSON.parse(readerEvent.target.result);
+                        syncAndSave();
+                        renderStudents();
+                        alert("✅ Data Restored Successfully!");
+                    } catch(err) {
+                        alert("❌ Invalid Backup File!");
+                    }
+                }
+            };
+            input.click();
+        }
+    </script>
 </body>
 </html>
