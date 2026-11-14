@@ -14,17 +14,19 @@
         .theme-border { border-color: #5c061c; }
         .fade-in { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        /* Special styling so html2canvas never clips text */
-        .id-text-safe { line-height: 1.45 !important; padding-top: 1px; padding-bottom: 2px; word-break: break-word; }
+        /* Prevents html2canvas text & badge clipping */
+        .id-safe-line { line-height: 1.5 !important; padding-top: 2px; padding-bottom: 2px; }
+        /* Face & Neck focus for thumbnails */
+        .face-focus-thumb { object-fit: cover; object-position: center 15%; }
         @media print {
             .no-print { display: none !important; }
             body { background: #fff !important; }
         }
     </style>
 </head>
-<body class="min-h-screen pb-10">
+<body class="min-h-screen pb-12">
 
-    <!-- 1. Security PIN Lock Modal -->
+    <!-- 1. Security PIN Lock Modal (Default: 7050 or 2026) -->
     <div id="pinModal" class="fixed inset-0 bg-slate-900 bg-opacity-90 z-50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xs text-center border-t-4 theme-border fade-in">
             <div class="w-14 h-14 mx-auto mb-2 rounded-full theme-maroon text-white flex items-center justify-center text-2xl shadow-md">🏛️</div>
@@ -40,20 +42,20 @@
     <!-- Main Application Wrapper -->
     <div id="mainApp" class="max-w-7xl mx-auto p-2.5 sm:p-4 hidden fade-in">
 
-        <!-- 2. Clean Professional Header (No Underline on Helpline) -->
+        <!-- 2. Clean Professional Header with 3-Line Menu (☰) -->
         <header class="theme-maroon text-white p-4 sm:p-5 rounded-2xl shadow-lg mb-3 relative">
             <div class="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2">
                 <span id="syncStatusDot" title="Cloud Sync Status" class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block shadow"></span>
                 <button onclick="toggleHeaderMenu()" class="bg-white bg-opacity-15 hover:bg-opacity-25 text-white px-3 py-1.5 rounded-xl font-extrabold text-lg shadow transition">☰</button>
             </div>
 
-            <!-- 3-Line Dropdown Menu -->
-            <div id="headerDropdown" class="hidden absolute top-14 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-56 py-2 z-40 text-xs font-bold fade-in">
-                <button onclick="openLogoModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">🖼️ Set Library Logo</button>
+            <!-- Dropdown Menu -->
+            <div id="headerDropdown" class="hidden absolute top-14 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-60 py-2 z-40 text-xs font-bold fade-in">
+                <button onclick="openLogoModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">🖼️ Set Official Library Logo</button>
                 <button onclick="openCloudSyncModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">☁️ Firebase Cloud Sync</button>
                 <button onclick="exportDriveBackup(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">💾 Download JSON Backup</button>
                 <button onclick="triggerRestore(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">📂 Restore JSON Backup</button>
-                <button onclick="exportExcelCsv(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">📊 Export Excel (CSV)</button>
+                <button onclick="exportExcelCsv(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">📊 Export Excel Sheet (CSV)</button>
                 <hr class="my-1">
                 <button onclick="changeAppPin(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2 text-indigo-700">🔑 Change Security PIN</button>
                 <button onclick="logoutApp()" class="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-2 text-red-600">🔒 Lock / Logout</button>
@@ -70,11 +72,11 @@
             </div>
         </header>
 
-        <!-- 3. Top Priority Search Bar & Quick Filter Tabs (Right at Top for Mobile Convenience) -->
+        <!-- 3. Top Search Bar & Quick Filter Tabs -->
         <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 mb-3">
             <div class="flex items-center gap-2 bg-slate-50 px-3.5 py-2.5 rounded-xl border border-slate-300 mb-2.5">
                 <span class="text-base">🔍</span>
-                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search Exact ID (e.g. 1, 99), Mobile Number, or Student Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
+                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search Exact ID (e.g. 1, 99), 10-Digit Mobile, or Student Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
                 <button onclick="document.getElementById('searchInput').value=''; resetLimitAndRender();" class="text-xs text-slate-400 hover:text-red-600 font-extrabold px-1">✖</button>
             </div>
             <div class="flex flex-wrap gap-1.5">
@@ -86,13 +88,13 @@
             </div>
         </div>
 
-        <!-- 4. Primary Action Bar (No Duplicate Vacant Button) -->
+        <!-- 4. Primary Action Bar -->
         <div class="flex flex-wrap gap-2 mb-3">
             <button onclick="toggleAdmissionForm()" class="theme-maroon text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:opacity-95 transition">
                 ➕ New Admission
             </button>
             <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:bg-indigo-600 transition">
-                📊 Expenses
+                📊 Expense Tracker
             </button>
             <button onclick="openBirthdayModal()" class="bg-pink-600 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:bg-pink-500 transition">
                 🎂 Birthdays <span id="bdayCountBadge" class="bg-white text-pink-600 px-1.5 py-0.5 rounded-full text-[11px] ml-1 hidden">0</span>
@@ -114,7 +116,7 @@
                 <h3 id="statExpiredMembers" class="text-xl font-extrabold text-rose-600">0</h3>
             </div>
             <div onclick="openVacantModal()" class="bg-purple-50 p-3 rounded-xl shadow-sm border-l-4 border-purple-700 cursor-pointer hover:bg-purple-100 transition">
-                <p class="text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="underline text-[10px]">Check ➔</span></p>
+                <p class="text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="text-[10px] bg-purple-200 px-1.5 py-0.2 rounded">View ➔</span></p>
                 <h3 id="statVacantSummary" class="text-xs sm:text-sm font-extrabold text-purple-800 mt-1">S: 250 | C: 250 | L: 90</h3>
             </div>
         </div>
@@ -143,7 +145,7 @@
             </div>
         </div>
 
-        <!-- 6. Collapsible Admission / Edit Form (Unlocked Editable Dates) -->
+        <!-- 6. Collapsible Admission / Edit Form (With All 6 Shifts, Gender, Locker Auto ₹50/M + ₹200 Security, Manual Bill Date) -->
         <div id="admissionFormBox" class="bg-white p-4 sm:p-5 rounded-2xl shadow-xl mb-5 hidden border-2 theme-border fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-4">
                 <h2 id="formHeading" class="text-base sm:text-lg font-extrabold theme-maroon-text">📝 Student Admission & Plan Form (28-Day Cycle)</h2>
@@ -157,9 +159,16 @@
                     <label class="block text-xs font-bold text-slate-700 mb-1">Unique ID * (1 to 1000)</label>
                     <input type="number" id="uniId" min="1" max="1000" required class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-red-900 bg-amber-50" placeholder="1 - 1000">
                 </div>
-                <div class="sm:col-span-2">
+                <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Student Full Name *</label>
                     <input type="text" id="fullName" required class="w-full border border-slate-300 p-2 rounded-lg font-semibold" placeholder="Enter Full Name">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">🚻 Gender *</label>
+                    <select id="gender" required class="w-full border border-slate-300 p-2 rounded-lg font-semibold">
+                        <option value="Male">Male (लड़का)</option>
+                        <option value="Female">Female (लड़की)</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">📞 Mobile * (Exact 10 Digits)</label>
@@ -183,10 +192,10 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">🗄️ Locker (1-90 Optional)</label>
-                        <div class="flex items-center border bg-white rounded-lg overflow-hidden">
+                        <label class="block text-[11px] font-bold text-indigo-800 mb-1">🗄️ Locker (1-90) [+₹50/M Auto]</label>
+                        <div class="flex items-center border-2 border-indigo-300 bg-white rounded-lg overflow-hidden">
                             <span class="bg-red-900 text-white px-2.5 py-2 font-extrabold text-xs">L-</span>
-                            <input type="number" id="lockerNo" min="1" max="90" class="w-full p-2 outline-none font-extrabold text-blue-800" placeholder="Digit">
+                            <input type="number" id="lockerNo" min="1" max="90" oninput="onLockerInputChanged()" class="w-full p-2 outline-none font-extrabold text-blue-800" placeholder="Digit">
                         </div>
                     </div>
                     <div>
@@ -231,14 +240,16 @@
                     <input type="text" id="otherCourseInput" class="w-full border-2 border-indigo-400 p-2 rounded-lg" placeholder="Type course...">
                 </div>
 
+                <!-- Exact 6 Shift Plans -->
                 <div class="sm:col-span-2">
-                    <label class="block text-xs font-bold text-slate-700 mb-1">⏱️ Shift Timing *</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">⏱️ Select Shift Plan *</label>
                     <select id="shiftPlan" onchange="recalcAdmissionBill()" required class="w-full border border-slate-300 p-2 rounded-lg font-bold">
-                        <option value="Morning (06:00 AM - 10:00 AM)" data-rate="299">Morning (06:00 AM - 10:00 AM) — [Fee: ₹299]</option>
-                        <option value="Morning (10:00 AM - 02:00 PM)" data-rate="399">Morning (10:00 AM - 02:00 PM) — [Fee: ₹399]</option>
-                        <option value="Evening (02:00 PM - 06:00 PM)" data-rate="399">Evening (02:00 PM - 06:00 PM) — [Fee: ₹399]</option>
-                        <option value="Full Day (12 Hrs: 06:00 AM - 06:00 PM)" data-rate="499">Full Day (12 Hrs: 06:00 AM - 06:00 PM) — [Fee: ₹499]</option>
-                        <option value="24 Hours Plan (Day & Night)" data-rate="799">24 Hours Plan (Day & Night) — [Fee: ₹799]</option>
+                        <option value="Morning (06:00 AM - 10:00 AM)" data-rate="299">1. Morning Shift (06:00 AM - 10:00 AM) — [₹299]</option>
+                        <option value="Afternoon 1 (10:00 AM - 02:00 PM)" data-rate="399">2. Afternoon Shift 1 (10:00 AM - 02:00 PM) — [₹399]</option>
+                        <option value="Afternoon 2 (02:00 PM - 06:00 PM)" data-rate="399">3. Afternoon Shift 2 (02:00 PM - 06:00 PM) — [₹399]</option>
+                        <option value="Night Shift (10:00 PM - 05:00 AM)" data-rate="399">4. Night Shift (10:00 PM - 05:00 AM) — [₹399]</option>
+                        <option value="Full Day (06:00 AM - 06:00 PM)" data-rate="499">5. Full Day (12 Hrs: 06:00 AM - 06:00 PM) — [₹499]</option>
+                        <option value="24 Hours Plan (Day & Night)" data-rate="799">6. 24 Hours Plan (Day & Night) — [₹799]</option>
                     </select>
                 </div>
 
@@ -258,22 +269,34 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-blue-800 mb-1">▶️ Current Cycle Start Date *</label>
+                    <label class="block text-xs font-bold text-blue-800 mb-1">▶️ Plan Start Date *</label>
                     <input type="date" id="cycleStartDate" onchange="update28DayValidity()" required class="w-full border-2 border-blue-400 p-2 rounded-lg font-extrabold bg-blue-50">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-emerald-800 mb-1">⏳ Valid Upto (Auto +28d/M) *</label>
+                    <label class="block text-xs font-bold text-emerald-800 mb-1">⏳ Valid Upto (+28d/M Auto) *</label>
                     <input type="date" id="validUpto" required class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-red-700 bg-slate-100">
                 </div>
 
-                <div class="flex items-center gap-2 bg-amber-50 p-2.5 rounded-xl border border-amber-300">
-                    <input type="checkbox" id="applyGstCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-red-900 cursor-pointer">
-                    <label for="applyGstCheck" class="text-xs font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Optional)</label>
+                <div>
+                    <label class="block text-xs font-bold text-purple-800 mb-1">🧾 Bill / Payment Date (Manual) *</label>
+                    <input type="date" id="manualBillDate" required class="w-full border-2 border-purple-300 p-2 rounded-lg font-extrabold bg-purple-50">
+                </div>
+
+                <!-- Checkboxes for Locker Security Deposit (₹200) & Optional 5% GST -->
+                <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="flex items-center gap-2 bg-indigo-50 p-2.5 rounded-xl border border-indigo-300">
+                        <input type="checkbox" id="lockerSecurityCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-indigo-900 cursor-pointer">
+                        <label for="lockerSecurityCheck" class="text-xs font-extrabold text-indigo-900 cursor-pointer">🔑 +₹200 Locker Security (Refundable)</label>
+                    </div>
+                    <div class="flex items-center gap-2 bg-amber-50 p-2.5 rounded-xl border border-amber-300">
+                        <input type="checkbox" id="applyGstCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-red-900 cursor-pointer">
+                        <label for="applyGstCheck" class="text-xs font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Optional Tax Bill)</label>
+                    </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">💵 Total Payable Fee (₹) *</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">💵 Total Payable Bill (₹) *</label>
                     <input type="number" id="totalBill" oninput="recalcDuesOnly()" required class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-slate-900">
                 </div>
                 <div>
@@ -297,18 +320,19 @@
                     </select>
                 </div>
 
+                <!-- Face-Focused HD Photo & Verification Docs -->
                 <div class="sm:col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">📷 Student Square HD Photo</label>
-                        <input type="file" id="studentPhotoInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'photoBase64', 650, 0.85)">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">📷 Student Photo (Auto Face Focus HD)</label>
+                        <input type="file" id="studentPhotoInput" accept="image/*" class="w-full text-xs" onchange="compressStudentPhotoWithFaceCrop(this)">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">🆔 Document Front (HD)</label>
-                        <input type="file" id="docFrontInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'frontBase64', 1100, 0.85)">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">🆔 ID Proof / Doc Front (HD)</label>
+                        <input type="file" id="docFrontInput" accept="image/*" class="w-full text-xs" onchange="compressHdDoc(this, 'frontBase64', 1100, 0.85)">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">🆔 Document Back (HD)</label>
-                        <input type="file" id="docBackInput" accept="image/*" class="w-full text-xs" onchange="compressHdImage(this, 'backBase64', 1100, 0.85)">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">🆔 ID Proof / Doc Back (HD)</label>
+                        <input type="file" id="docBackInput" accept="image/*" class="w-full text-xs" onchange="compressHdDoc(this, 'backBase64', 1100, 0.85)">
                     </div>
                 </div>
 
@@ -348,58 +372,61 @@
         </div>
     </div>
 
-    <!-- Modal B: Zero-Crop HD ID Card Modal (With Padded Frame so Corners Never Cut) -->
+    <!-- Modal B: Zero-Clip HD ID Card Modal (Face-Focused Photo, Unclipped ID: 1, Single-Line Shift, Outer Padded Frame) -->
     <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2 overflow-y-auto">
-        <!-- Outer Padded Capture Frame (Prevents Corner Clipping on WhatsApp Share) -->
-        <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
-            <div class="bg-white w-[310px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
+        <!-- Outer Padded Capture Frame (Guarantees Rounded Corners Never Cut on WhatsApp Share) -->
+        <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3.5 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
+            <div class="bg-white w-[320px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
                 <!-- Header -->
                 <div class="theme-maroon text-white p-3.5 text-center border-b-2 border-amber-400">
                     <div class="w-12 h-12 bg-white rounded-full mx-auto mb-1.5 flex items-center justify-center text-xl border-2 border-amber-300 overflow-hidden shadow">
                         <img id="idCardLogoImg" src="" class="w-full h-full object-cover hidden">
                         <span id="idCardLogoEmoji">🏛️</span>
                     </div>
-                    <h2 class="text-lg font-extrabold tracking-wider id-text-safe">BUDDHA LIBRARY</h2>
-                    <p class="text-[11px] text-yellow-300 font-bold id-text-safe">A Unit of Flair Foundation</p>
-                    <p class="text-[10px] text-slate-200 id-text-safe">Kachchhi Dargah, Patna | 📞 7050668855</p>
+                    <h2 class="text-lg font-extrabold tracking-wider id-safe-line">BUDDHA LIBRARY</h2>
+                    <p class="text-[11px] text-yellow-300 font-bold id-safe-line">A Unit of Flair Foundation</p>
+                    <p class="text-[10px] text-slate-200 id-safe-line">Kachchhi Dargah, Patna | 📞 7050668855</p>
                 </div>
 
-                <!-- Body: Photo + Side ID & Name (No Clipping) -->
+                <!-- Body: Face-Focused Square HD Photo + Unclipped Side ID & Name -->
                 <div class="p-4 bg-gradient-to-b from-white to-slate-50">
                     <div class="flex items-center gap-3.5 mb-3">
-                        <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl object-cover border-2 border-red-900 shadow-sm bg-slate-100 flex-shrink-0">
+                        <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl face-focus-thumb border-2 border-red-900 shadow-sm bg-slate-100 flex-shrink-0">
                         <div class="text-left min-w-0 flex-grow">
-                            <span id="idCardUniId" class="inline-block theme-maroon-solid text-white text-xs font-extrabold px-3 py-1 rounded-lg shadow-sm id-text-safe">ID: 1</span>
-                            <h3 id="idCardName" class="text-base font-extrabold text-slate-900 mt-1.5 id-text-safe">Student Name</h3>
-                            <p id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-text-safe">📞 0000000000</p>
+                            <!-- Unclipped Bold ID Badge -->
+                            <div class="inline-block bg-red-50 border-2 border-red-900 rounded-lg px-3 py-1 mb-1">
+                                <span id="idCardUniId" class="text-sm font-extrabold text-red-900 block leading-none">ID: 1</span>
+                            </div>
+                            <h3 id="idCardName" class="text-base font-extrabold text-slate-900 id-safe-line">Student Name</h3>
+                            <p id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-safe-line">📞 0000000000</p>
                         </div>
                     </div>
 
                     <div class="bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 mb-3 text-left">
-                        <p id="idCardAddress" class="text-xs font-bold text-slate-700 id-text-safe">📍 Address</p>
+                        <p id="idCardAddress" class="text-xs font-bold text-slate-700 id-safe-line">📍 Address</p>
                     </div>
 
-                    <!-- Clean Details Box (Dual-Color Allocation, Cycle Start & Valid Upto, Due / Not Due, No Footer Text) -->
+                    <!-- Details Box (Single-Line Shift, Dual-Color Allocation, Start & Valid Upto, Due / Not Due) -->
                     <div class="text-left bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-2 shadow-sm">
-                        <div class="flex justify-between items-start gap-2">
+                        <div class="flex justify-between items-center gap-1">
                             <span class="text-slate-500 font-bold flex-shrink-0">⏱️ Shift:</span>
-                            <b id="idCardShift" class="text-slate-900 text-right id-text-safe"></b>
+                            <b id="idCardShift" class="text-slate-900 text-right text-[11px] font-extrabold whitespace-nowrap id-safe-line"></b>
                         </div>
                         <div class="flex justify-between items-center border-t pt-1.5">
                             <span class="text-slate-500 font-bold">💺 Seat/Locker:</span>
-                            <span id="idCardResources" class="font-extrabold text-right id-text-safe"></span>
+                            <span id="idCardResources" class="font-extrabold text-right id-safe-line"></span>
                         </div>
                         <div class="flex justify-between items-center border-t pt-1.5">
                             <span class="text-slate-500 font-bold">▶️ Start Date:</span>
-                            <b id="idCardStart" class="text-blue-800 font-extrabold id-text-safe"></b>
+                            <b id="idCardStart" class="text-blue-800 font-extrabold id-safe-line"></b>
                         </div>
                         <div class="flex justify-between items-center border-t pt-1.5">
                             <span class="text-slate-500 font-bold">⏳ Valid Upto:</span>
-                            <b id="idCardEnd" class="text-emerald-700 font-extrabold id-text-safe"></b>
+                            <b id="idCardEnd" class="text-emerald-700 font-extrabold id-safe-line"></b>
                         </div>
                         <div class="flex justify-between items-center border-t pt-1.5">
                             <span class="text-slate-500 font-bold">💰 Fee Status:</span>
-                            <b id="idCardDueStatus" class="font-extrabold id-text-safe"></b>
+                            <b id="idCardDueStatus" class="font-extrabold id-safe-line"></b>
                         </div>
                     </div>
                 </div>
@@ -416,46 +443,84 @@
         <p id="idCardHint" class="text-[11px] text-slate-300 mt-1.5 text-center no-print">💡 कार्ड पर टच करने से बटन छुप/दिख जाएंगे।</p>
     </div>
 
-    <!-- Modal C: Smart 1M / 3M / 6M / 12M Renewal Modal with Manual Start Date -->
-    <div id="renewModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-3">
-        <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-md fade-in">
+    <!-- Modal C: Full Plan Renewal Modal (Change Shift, Change Duration 1M/3M/6M/12M, Locker Auto ₹50/M + ₹200 Security, Manual Bill Date) -->
+    <div id="renewModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-2.5 overflow-y-auto">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xl w-full max-w-lg fade-in my-auto">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
-                <h3 class="text-base font-extrabold theme-maroon-text">🔄 Plan Renewal (1M / 3M / 6M / 12M)</h3>
-                <button onclick="closeRenewModal()" class="text-slate-400 hover:text-red-600 font-bold">✖</button>
+                <h3 class="text-base font-extrabold theme-maroon-text">🔄 Plan Renewal & Shift / Locker Upgrade</h3>
+                <button onclick="closeRenewModal()" class="text-slate-400 hover:text-red-600 font-bold text-lg">✖</button>
             </div>
             <input type="hidden" id="renewStudentIdx" value="">
-            <div id="renewStudentInfo" class="bg-slate-50 p-3 rounded-xl border text-xs mb-3 font-semibold"></div>
+            <div id="renewStudentInfo" class="bg-slate-50 p-2.5 rounded-xl border text-xs mb-3 font-semibold"></div>
 
             <div class="space-y-3 text-xs">
-                <div class="grid grid-cols-2 gap-2.5">
+                <!-- All 6 Shift Plans Available During Renewal -->
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">⏱️ Select / Change Shift Plan *</label>
+                    <select id="renewShiftSelect" onchange="recalcRenewalBill()" class="w-full border-2 border-indigo-300 p-2 rounded-lg font-extrabold bg-indigo-50 text-slate-900">
+                        <option value="Morning (06:00 AM - 10:00 AM)" data-rate="299">1. Morning Shift (06:00 AM - 10:00 AM) — [₹299]</option>
+                        <option value="Afternoon 1 (10:00 AM - 02:00 PM)" data-rate="399">2. Afternoon Shift 1 (10:00 AM - 02:00 PM) — [₹399]</option>
+                        <option value="Afternoon 2 (02:00 PM - 06:00 PM)" data-rate="399">3. Afternoon Shift 2 (02:00 PM - 06:00 PM) — [₹399]</option>
+                        <option value="Night Shift (10:00 PM - 05:00 AM)" data-rate="399">4. Night Shift (10:00 PM - 05:00 AM) — [₹399]</option>
+                        <option value="Full Day (06:00 AM - 06:00 PM)" data-rate="499">5. Full Day (12 Hrs: 06:00 AM - 06:00 PM) — [₹499]</option>
+                        <option value="24 Hours Plan (Day & Night)" data-rate="799">6. 24 Hours Plan (Day & Night) — [₹799]</option>
+                    </select>
+                </div>
+
+                <!-- Locker Allocation inside Renewal -->
+                <div class="grid grid-cols-2 gap-2.5 bg-slate-50 p-2.5 rounded-xl border">
                     <div>
-                        <label class="block font-bold text-blue-800 mb-1">▶️ Start Date (Manual / Auto) *</label>
+                        <label class="block font-bold text-indigo-800 mb-1">🗄️ Locker No (+₹50/M Auto)</label>
+                        <div class="flex items-center border bg-white rounded-lg overflow-hidden">
+                            <span class="bg-red-900 text-white px-2 py-1.5 font-extrabold">L-</span>
+                            <input type="number" id="renewLockerNo" min="1" max="90" oninput="recalcRenewalBill()" class="w-full p-1.5 outline-none font-extrabold text-blue-800" placeholder="Optional">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">🔑 Key No (Optional)</label>
+                        <div class="flex items-center border bg-white rounded-lg overflow-hidden">
+                            <span class="bg-red-900 text-white px-2 py-1.5 font-extrabold">K-</span>
+                            <input type="number" id="renewKeyNo" min="1" max="90" class="w-full p-1.5 outline-none font-extrabold text-blue-800" placeholder="Optional">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Start Date, Package Months & Auto Valid Upto -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                        <label class="block font-bold text-blue-800 mb-1">▶️ Plan Start Date *</label>
                         <input type="date" id="renewStartDate" onchange="recalcRenewalDates()" class="w-full border-2 border-blue-400 p-2 rounded-lg font-extrabold bg-blue-50">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">🗓️ Select Plan Package *</label>
-                        <select id="renewMonths" onchange="recalcRenewalDates(); recalcRenewalBill();" class="w-full border p-2 rounded-lg font-extrabold text-indigo-900 bg-indigo-50">
-                            <option value="1">1 Month (28 Days)</option>
-                            <option value="3">3 Months (84 Days - 5% Off)</option>
-                            <option value="6">6 Months (168 Days - 10% Off)</option>
-                            <option value="12">12 Months (336 Days - 15% Off)</option>
+                        <label class="block font-bold text-slate-700 mb-1">🗓️ Duration (28d/M) *</label>
+                        <select id="renewMonths" onchange="recalcRenewalDates(); recalcRenewalBill();" class="w-full border p-2 rounded-lg font-extrabold">
+                            <option value="1">1 Month (28d)</option>
+                            <option value="3">3 Months (5% Off)</option>
+                            <option value="6">6 Months (10% Off)</option>
+                            <option value="12">12 Months (15% Off)</option>
                         </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-emerald-800 mb-1">⏳ Valid Upto *</label>
+                        <input type="date" id="renewNewValid" class="w-full border p-2 rounded-lg font-extrabold text-red-700 bg-slate-100">
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center bg-slate-100 p-2.5 rounded-xl border">
-                    <span class="font-bold text-slate-700">⏳ New Valid Upto (End Date):</span>
-                    <input type="date" id="renewNewValid" class="border border-slate-300 p-1.5 rounded-lg font-extrabold text-red-700 bg-white">
-                </div>
-
-                <div class="flex items-center gap-2 bg-amber-50 p-2.5 rounded-xl border border-amber-300">
-                    <input type="checkbox" id="renewGstCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-red-900">
-                    <label for="renewGstCheck" class="font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Optional Tax Bill)</label>
+                <!-- Optional Checkboxes: Locker Security ₹200 & 5% GST -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div class="flex items-center gap-2 bg-indigo-50 p-2 rounded-xl border border-indigo-200">
+                        <input type="checkbox" id="renewLockerSecCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-indigo-900">
+                        <label for="renewLockerSecCheck" class="font-extrabold text-indigo-900 cursor-pointer">🔑 +₹200 New Locker Deposit</label>
+                    </div>
+                    <div class="flex items-center gap-2 bg-amber-50 p-2 rounded-xl border border-amber-300">
+                        <input type="checkbox" id="renewGstCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-red-900">
+                        <label for="renewGstCheck" class="font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Tax Bill)</label>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">💵 Plan Bill (₹)</label>
+                        <label class="block font-bold text-slate-700 mb-1">💵 Total Bill (₹)</label>
                         <input type="number" id="renewBillAmt" oninput="recalcRenewDue()" class="w-full border p-2 rounded-lg font-extrabold">
                     </div>
                     <div>
@@ -463,12 +528,17 @@
                         <input type="number" id="renewPaidAmt" oninput="recalcRenewDue()" class="w-full border border-emerald-400 p-2 rounded-lg font-extrabold text-emerald-700">
                     </div>
                     <div>
-                        <label class="block font-bold text-red-600 mb-1">⚠️ Balance Due</label>
+                        <label class="block font-bold text-red-600 mb-1">⚠️ New Due</label>
                         <input type="number" id="renewDueAmt" readonly class="w-full border p-2 rounded-lg bg-slate-100 font-extrabold text-red-600">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2.5">
+                <!-- Manual Bill Date, Payment Mode & Promise Date -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                        <label class="block font-bold text-purple-800 mb-1">🧾 Bill Date (Manual) *</label>
+                        <input type="date" id="renewBillDate" class="w-full border-2 border-purple-300 p-2 rounded-lg font-extrabold bg-purple-50">
+                    </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">💳 Payment Mode</label>
                         <select id="renewPayMode" class="w-full border p-2 rounded-lg font-bold">
@@ -477,7 +547,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block font-bold text-red-700 mb-1">📅 Promise Date (If Due)</label>
+                        <label class="block font-bold text-red-700 mb-1">📅 Promise Date</label>
                         <input type="date" id="renewPromiseDate" class="w-full border border-red-300 p-2 rounded-lg bg-red-50">
                     </div>
                 </div>
@@ -485,7 +555,7 @@
 
             <div class="flex justify-end gap-2 mt-4 pt-3 border-t">
                 <button onclick="closeRenewModal()" class="bg-slate-400 text-white px-4 py-2 rounded-xl text-xs font-bold">Cancel</button>
-                <button onclick="confirmRenewalSubmit()" class="theme-maroon text-white px-5 py-2 rounded-xl text-xs font-extrabold shadow">✅ Save Renewal & Bill</button>
+                <button onclick="confirmRenewalSubmit()" class="theme-maroon text-white px-5 py-2 rounded-xl text-xs font-extrabold shadow">✅ Save Renewal & Generate Bill</button>
             </div>
         </div>
     </div>
@@ -507,7 +577,7 @@
             <div id="invoiceBodyContent"></div>
         </div>
         <div class="mt-4 flex flex-wrap gap-2.5 justify-center no-print">
-            <button onclick="shareInvoiceAsImage()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">📤 Share Bill</button>
+            <button onclick="shareInvoiceAsImage()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">📤 Share Bill Image</button>
             <button onclick="window.print()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">🖨️ Print / Save PDF</button>
             <button onclick="closeInvoiceModal()" class="bg-slate-600 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">✖ Close</button>
         </div>
@@ -540,11 +610,11 @@
         </div>
     </div>
 
-    <!-- Modal H: HD Zoom, Logo, Cloud Sync & Expense Modals -->
+    <!-- Modal H: Full HD Photo / Doc Zoom Viewer -->
     <div id="zoomModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center hidden p-3" onclick="closeZoomModal()">
         <div class="bg-white p-3 rounded-2xl max-w-2xl w-full text-center relative shadow-2xl" onclick="event.stopPropagation()">
             <button onclick="closeZoomModal()" class="absolute top-2 right-3 text-slate-600 hover:text-red-600 font-bold text-xl">✖</button>
-            <h4 id="zoomModalTitle" class="font-extrabold text-sm mb-2 theme-maroon-text">HD View</h4>
+            <h4 id="zoomModalTitle" class="font-extrabold text-sm mb-2 theme-maroon-text">Full HD View</h4>
             <img id="zoomModalImg" src="" class="max-h-[80vh] mx-auto rounded-xl object-contain border">
         </div>
     </div>
@@ -590,6 +660,8 @@
         const TOTAL_SEATS = 250;
         const TOTAL_CHAIRS = 250;
         const TOTAL_LOCKERS = 90;
+        const LOCKER_MONTHLY_FEE = 50;
+        const LOCKER_SECURITY_DEPOSIT = 200;
         const ADMIN_MOBILE = "7050668855";
         const LIBRARY_GSTIN = "10IMAPS7440N1ZQ";
         const HSN_SAC_CODE = "999299";
@@ -600,7 +672,7 @@
         let displayLimit = 50;
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
-        let tempUploads = { photoBase64: '', frontBase64: '', backBase64: '' };
+        let tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '' };
         let hindiNameCache = {};
 
         try { students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]'); } catch(e) { students = []; }
@@ -611,24 +683,22 @@
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
         }
 
-        // Automatic English-to-Hindi Name Transliteration (Online Google Input Tools + Offline Fallback Dictionary)
+        // Automatic English-to-Hindi Name Transliteration
         const commonHindiNames = {
             "pintu": "पिंटू", "kumar": "कुमार", "singh": "सिंह", "ramesh": "रमेश", "suresh": "सुरेश",
-            "rahul": "राहुल", "rohit": "रोहित", "aman": "अमन", "ankित": "अंकित", "ankit": "अंकित",
-            "vikas": "विकास", "saket": "साकेत", "abhishek": "अभिषेक", "golu": "गोलू", "manish": "मनीष",
-            "randhir": "रणधीर", "shiv": "शिव", "ram": "राम", "priya": "प्रिया", "kumari": "कुमारी",
-            "neha": "नेहा", "pooja": "पूजा", "arti": "आरती", "anjali": "अंजलि", "sonu": "सोनू",
-            "monu": "मोनू", "ravi": "रवि", "amit": "अमित", "sumit": "सुमित", "deepak": "दीपक",
-            "ajay": "अजय", "vijay": "विजय", "sanjay": "संजय", "nitish": "नीतीश", "vishal": "विशाल",
-            "aditya": "आदित्य", "aryan": "आर्यन", "vivek": "विवेक", "gaurav": "गौरव", "saurabh": "सौरभ"
+            "rahul": "राहुल", "rohit": "रोहित", "aman": "अमन", "ankit": "अंकित", "vikas": "विकास",
+            "saket": "साकेत", "abhishek": "अभिषेक", "golu": "गोलू", "manish": "मनीष", "randhir": "रणधीर",
+            "shiv": "शिव", "ram": "राम", "priya": "प्रिया", "kumari": "कुमारी", "neha": "नेहा",
+            "pooja": "पूजा", "arti": "आरती", "anjali": "अंजलि", "sonu": "सोनू", "monu": "मोनू",
+            "ravi": "रवि", "amit": "अमित", "sumit": "सुमित", "deepak": "दीपक", "ajay": "अजय",
+            "vijay": "विजय", "sanjay": "संजय", "nitish": "नीतीश", "vishal": "विशाल", "aditya": "आदित्य"
         };
 
         async function toHindiName(engName) {
             if(!engName) return "";
             const clean = engName.trim();
-            if(/[\u0900-\u097F]/.test(clean)) return clean; // Already in Hindi
+            if(/[\u0900-\u097F]/.test(clean)) return clean;
             if(hindiNameCache[clean]) return hindiNameCache[clean];
-
             try {
                 const res = await fetch(`https://inputtools.google.com/request?text=${encodeURIComponent(clean)}&itc=hi-t-i0-und&num=1`);
                 const data = await res.json();
@@ -638,8 +708,6 @@
                     return hi;
                 }
             } catch(e) {}
-
-            // Offline fallback word-by-word
             const words = clean.split(/\s+/);
             const conv = words.map(w => commonHindiNames[w.toLowerCase()] || w).join(' ');
             hindiNameCache[clean] = conv;
@@ -713,14 +781,12 @@
             document.getElementById('headerDropdown').classList.toggle('hidden');
         }
 
-        // Backfill missing start dates in old student records so '-' never shows
         function normalizeStudentDates() {
             const today = new Date().toISOString().split('T')[0];
             students.forEach(s => {
                 if(!s.cycleStartDate) {
-                    if(s.admissionDate) {
-                        s.cycleStartDate = s.admissionDate;
-                    } else if(s.validUpto) {
+                    if(s.admissionDate) s.cycleStartDate = s.admissionDate;
+                    else if(s.validUpto) {
                         let d = new Date(s.validUpto);
                         d.setDate(d.getDate() - 28);
                         s.cycleStartDate = d.toISOString().split('T')[0];
@@ -731,6 +797,7 @@
                     }
                 }
                 if(!s.admissionDate) s.admissionDate = s.cycleStartDate;
+                if(!s.gender) s.gender = 'Male';
                 if(!s.reminderStats) s.reminderStats = { wa: 0, sms: 0, mail: 0 };
             });
         }
@@ -740,6 +807,7 @@
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('admissionDateInput').value = today;
             document.getElementById('cycleStartDate').value = today;
+            document.getElementById('manualBillDate').value = today;
             document.getElementById('expDate').value = today;
             if(libraryLogo) applyLogoToUi(libraryLogo);
             update28DayValidity();
@@ -751,7 +819,17 @@
             updateDashboardStats();
         }
 
-        // 2. 28-Day Exact Cycle & Optional 5% GST Calculation
+        // 2. 28-Day Cycle + Locker Auto ₹50/M + ₹200 Security Deposit + Optional 5% GST
+        function onLockerInputChanged() {
+            const lVal = cleanResNum(document.getElementById('lockerNo').value);
+            const editIdx = document.getElementById('editIndex').value;
+            // Auto check ₹200 security deposit on new admission when locker number is typed
+            if(editIdx === "") {
+                document.getElementById('lockerSecurityCheck').checked = (lVal !== "");
+            }
+            recalcAdmissionBill();
+        }
+
         function update28DayValidity() {
             const startVal = document.getElementById('cycleStartDate').value;
             if(!startVal) return;
@@ -767,14 +845,23 @@
             const opt = shiftSel.options[shiftSel.selectedIndex];
             let rate = parseFloat(opt.getAttribute('data-rate')) || 299;
             const months = parseInt(document.getElementById('durationMonths').value) || 1;
-            let baseTotal = rate * months;
+            let shiftTotal = rate * months;
 
-            if(months === 3) baseTotal = Math.round(baseTotal * 0.95);
-            else if(months === 6) baseTotal = Math.round(baseTotal * 0.90);
-            else if(months === 12) baseTotal = Math.round(baseTotal * 0.85);
+            if(months === 3) shiftTotal = Math.round(shiftTotal * 0.95);
+            else if(months === 6) shiftTotal = Math.round(shiftTotal * 0.90);
+            else if(months === 12) shiftTotal = Math.round(shiftTotal * 0.85);
 
+            // Auto Locker Monthly Charge (₹50 per month if Locker No is entered)
+            const hasLocker = cleanResNum(document.getElementById('lockerNo').value) !== "";
+            const lockerRent = hasLocker ? (LOCKER_MONTHLY_FEE * months) : 0;
+
+            // Optional ₹200 Locker Security Deposit
+            const hasSecDeposit = document.getElementById('lockerSecurityCheck').checked;
+            const secDepositAmt = hasSecDeposit ? LOCKER_SECURITY_DEPOSIT : 0;
+
+            const subTotal = shiftTotal + lockerRent + secDepositAmt;
             const addGst = document.getElementById('applyGstCheck').checked;
-            let finalPayable = addGst ? Math.round(baseTotal * 1.05) : baseTotal;
+            const finalPayable = addGst ? Math.round(subTotal * 1.05) : subTotal;
 
             document.getElementById('totalBill').value = finalPayable;
             document.getElementById('paidNow').value = finalPayable;
@@ -813,13 +900,57 @@
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('admissionDateInput').value = today;
                 document.getElementById('cycleStartDate').value = today;
+                document.getElementById('manualBillDate').value = today;
                 document.getElementById('otherCourseWrap').classList.add('hidden');
-                tempUploads = { photoBase64: '', frontBase64: '', backBase64: '' };
+                tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '' };
                 update28DayValidity();
             }
         }
 
-        function compressHdImage(input, key, maxDim, quality) {
+        // 3. Smart Dual Photo Compression: Face & Neck Closeup Square Thumbnail + Full Original HD Photo for Zoom
+        function compressStudentPhotoWithFaceCrop(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function () {
+                        // 1) Save Full Uncropped HD Photo (for click-to-zoom)
+                        const fullCanvas = document.createElement('canvas');
+                        let fw = img.width, fh = img.height;
+                        const MAX_FULL = 900;
+                        if (fw > fh && fw > MAX_FULL) { fh *= MAX_FULL / fw; fw = MAX_FULL; }
+                        else if (fh > MAX_FULL) { fw *= MAX_FULL / fh; fh = MAX_FULL; }
+                        fullCanvas.width = fw; fullCanvas.height = fh;
+                        const fCtx = fullCanvas.getContext('2d');
+                        fCtx.imageSmoothingEnabled = true;
+                        fCtx.imageSmoothingQuality = 'high';
+                        fCtx.drawImage(img, 0, 0, fw, fh);
+                        tempUploads.photoFull = fullCanvas.toDataURL('image/jpeg', 0.85);
+
+                        // 2) Create Face & Neck Focused Square HD Thumbnail (crops top-center portrait area so face is large & clear)
+                        const thumbCanvas = document.createElement('canvas');
+                        thumbCanvas.width = 450;
+                        thumbCanvas.height = 450;
+                        const tCtx = thumbCanvas.getContext('2d');
+                        tCtx.imageSmoothingEnabled = true;
+                        tCtx.imageSmoothingQuality = 'high';
+
+                        let cropSize = Math.min(img.width, img.height) * 0.78;
+                        let sx = (img.width - cropSize) / 2;
+                        // Focus near top (10% from top) so head & neck fill the square nicely
+                        let sy = Math.max(0, img.height * 0.08);
+                        if (sy + cropSize > img.height) sy = 0;
+
+                        tCtx.drawImage(img, sx, sy, cropSize, cropSize, 0, 0, 450, 450);
+                        tempUploads.photoThumb = thumbCanvas.toDataURL('image/jpeg', 0.88);
+                    };
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function compressHdDoc(input, key, maxDim, quality) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function (e) {
@@ -842,12 +973,13 @@
             }
         }
 
-        // 3. Save Student Record
+        // 4. Save Student Record
         function saveStudentRecord(e) {
             e.preventDefault();
             const editIdx = document.getElementById('editIndex').value;
             const uniId = parseInt(document.getElementById('uniId').value);
             const fullName = document.getElementById('fullName').value.trim();
+            const gender = document.getElementById('gender').value;
             const mobile = document.getElementById('mobile').value.trim();
             const guardianMobile = document.getElementById('guardianMobile').value.trim();
             const emailId = document.getElementById('emailId').value.trim();
@@ -867,7 +999,12 @@
             const admissionDate = document.getElementById('admissionDateInput').value;
             const cycleStartDate = document.getElementById('cycleStartDate').value;
             const validUpto = document.getElementById('validUpto').value;
+            const billDate = document.getElementById('manualBillDate').value || new Date().toISOString().split('T')[0];
             const isGst = document.getElementById('applyGstCheck').checked;
+            const hasLockerSec = document.getElementById('lockerSecurityCheck').checked;
+            const lockerRentAmt = lockerNo ? (LOCKER_MONTHLY_FEE * durationMonths) : 0;
+            const lockerSecAmt = hasLockerSec ? LOCKER_SECURITY_DEPOSIT : 0;
+
             const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
             const paidNow = parseFloat(document.getElementById('paidNow').value) || 0;
             const remainingDue = Math.max(0, totalBill - paidNow);
@@ -905,7 +1042,7 @@
                         st.promiseHistory.push({ failedDate: st.promiseDate, newDate: promiseDate, updatedOn: todayStr });
                     }
                 }
-                st.uniId = uniId; st.fullName = fullName; st.mobile = mobile;
+                st.uniId = uniId; st.fullName = fullName; st.gender = gender; st.mobile = mobile;
                 st.guardianMobile = guardianMobile; st.emailId = emailId; st.dob = dob; st.address = address;
                 st.seatNo = seatNo; st.chairNo = chairNo; st.lockerNo = lockerNo; st.keyNo = keyNo;
                 st.studyCourse = studyCourse; st.shiftPlan = shiftPlan;
@@ -913,34 +1050,40 @@
                 st.cycleStartDate = cycleStartDate;
                 st.validUpto = validUpto; st.totalBill = totalBill;
                 st.remainingDue = remainingDue; st.promiseDate = promiseDate;
-                if(tempUploads.photoBase64) st.photo = tempUploads.photoBase64;
+                if(hasLockerSec) st.lockerSecurityPaid = LOCKER_SECURITY_DEPOSIT;
+                if(tempUploads.photoThumb) { st.photo = tempUploads.photoThumb; st.photoFull = tempUploads.photoFull; }
                 if(tempUploads.frontBase64) st.aadhaarFront = tempUploads.frontBase64;
                 if(tempUploads.backBase64) st.aadhaarBack = tempUploads.backBase64;
             } else {
                 const invNo = "BL-" + Date.now().toString().slice(-6);
                 let newSt = {
-                    uniId, fullName, mobile, guardianMobile, emailId, dob, address,
+                    uniId, fullName, gender, mobile, guardianMobile, emailId, dob, address,
                     seatNo, chairNo, lockerNo, keyNo, studyCourse, shiftPlan,
                     admissionDate: admissionDate,
                     cycleStartDate: cycleStartDate,
                     validUpto, totalBill, paidNow, remainingDue,
+                    lockerSecurityPaid: lockerSecAmt,
                     promiseDate: promiseDate,
                     promiseHistory: [],
                     reminderStats: { wa: 0, sms: 0, mail: 0 },
                     lastBdayWishYear: '',
-                    photo: tempUploads.photoBase64 || '',
+                    photo: tempUploads.photoThumb || '',
+                    photoFull: tempUploads.photoFull || '',
                     aadhaarFront: tempUploads.frontBase64 || '',
                     aadhaarBack: tempUploads.backBase64 || '',
                     paymentHistory: [{
                         invNo: invNo,
-                        date: cycleStartDate,
+                        date: billDate,
                         startDate: cycleStartDate,
                         endDate: validUpto,
                         amount: paidNow,
                         totalBill: totalBill,
+                        lockerRent: lockerRentAmt,
+                        lockerSecurity: lockerSecAmt,
                         dueAfter: remainingDue,
                         isGst: isGst,
                         months: durationMonths,
+                        shiftAtTime: shiftPlan,
                         mode: paymentMode,
                         period: `${cycleStartDate} to ${validUpto} (${durationMonths}M)`,
                         type: 'Admission'
@@ -954,7 +1097,7 @@
             renderStudentList();
         }
 
-        // 4. Dual-Color Resource Formatting (Alphabet Maroon, Digit Blue)
+        // 5. Dual-Color Resource Formatting (Alphabet Maroon, Digit Blue)
         function formatResDualColorHtml(s) {
             let parts = [];
             if(cleanResNum(s.seatNo)) parts.push(`<span class="text-red-800 font-extrabold">S-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.seatNo)}</span>`);
@@ -975,7 +1118,9 @@
 
         function cleanShiftName(shiftStr) {
             if(!shiftStr) return '';
-            return shiftStr.split(' - ₹')[0].split(' — [')[0].trim();
+            let s = shiftStr.split(' - ₹')[0].split(' — [')[0].replace(/^\d+\.\s*/, '').trim();
+            // Keep compact so it fits on a single line in ID Card
+            return s.replace('12 Hrs: ', '');
         }
 
         function resetLimitAndRender() {
@@ -988,7 +1133,7 @@
             renderStudentList();
         }
 
-        // 5. Exact ID Search & Multi-Match Name Search
+        // 6. Render Student List (Serial Number WITHOUT '#' Symbol, Face-Focused Square Photo, Full Zoom on Click)
         function renderStudentList() {
             const container = document.getElementById('studentListContainer');
             const rawQuery = document.getElementById('searchInput').value.trim();
@@ -1014,14 +1159,11 @@
 
                 if(!rawQuery) return true;
                 if(/^\d+$/.test(rawQuery)) {
-                    // Pure digits <= 4: STRICTLY match ONLY Exact Unique ID (so typing 1 returns ONLY ID: 1)
                     if(rawQuery.length <= 4) {
                         return parseInt(s.uniId) === parseInt(rawQuery);
                     }
-                    // > 4 digits: match mobile number
                     return (s.mobile && s.mobile.includes(rawQuery));
                 }
-                // Name or Address search (returns all matching students e.g. all 10 Ramesh)
                 return (s.fullName && s.fullName.toLowerCase().includes(qLower)) ||
                        (s.address && s.address.toLowerCase().includes(qLower));
             });
@@ -1038,7 +1180,8 @@
             visibleItems.forEach(({ item: s, originalIdx }, serialIdx) => {
                 const isActive = s.validUpto >= today;
                 const dueAmt = parseFloat(s.remainingDue) || 0;
-                const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+                const thumbAvatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+                const fullZoomAvatar = s.photoFull || thumbAvatar;
                 const shiftClean = cleanShiftName(s.shiftPlan);
                 const resDualHtml = formatResDualColorHtml(s);
                 const failList = s.promiseHistory || [];
@@ -1052,13 +1195,13 @@
 
                 card.innerHTML = `
                     <div class="flex items-start gap-3">
-                        <!-- Square HD Photo -->
+                        <!-- Face-Focused Square HD Photo + Clean Serial Number WITHOUT '#' -->
                         <div class="relative flex-shrink-0">
-                            <img src="${avatar}" onclick="zoomHdImage('${avatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl object-cover border-2 border-red-900 cursor-pointer shadow-sm bg-slate-100" title="Click to Zoom HD Photo">
-                            <span class="absolute -top-1.5 -left-1.5 bg-slate-800 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded shadow">#${serialIdx + 1}</span>
+                            <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl face-focus-thumb border-2 border-red-900 cursor-pointer shadow-sm bg-slate-100" title="Click to View Full Original HD Photo">
+                            <span class="absolute -top-1.5 -left-1.5 bg-slate-800 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded shadow">${serialIdx + 1}</span>
                         </div>
 
-                        <!-- Student Details (No Truncate Cut) -->
+                        <!-- Student Details -->
                         <div class="flex-grow min-w-0">
                             <div class="flex items-start justify-between gap-2">
                                 <div class="flex flex-wrap items-center gap-1.5">
@@ -1098,12 +1241,12 @@
                         </div>
                     </div>
 
-                    <!-- Collapsible Action Bar -->
+                    <!-- Collapsible Hidden Action Bar -->
                     <div id="cardMenu-${originalIdx}" class="hidden mt-3 pt-2.5 border-t border-slate-200 flex flex-wrap gap-1.5 justify-between items-center bg-slate-50 p-2 rounded-xl fade-in">
                         <div class="flex flex-wrap gap-1.5">
                             <button onclick="openIdCardModal(${originalIdx})" class="theme-maroon text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🪪 ID Card</button>
-                            <button onclick="openProfileModal(${originalIdx})" class="bg-purple-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">👤 Profile & Dates</button>
-                            <button onclick="openRenewModal(${originalIdx})" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔄 Renew Plan</button>
+                            <button onclick="openProfileModal(${originalIdx})" class="bg-purple-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">👤 Profile & Docs</button>
+                            <button onclick="openRenewModal(${originalIdx})" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔄 Renew / Change Plan</button>
                             <button onclick="openLatestInvoice(${originalIdx})" class="bg-teal-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🧾 GST Bill</button>
                             <button onclick="openPromiseUpdatePrompt(${originalIdx})" class="bg-rose-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">📅 Promise Date</button>
                             <button onclick="openReminderModal(${originalIdx})" class="bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔔 Send Reminder</button>
@@ -1121,7 +1264,7 @@
             if(el) el.classList.toggle('hidden');
         }
 
-        // 6. Promise Date Strike & Fail Counter Logic
+        // 7. Promise Date Update & Due Cleared with Manual Bill Date
         function openPromiseUpdatePrompt(index) {
             let s = students[index];
             const today = new Date().toISOString().split('T')[0];
@@ -1131,18 +1274,22 @@
 
             if(input.trim() === '0') {
                 const paidAmt = parseFloat(s.remainingDue) || 0;
+                const billD = prompt("🧾 बिल / पेमेंट मिलने की तारीख (YYYY-MM-DD) दर्ज करें:", today) || today;
                 const mode = confirm("Cash के लिए OK दबाएं, Online/UPI के लिए Cancel दबाएं") ? "Cash" : "Online / UPI";
                 const invNo = "BL-" + Date.now().toString().slice(-6);
                 s.paymentHistory.push({
                     invNo: invNo,
-                    date: today,
+                    date: billD,
                     startDate: s.cycleStartDate || s.admissionDate,
                     endDate: s.validUpto,
                     amount: paidAmt,
                     totalBill: paidAmt,
+                    lockerRent: 0,
+                    lockerSecurity: 0,
                     dueAfter: 0,
                     isGst: false,
                     months: 0,
+                    shiftAtTime: s.shiftPlan,
                     mode: mode,
                     period: `${s.cycleStartDate || s.admissionDate} to ${s.validUpto} (Due Cleared)`,
                     type: 'Due Cleared'
@@ -1166,7 +1313,7 @@
             renderStudentList();
         }
 
-        // 7. Vacant Seat (250), Chair (250), Locker (90) Finder
+        // 8. Vacant Seat (250), Chair (250), Locker (90) Finder
         function openVacantModal() {
             document.getElementById('vacantModal').classList.remove('hidden');
             renderVacantGrid('seat');
@@ -1212,7 +1359,7 @@
             }
         }
 
-        // 8. Zero-Crop HD ID Card (Side ID, Dual-Color S-/C-/L-/K-, Start & Valid Date, Due / Not Due)
+        // 9. Zero-Clip HD ID Card Modal
         function openIdCardModal(index) {
             const s = students[index];
             const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
@@ -1234,10 +1381,10 @@
             const due = parseFloat(s.remainingDue) || 0;
             const dueEl = document.getElementById('idCardDueStatus');
             if(due > 0) {
-                dueEl.className = "text-red-600 font-extrabold id-text-safe";
+                dueEl.className = "text-red-600 font-extrabold id-safe-line";
                 dueEl.innerText = `⚠️ Pending Due: ₹${due}`;
             } else {
-                dueEl.className = "text-emerald-700 font-extrabold id-text-safe";
+                dueEl.className = "text-emerald-700 font-extrabold id-safe-line";
                 dueEl.innerText = `✅ Not Due (No Dues)`;
             }
 
@@ -1291,32 +1438,40 @@
             }
         }
 
-        // 9. Smart Manual/Auto Renewal (1M, 3M, 6M, 12M) & Bill Generator
+        // 10. Full Plan Renewal Modal (With All 6 Shift Plans, Locker Auto ₹50/M + ₹200 Security, Manual Bill Date)
         function openRenewModal(index) {
             const s = students[index];
+            const today = new Date().toISOString().split('T')[0];
             document.getElementById('renewStudentIdx').value = index;
-            document.getElementById('renewStudentInfo').innerHTML = `<b>ID: ${s.uniId} — ${s.fullName}</b><br>Shift: ${cleanShiftName(s.shiftPlan)} | Previous Expiry: <span class="text-red-600">${s.validUpto}</span>`;
-            
-            // Default Start Date = Previous Expiry Date (Editable manually by user)
-            const defaultStart = s.validUpto || new Date().toISOString().split('T')[0];
-            document.getElementById('renewStartDate').value = defaultStart;
+            document.getElementById('renewStudentInfo').innerHTML = `<b>ID: ${s.uniId} — ${s.fullName}</b> (${s.gender || 'Male'})<br>Current Shift: <span class="text-indigo-800">${cleanShiftName(s.shiftPlan)}</span> | Previous Expiry: <span class="text-red-600">${s.validUpto}</span>`;
+
+            // Pre-select current shift in dropdown
+            const shiftDropdown = document.getElementById('renewShiftSelect');
+            let matched = false;
+            for(let i = 0; i < shiftDropdown.options.length; i++) {
+                if(cleanShiftName(shiftDropdown.options[i].value) === cleanShiftName(s.shiftPlan)) {
+                    shiftDropdown.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+            if(!matched) shiftDropdown.selectedIndex = 0;
+
+            document.getElementById('renewLockerNo').value = cleanResNum(s.lockerNo);
+            document.getElementById('renewKeyNo').value = cleanResNum(s.keyNo);
+            document.getElementById('renewStartDate').value = s.validUpto || today;
+            document.getElementById('renewBillDate').value = today;
             document.getElementById('renewMonths').value = '1';
+            document.getElementById('renewLockerSecCheck').checked = false;
             document.getElementById('renewGstCheck').checked = false;
             document.getElementById('renewPromiseDate').value = '';
+
             recalcRenewalDates();
             recalcRenewalBill();
             document.getElementById('renewModal').classList.remove('hidden');
         }
 
         function closeRenewModal() { document.getElementById('renewModal').classList.add('hidden'); }
-
-        function getBaseRateFromShift(shiftStr) {
-            if(!shiftStr) return 299;
-            if(shiftStr.includes('10:00 AM - 02:00 PM') || shiftStr.includes('02:00 PM - 06:00 PM') || shiftStr.includes('399')) return 399;
-            if(shiftStr.includes('12 Hrs') || shiftStr.includes('499')) return 499;
-            if(shiftStr.includes('24 Hours') || shiftStr.includes('799')) return 799;
-            return 299;
-        }
 
         function recalcRenewalDates() {
             const startStr = document.getElementById('renewStartDate').value;
@@ -1328,18 +1483,23 @@
         }
 
         function recalcRenewalBill() {
-            const idx = document.getElementById('renewStudentIdx').value;
-            if(idx === "") return;
-            const s = students[idx];
+            const shiftSel = document.getElementById('renewShiftSelect');
+            const opt = shiftSel.options[shiftSel.selectedIndex];
+            const rate = parseFloat(opt.getAttribute('data-rate')) || 299;
             const months = parseInt(document.getElementById('renewMonths').value) || 1;
-            const rate = getBaseRateFromShift(s.shiftPlan);
-            let sub = rate * months;
-            if(months === 3) sub = Math.round(sub * 0.95);
-            else if(months === 6) sub = Math.round(sub * 0.90);
-            else if(months === 12) sub = Math.round(sub * 0.85);
 
+            let shiftSub = rate * months;
+            if(months === 3) shiftSub = Math.round(shiftSub * 0.95);
+            else if(months === 6) shiftSub = Math.round(shiftSub * 0.90);
+            else if(months === 12) shiftSub = Math.round(shiftSub * 0.85);
+
+            const hasLocker = cleanResNum(document.getElementById('renewLockerNo').value) !== "";
+            const lockerRent = hasLocker ? (LOCKER_MONTHLY_FEE * months) : 0;
+            const secDeposit = document.getElementById('renewLockerSecCheck').checked ? LOCKER_SECURITY_DEPOSIT : 0;
+
+            const combined = shiftSub + lockerRent + secDeposit;
             const addGst = document.getElementById('renewGstCheck').checked;
-            const total = addGst ? Math.round(sub * 1.05) : sub;
+            const total = addGst ? Math.round(combined * 1.05) : combined;
 
             document.getElementById('renewBillAmt').value = total;
             document.getElementById('renewPaidAmt').value = total;
@@ -1355,17 +1515,28 @@
         function confirmRenewalSubmit() {
             const idx = document.getElementById('renewStudentIdx').value;
             const s = students[idx];
+            const newShift = document.getElementById('renewShiftSelect').value;
+            const newLocker = cleanResNum(document.getElementById('renewLockerNo').value);
+            const newKey = cleanResNum(document.getElementById('renewKeyNo').value);
             const startD = document.getElementById('renewStartDate').value;
             const newValid = document.getElementById('renewNewValid').value;
+            const billD = document.getElementById('renewBillDate').value || new Date().toISOString().split('T')[0];
             const months = parseInt(document.getElementById('renewMonths').value) || 1;
             const isGst = document.getElementById('renewGstCheck').checked;
+            const hasSec = document.getElementById('renewLockerSecCheck').checked;
+            const lockerRentAmt = newLocker ? (LOCKER_MONTHLY_FEE * months) : 0;
+            const lockerSecAmt = hasSec ? LOCKER_SECURITY_DEPOSIT : 0;
+
             const billAmt = parseFloat(document.getElementById('renewBillAmt').value) || 0;
             const paidAmt = parseFloat(document.getElementById('renewPaidAmt').value) || 0;
             const newDue = Math.max(0, billAmt - paidAmt);
             const payMode = document.getElementById('renewPayMode').value;
             const promiseD = document.getElementById('renewPromiseDate').value;
-            const today = new Date().toISOString().split('T')[0];
 
+            s.shiftPlan = newShift;
+            s.lockerNo = newLocker;
+            s.keyNo = newKey;
+            if(hasSec) s.lockerSecurityPaid = (parseFloat(s.lockerSecurityPaid) || 0) + LOCKER_SECURITY_DEPOSIT;
             s.cycleStartDate = startD;
             s.validUpto = newValid;
             s.remainingDue = (parseFloat(s.remainingDue) || 0) + newDue;
@@ -1375,14 +1546,17 @@
             if(!s.paymentHistory) s.paymentHistory = [];
             s.paymentHistory.push({
                 invNo: invNo,
-                date: today,
+                date: billD,
                 startDate: startD,
                 endDate: newValid,
                 amount: paidAmt,
                 totalBill: billAmt,
+                lockerRent: lockerRentAmt,
+                lockerSecurity: lockerSecAmt,
                 dueAfter: s.remainingDue,
                 isGst: isGst,
                 months: months,
+                shiftAtTime: newShift,
                 mode: payMode,
                 period: `${startD} to ${newValid} (${months}M / ${months * 28} Days)`,
                 type: `Renewal (${months}M)`
@@ -1403,17 +1577,22 @@
             showInvoiceDetails(studentIdx, s.paymentHistory.length - 1);
         }
 
+        // 11. Professional GST / Non-GST PDF Tax Invoice (Shows Manual Bill Date, Payment Count, Mode, Locker Breakdown & Gender)
         function showInvoiceDetails(studentIdx, payIdx) {
             const s = students[studentIdx];
             const p = s.paymentHistory[payIdx];
             const totalPayCount = s.paymentHistory.length;
             const isGst = p.isGst;
             const totalBill = parseFloat(p.totalBill || p.amount) || 0;
-            const baseAmt = isGst ? (totalBill / 1.05).toFixed(2) : totalBill.toFixed(2);
-            const cgst = isGst ? ((totalBill - baseAmt) / 2).toFixed(2) : "0.00";
+            const lockerRent = parseFloat(p.lockerRent) || 0;
+            const lockerSec = parseFloat(p.lockerSecurity) || 0;
+            const subBeforeTax = isGst ? (totalBill / 1.05) : totalBill;
+            const tuitionBase = Math.max(0, subBeforeTax - lockerRent - lockerSec).toFixed(2);
+            const cgst = isGst ? ((totalBill - subBeforeTax) / 2).toFixed(2) : "0.00";
             const sgst = cgst;
             const pStart = p.startDate || s.cycleStartDate || s.admissionDate || '-';
             const pEnd = p.endDate || s.validUpto || '-';
+            const shiftUsed = cleanShiftName(p.shiftAtTime || s.shiftPlan);
 
             const logoHtml = libraryLogo ? `<img src="${libraryLogo}" class="w-12 h-12 rounded-full object-cover border border-red-900">` : `<div class="w-12 h-12 rounded-full theme-maroon text-white flex items-center justify-center text-xl">🏛️</div>`;
 
@@ -1431,38 +1610,50 @@
                     <div class="text-right">
                         <span class="bg-red-900 text-white px-2.5 py-1 rounded text-[10px] font-extrabold">${isGst ? 'TAX INVOICE' : 'FEE RECEIPT'}</span>
                         <p class="text-[10px] font-bold mt-1">Inv No: <b>${p.invNo || 'BL-001'}</b></p>
-                        <p class="text-[10px] text-slate-600">Billing Date: <b>${p.date}</b></p>
+                        <p class="text-[10px] text-purple-800 font-extrabold">Bill Date: ${p.date}</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg border mb-3 text-[11px]">
                     <div>
-                        <p>Student Name: <b>${s.fullName}</b></p>
+                        <p>Name: <b>${s.fullName}</b> (${s.gender || 'Male'})</p>
                         <p>Unique ID: <b>ID: ${s.uniId}</b></p>
                         <p>Mobile: <b>${s.mobile}</b></p>
                     </div>
                     <div class="text-right">
-                        <p>Shift: <b>${cleanShiftName(s.shiftPlan)}</b></p>
-                        <p>Allocation: <b>${formatResPlain(s)}</b></p>
-                        <p>Payment Count: <b>#${payIdx + 1} (Total ${totalPayCount} times)</b></p>
+                        <p>Shift: <b>${shiftUsed}</b></p>
+                        <p>Seat/Locker: <b>${formatResPlain(s)}</b></p>
+                        <p>Payment Track: <b class="text-indigo-800">Paid #${payIdx + 1} of ${totalPayCount} (${p.mode})</b></p>
                     </div>
                 </div>
 
                 <table class="w-full border-collapse border border-slate-300 text-[11px] mb-3">
                     <thead class="bg-slate-100">
                         <tr>
-                            <th class="border p-1.5 text-left">Plan Description & Validity (28-Day Cycle)</th>
+                            <th class="border p-1.5 text-left">Description & Validity Period (28-Day Cycle)</th>
                             <th class="border p-1.5 text-right">Amount (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td class="border p-1.5">
-                                <b>Library Membership — ${p.type}</b><br>
+                                <b>Library Plan — ${p.type}</b> (${shiftUsed})<br>
                                 <span class="text-[10px] text-blue-800 font-bold">Start Date: ${pStart} ➔ Valid Upto: ${pEnd}</span>
                             </td>
-                            <td class="border p-1.5 text-right font-bold">₹${baseAmt}</td>
+                            <td class="border p-1.5 text-right font-bold">₹${tuitionBase}</td>
                         </tr>
+                        ${lockerRent > 0 ? `
+                        <tr>
+                            <td class="border p-1.5 text-slate-700">🗄️ Locker Monthly Charges (₹50/Month)</td>
+                            <td class="border p-1.5 text-right font-bold">₹${lockerRent.toFixed(2)}</td>
+                        </tr>
+                        ` : ''}
+                        ${lockerSec > 0 ? `
+                        <tr>
+                            <td class="border p-1.5 text-indigo-800 font-semibold">🔑 Locker Security Deposit (Refundable on Key Return)</td>
+                            <td class="border p-1.5 text-right font-bold">₹${lockerSec.toFixed(2)}</td>
+                        </tr>
+                        ` : ''}
                         ${isGst ? `
                         <tr>
                             <td class="border p-1.5 text-slate-600">CGST @ 2.5% (SAC: ${HSN_SAC_CODE})</td>
@@ -1478,7 +1669,7 @@
                             <td class="border p-1.5 text-right">₹${totalBill}</td>
                         </tr>
                         <tr class="text-emerald-800 font-extrabold">
-                            <td class="border p-1.5">Amount Received (${p.mode})</td>
+                            <td class="border p-1.5">Paid Amount (Mode: ${p.mode} | Date: ${p.date})</td>
                             <td class="border p-1.5 text-right">₹${p.amount}</td>
                         </tr>
                         <tr class="text-red-600 font-extrabold">
@@ -1514,7 +1705,7 @@
             });
         }
 
-        // 10. Complete Profile with Direct Editable Admission & Cycle Dates + Reminder History
+        // 12. Complete Profile Modal
         function calculateStudentTenure(admDateStr) {
             if(!admDateStr) return "0 Months, 0 Days";
             const start = new Date(admDateStr);
@@ -1550,7 +1741,8 @@
 
         function openProfileModal(index) {
             const s = students[index];
-            const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+            const thumbAvatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+            const fullZoomAvatar = s.photoFull || thumbAvatar;
             const history = s.paymentHistory || [];
             const totalPaid = history.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
             const cashCount = history.filter(r => r.mode === 'Cash').length;
@@ -1565,7 +1757,7 @@
             const ledgerRows = history.map((p, i) => `
                 <tr class="border-b hover:bg-slate-50">
                     <td class="p-2 font-bold">${i+1}</td>
-                    <td class="p-2">${p.date}</td>
+                    <td class="p-2 font-bold text-purple-900">${p.date}</td>
                     <td class="p-2 font-extrabold text-emerald-700">₹${p.amount}</td>
                     <td class="p-2 font-semibold">${p.mode}</td>
                     <td class="p-2 text-slate-600">${p.period || p.type}</td>
@@ -1587,15 +1779,15 @@
                         <p class="text-[10px] text-slate-600">Paid <b>${history.length} Times</b> (${onlineCount} Online, ${cashCount} Cash)</p>
                     </div>
                     <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl">
-                        <p class="text-[11px] font-bold text-amber-900">🔔 Reminders Sent Count</p>
-                        <h4 class="text-sm font-extrabold text-amber-900 mt-1">💬 WA: ${rem.wa||0} | ✉️ SMS: ${rem.sms||0} | 📧 Mail: ${rem.mail||0}</h4>
-                        <p class="text-[10px] text-red-600 font-bold mt-0.5">Current Due: ₹${s.remainingDue || 0}</p>
+                        <p class="text-[11px] font-bold text-amber-900">🔔 Reminders & Security</p>
+                        <h4 class="text-xs font-extrabold text-amber-900 mt-1">💬 WA: ${rem.wa||0} | ✉️ SMS: ${rem.sms||0} | 📧 Mail: ${rem.mail||0}</h4>
+                        <p class="text-[10px] text-indigo-800 font-bold mt-0.5">🔑 Locker Security Deposit: ₹${s.lockerSecurityPaid || 0}</p>
                     </div>
                 </div>
 
-                <!-- Direct Date Editor Box inside Profile (As Requested) -->
+                <!-- Direct Date Editor Box inside Profile -->
                 <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 mb-4 text-xs">
-                    <h4 class="font-extrabold text-blue-900 mb-2">📅 Direct Admission & Plan Date Editor (यहाँ से सीधे तारीख सुधारें)</h4>
+                    <h4 class="font-extrabold text-blue-900 mb-2">📅 Direct Admission & Plan Date Editor</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Original Admission Date</label>
@@ -1626,11 +1818,12 @@
 
                 <!-- Personal & Official Details -->
                 <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border mb-4 text-xs">
-                    <img src="${avatar}" onclick="zoomHdImage('${avatar}', '${s.fullName}')" class="w-24 h-24 rounded-xl object-cover border-2 border-red-900 shadow cursor-pointer">
+                    <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (Full Photo)')" class="w-24 h-24 rounded-xl face-focus-thumb border-2 border-red-900 shadow cursor-pointer" title="Click for Full Uncropped HD Photo">
                     <div class="space-y-1 w-full">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="theme-maroon-solid text-white px-2.5 py-0.5 rounded font-extrabold">ID: ${s.uniId}</span>
                             <h2 class="text-lg font-extrabold text-slate-900">${s.fullName}</h2>
+                            <span class="bg-slate-200 text-slate-800 px-2 py-0.5 rounded font-bold text-[11px]">${s.gender || 'Male'}</span>
                         </div>
                         <p>📞 Student Mobile: <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold">${s.mobile}</a> | 🏠 Guardian: <b>${s.guardianMobile || 'N/A'}</b></p>
                         <p>📍 Full Address: <b class="text-slate-800">${s.address}</b></p>
@@ -1663,7 +1856,7 @@
                 <div class="overflow-x-auto border rounded-xl">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-100 font-extrabold">
-                            <tr><th class="p-2">#</th><th class="p-2">Date</th><th class="p-2">Paid</th><th class="p-2">Mode</th><th class="p-2">Validity / Details</th><th class="p-2">Invoice</th></tr>
+                            <tr><th class="p-2">No.</th><th class="p-2">Bill Date</th><th class="p-2">Paid</th><th class="p-2">Mode</th><th class="p-2">Validity / Details</th><th class="p-2">Invoice</th></tr>
                         </thead>
                         <tbody>${ledgerRows}</tbody>
                     </table>
@@ -1674,7 +1867,7 @@
 
         function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
 
-        // 11. Multi-Channel Reminder with Automatic Hindi Name & Sent Counter
+        // 13. Multi-Channel Reminder with Automatic Hindi Name & Sent Counter
         async function openReminderModal(index) {
             const s = students[index];
             if(!s.reminderStats) s.reminderStats = { wa: 0, sms: 0, mail: 0 };
@@ -1728,7 +1921,7 @@
             document.getElementById('reminderStatsBadge').innerText = `📊 अब तक कुल भेजे गए रिमाइंडर: ${tot} (💬 WA: ${r.wa||0} | ✉️ SMS: ${r.sms||0} | 📧 Mail: ${r.mail||0})`;
         }
 
-        // 12. Today's Birthdays Modal (Full List, Hindi Name Conversion & Wished Status Tracking)
+        // 14. Today's Birthdays Modal
         async function openBirthdayModal() {
             const todayIso = new Date().toISOString().split('T')[0];
             const currentYear = todayIso.slice(0, 4);
@@ -1753,7 +1946,7 @@
                 row.className = `p-3 rounded-xl border flex items-center justify-between gap-2 ${isWished ? 'bg-emerald-50 border-emerald-300' : 'bg-pink-50 border-pink-200'}`;
                 row.innerHTML = `
                     <div class="flex items-center gap-2.5">
-                        <img src="${avatar}" class="w-11 h-11 rounded-lg object-cover border border-pink-400">
+                        <img src="${avatar}" class="w-11 h-11 rounded-lg face-focus-thumb border border-pink-400">
                         <div>
                             <span class="bg-pink-600 text-white text-[10px] font-extrabold px-2 py-0.2 rounded">ID: ${s.uniId}</span>
                             <h4 class="font-extrabold text-slate-900 text-xs mt-0.5">${hiName} <span class="text-slate-500 font-normal">(${s.fullName})</span></h4>
@@ -1792,6 +1985,7 @@
             document.getElementById('formHeading').innerText = `✏️ Edit Member: ${s.fullName} (ID: ${s.uniId})`;
             document.getElementById('uniId').value = s.uniId;
             document.getElementById('fullName').value = s.fullName;
+            document.getElementById('gender').value = s.gender || 'Male';
             document.getElementById('mobile').value = s.mobile;
             document.getElementById('guardianMobile').value = s.guardianMobile || '';
             document.getElementById('emailId').value = s.emailId || '';
@@ -1808,12 +2002,14 @@
             document.getElementById('admissionDateInput').value = s.admissionDate || s.cycleStartDate || '';
             document.getElementById('cycleStartDate').value = s.cycleStartDate || s.admissionDate || '';
             document.getElementById('validUpto').value = s.validUpto;
+            document.getElementById('manualBillDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('lockerSecurityCheck').checked = (parseFloat(s.lockerSecurityPaid) > 0);
             document.getElementById('totalBill').value = s.totalBill || 0;
             document.getElementById('paidNow').value = s.paidNow || 0;
             document.getElementById('remainingDue').value = s.remainingDue || 0;
             document.getElementById('promiseDate').value = s.promiseDate || '';
 
-            tempUploads = { photoBase64: '', frontBase64: '', backBase64: '' };
+            tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '' };
             document.getElementById('admissionFormBox').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -1899,7 +2095,7 @@
         function zoomHdImage(src, title) {
             if(!src) return;
             document.getElementById('zoomModalImg').src = src;
-            document.getElementById('zoomModalTitle').innerText = title || 'HD Preview';
+            document.getElementById('zoomModalTitle').innerText = title || 'Full HD View';
             document.getElementById('zoomModal').classList.remove('hidden');
         }
         function closeZoomModal() { document.getElementById('zoomModal').classList.add('hidden'); }
@@ -2019,10 +2215,10 @@
         }
 
         function exportExcelCsv() {
-            let csv = "Unique ID,Full Name,Mobile,Address,Shift,Seat,Chair,Locker,Key,Admission Date,Cycle Start Date,Valid Upto,Remaining Due,Promise Date,Reminders Sent\n";
-            students.forEach(s => {
+            let csv = "Serial,Unique ID,Full Name,Gender,Mobile,Address,Shift,Seat,Chair,Locker,Key,Locker Security Paid,Admission Date,Cycle Start Date,Valid Upto,Remaining Due,Promise Date,Reminders Sent\n";
+            students.forEach((s, idx) => {
                 const r = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
-                csv += `${s.uniId},"${s.fullName}",${s.mobile},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.admissionDate || ''},${s.cycleStartDate || ''},${s.validUpto},${s.remainingDue || 0},${s.promiseDate || ''},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
+                csv += `${idx + 1},${s.uniId},"${s.fullName}",${s.gender || 'Male'},${s.mobile},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.lockerSecurityPaid || 0},${s.admissionDate || ''},${s.cycleStartDate || ''},${s.validUpto},${s.remainingDue || 0},${s.promiseDate || ''},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
