@@ -14,10 +14,9 @@
         .theme-border { border-color: #5c061c; }
         .fade-in { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        /* Prevents html2canvas text & badge clipping */
-        .id-safe-line { line-height: 1.5 !important; padding-top: 2px; padding-bottom: 2px; }
-        /* Face & Neck focus for thumbnails */
+        .id-safe-line { line-height: 1.45 !important; padding-top: 1px; padding-bottom: 1px; }
         .face-focus-thumb { object-fit: cover; object-position: center 15%; }
+        .active-filter-ring { ring: 3px; box-shadow: 0 0 0 3px #5c061c !important; background-color: #fffbeb !important; }
         @media print {
             .no-print { display: none !important; }
             body { background: #fff !important; }
@@ -72,57 +71,70 @@
             </div>
         </header>
 
-        <!-- 3. Top Search Bar & Quick Filter Tabs -->
-        <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 mb-3">
-            <div class="flex items-center gap-2 bg-slate-50 px-3.5 py-2.5 rounded-xl border border-slate-300 mb-2.5">
+        <!-- 3. Clean Search Bar right at Top (No Duplicate Filter Buttons Below It) -->
+        <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200 mb-3 flex items-center gap-2">
+            <div class="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-300 flex-grow">
                 <span class="text-base">🔍</span>
-                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search Exact ID (e.g. 1, 99), 10-Digit Mobile, or Student Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
+                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search ID (1, 99), 10-Digit Mobile, or Student Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
                 <button onclick="document.getElementById('searchInput').value=''; resetLimitAndRender();" class="text-xs text-slate-400 hover:text-red-600 font-extrabold px-1">✖</button>
             </div>
-            <div class="flex flex-wrap gap-1.5">
-                <button onclick="setTab('all')" id="tab-all" class="px-3 py-1.5 rounded-xl text-xs font-extrabold theme-maroon text-white shadow-sm">👥 All Members</button>
-                <button onclick="setTab('active')" id="tab-active" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">🟢 Live Active</button>
-                <button onclick="setTab('expired')" id="tab-expired" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">🔴 Expired</button>
-                <button onclick="setTab('dues')" id="tab-dues" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">⚠️ Dues Pending</button>
-                <button onclick="setTab('promise')" id="tab-promise" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">📅 Promise Alerts <span id="promiseCountBadge" class="bg-red-600 text-white px-1.5 py-0.2 rounded-full text-[10px] ml-1 hidden">0</span></button>
-            </div>
         </div>
 
-        <!-- 4. Primary Action Bar -->
-        <div class="flex flex-wrap gap-2 mb-3">
-            <button onclick="toggleAdmissionForm()" class="theme-maroon text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:opacity-95 transition">
-                ➕ New Admission
-            </button>
-            <button onclick="openExpenseModal()" class="bg-indigo-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:bg-indigo-600 transition">
-                📊 Expense Tracker
-            </button>
-            <button onclick="openBirthdayModal()" class="bg-pink-600 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold shadow hover:bg-pink-500 transition">
-                🎂 Birthdays <span id="bdayCountBadge" class="bg-white text-pink-600 px-1.5 py-0.5 rounded-full text-[11px] ml-1 hidden">0</span>
-            </button>
-        </div>
-
-        <!-- 5. Member Status & Single Vacant Finder Card -->
+        <!-- 4. Unified Equal-Size Action & Filter Dashboard Grid (No Duplicate Buttons!) -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2.5">
-            <div onclick="setTab('all')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow transition">
+            <!-- New Admission Button right beside Total Members -->
+            <button onclick="toggleAdmissionForm()" class="theme-maroon text-white p-3 rounded-xl shadow-md hover:opacity-95 transition flex flex-col justify-between text-left">
+                <span class="text-[11px] text-yellow-300 font-extrabold">➕ NEW ENTRY</span>
+                <span class="text-sm sm:text-base font-extrabold mt-1">New Admission</span>
+            </button>
+
+            <div id="cardTab-all" onclick="setTab('all')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow transition active-filter-ring">
                 <p class="text-[11px] text-slate-500 font-bold">👥 Total Members</p>
-                <h3 id="statTotalMembers" class="text-xl font-extrabold text-slate-800">0</h3>
+                <h3 id="statTotalMembers" class="text-xl font-extrabold text-slate-800 mt-0.5">0</h3>
             </div>
-            <div onclick="setTab('active')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-emerald-600 cursor-pointer hover:shadow transition">
+
+            <div id="cardTab-active" onclick="setTab('active')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-emerald-600 cursor-pointer hover:shadow transition">
                 <p class="text-[11px] text-slate-500 font-bold">🟢 Live Active</p>
-                <h3 id="statActiveMembers" class="text-xl font-extrabold text-emerald-700">0</h3>
+                <h3 id="statActiveMembers" class="text-xl font-extrabold text-emerald-700 mt-0.5">0</h3>
             </div>
-            <div onclick="setTab('expired')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-rose-600 cursor-pointer hover:shadow transition">
+
+            <div id="cardTab-expired" onclick="setTab('expired')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-rose-600 cursor-pointer hover:shadow transition">
                 <p class="text-[11px] text-slate-500 font-bold">🔴 Expired Members</p>
-                <h3 id="statExpiredMembers" class="text-xl font-extrabold text-rose-600">0</h3>
+                <h3 id="statExpiredMembers" class="text-xl font-extrabold text-rose-600 mt-0.5">0</h3>
             </div>
+        </div>
+
+        <!-- Second Row of Equal-Size Utility & Filter Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2.5">
+            <div id="cardTab-promise" onclick="setTab('promise')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600 cursor-pointer hover:shadow transition">
+                <p class="text-[11px] text-red-800 font-extrabold flex items-center justify-between">
+                    <span>📅 Promise / Dues</span>
+                    <span id="promiseCountBadge" class="bg-red-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
+                </p>
+                <h3 id="colTotalDues" class="text-lg font-extrabold text-red-600 mt-0.5">₹0</h3>
+            </div>
+
             <div onclick="openVacantModal()" class="bg-purple-50 p-3 rounded-xl shadow-sm border-l-4 border-purple-700 cursor-pointer hover:bg-purple-100 transition">
-                <p class="text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="text-[10px] bg-purple-200 px-1.5 py-0.2 rounded">View ➔</span></p>
+                <p class="text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="text-[10px] bg-purple-200 px-1.5 py-0.2 rounded">View</span></p>
                 <h3 id="statVacantSummary" class="text-xs sm:text-sm font-extrabold text-purple-800 mt-1">S: 250 | C: 250 | L: 90</h3>
             </div>
+
+            <div onclick="openExpenseModal()" class="bg-indigo-50 p-3 rounded-xl shadow-sm border-l-4 border-indigo-700 cursor-pointer hover:bg-indigo-100 transition">
+                <p class="text-[11px] text-indigo-900 font-extrabold">📊 Expense Tracker</p>
+                <h3 class="text-xs sm:text-sm font-extrabold text-indigo-800 mt-1">Manage Expenses ➔</h3>
+            </div>
+
+            <div onclick="openBirthdayModal()" class="bg-pink-50 p-3 rounded-xl shadow-sm border-l-4 border-pink-600 cursor-pointer hover:bg-pink-100 transition">
+                <p class="text-[11px] text-pink-900 font-extrabold flex items-center justify-between">
+                    <span>🎂 Birthdays</span>
+                    <span id="bdayCountBadge" class="bg-pink-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
+                </p>
+                <h3 class="text-xs sm:text-sm font-extrabold text-pink-700 mt-1">Wish in Hindi ➔</h3>
+            </div>
         </div>
 
-        <!-- 5-Box Payment Collection & Dues Strip -->
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-4">
+        <!-- 5. Equal 4-Box Financial Collection Strip -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
             <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 shadow-sm">
                 <p class="text-[10px] text-emerald-800 font-bold">💵 Today's Collection</p>
                 <h4 id="colToday" class="text-base sm:text-lg font-extrabold text-emerald-700">₹0</h4>
@@ -139,13 +151,9 @@
                 <p class="text-[10px] text-amber-900 font-bold">🏦 This Year Total</p>
                 <h4 id="colThisYear" class="text-base sm:text-lg font-extrabold text-amber-800">₹0</h4>
             </div>
-            <div onclick="setTab('dues')" class="col-span-2 sm:col-span-1 bg-red-50 p-2.5 rounded-xl border border-red-200 shadow-sm cursor-pointer hover:bg-red-100 transition">
-                <p class="text-[10px] text-red-800 font-bold">⚠️ Total Pending Dues</p>
-                <h4 id="colTotalDues" class="text-base sm:text-lg font-extrabold text-red-600">₹0</h4>
-            </div>
         </div>
 
-        <!-- 6. Collapsible Admission / Edit Form (With All 6 Shifts, Gender, Locker Auto ₹50/M + ₹200 Security, Manual Bill Date) -->
+        <!-- 6. Collapsible Admission / Edit Form -->
         <div id="admissionFormBox" class="bg-white p-4 sm:p-5 rounded-2xl shadow-xl mb-5 hidden border-2 theme-border fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-4">
                 <h2 id="formHeading" class="text-base sm:text-lg font-extrabold theme-maroon-text">📝 Student Admission & Plan Form (28-Day Cycle)</h2>
@@ -240,7 +248,7 @@
                     <input type="text" id="otherCourseInput" class="w-full border-2 border-indigo-400 p-2 rounded-lg" placeholder="Type course...">
                 </div>
 
-                <!-- Exact 6 Shift Plans -->
+                <!-- All 6 Shift Plans -->
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-bold text-slate-700 mb-1">⏱️ Select Shift Plan *</label>
                     <select id="shiftPlan" onchange="recalcAdmissionBill()" required class="w-full border border-slate-300 p-2 rounded-lg font-bold">
@@ -283,7 +291,6 @@
                     <input type="date" id="manualBillDate" required class="w-full border-2 border-purple-300 p-2 rounded-lg font-extrabold bg-purple-50">
                 </div>
 
-                <!-- Checkboxes for Locker Security Deposit (₹200) & Optional 5% GST -->
                 <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div class="flex items-center gap-2 bg-indigo-50 p-2.5 rounded-xl border border-indigo-300">
                         <input type="checkbox" id="lockerSecurityCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-indigo-900 cursor-pointer">
@@ -343,8 +350,8 @@
             </form>
         </div>
 
-        <!-- 7. Compact Student List Container -->
-        <div id="studentListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
+        <!-- 7. Responsive Justified Student List Container -->
+        <div id="studentListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch"></div>
 
         <!-- Load More Button -->
         <div id="loadMoreWrap" class="text-center mt-5 hidden">
@@ -372,9 +379,9 @@
         </div>
     </div>
 
-    <!-- Modal B: Zero-Clip HD ID Card Modal (Face-Focused Photo, Unclipped ID: 1, Single-Line Shift, Outer Padded Frame) -->
+    <!-- Modal B: 100% Bug-Free HD ID Card Modal (Plain Bold ID Text Below Photo & Above Name - Never Disappears!) -->
     <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2 overflow-y-auto">
-        <!-- Outer Padded Capture Frame (Guarantees Rounded Corners Never Cut on WhatsApp Share) -->
+        <!-- Outer Padded Capture Frame -->
         <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3.5 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
             <div class="bg-white w-[320px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
                 <!-- Header -->
@@ -388,26 +395,18 @@
                     <p class="text-[10px] text-slate-200 id-safe-line">Kachchhi Dargah, Patna | 📞 7050668855</p>
                 </div>
 
-                <!-- Body: Face-Focused Square HD Photo + Unclipped Side ID & Name -->
-                <div class="p-4 bg-gradient-to-b from-white to-slate-50">
-                    <div class="flex items-center gap-3.5 mb-3">
-                        <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl face-focus-thumb border-2 border-red-900 shadow-sm bg-slate-100 flex-shrink-0">
-                        <div class="text-left min-w-0 flex-grow">
-                            <!-- Unclipped Bold ID Badge -->
-                            <div class="inline-block bg-red-50 border-2 border-red-900 rounded-lg px-3 py-1 mb-1">
-                                <span id="idCardUniId" class="text-sm font-extrabold text-red-900 block leading-none">ID: 1</span>
-                            </div>
-                            <h3 id="idCardName" class="text-base font-extrabold text-slate-900 id-safe-line">Student Name</h3>
-                            <p id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-safe-line">📞 0000000000</p>
-                        </div>
-                    </div>
+                <!-- Body: Centered Square Face Photo + Plain Bold Unboxed ID Number right below photo -->
+                <div class="p-4 bg-gradient-to-b from-white to-slate-50 text-center">
+                    <img id="idCardPhoto" src="" class="w-24 h-24 rounded-2xl face-focus-thumb border-2 border-red-900 shadow-md bg-slate-100 mx-auto">
 
-                    <div class="bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 mb-3 text-left">
-                        <p id="idCardAddress" class="text-xs font-bold text-slate-700 id-safe-line">📍 Address</p>
-                    </div>
+                    <!-- Plain Bold Text ID (No Box/Border so html2canvas NEVER hides or clips it!) -->
+                    <p id="idCardUniId" class="text-base font-extrabold text-red-800 mt-2 tracking-wide id-safe-line">ID NO: 1</p>
+                    <h3 id="idCardName" class="text-lg font-extrabold text-slate-900 mt-0.5 id-safe-line">Student Name</h3>
+                    <p id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-safe-line">📞 0000000000</p>
+                    <p id="idCardAddress" class="text-xs font-bold text-slate-600 mt-1 bg-slate-100 py-1 px-2.5 rounded-lg border border-slate-200 id-safe-line">📍 Address</p>
 
-                    <!-- Details Box (Single-Line Shift, Dual-Color Allocation, Start & Valid Upto, Due / Not Due) -->
-                    <div class="text-left bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-2 shadow-sm">
+                    <!-- Details Box -->
+                    <div class="mt-3 text-left bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-2 shadow-sm">
                         <div class="flex justify-between items-center gap-1">
                             <span class="text-slate-500 font-bold flex-shrink-0">⏱️ Shift:</span>
                             <b id="idCardShift" class="text-slate-900 text-right text-[11px] font-extrabold whitespace-nowrap id-safe-line"></b>
@@ -443,7 +442,7 @@
         <p id="idCardHint" class="text-[11px] text-slate-300 mt-1.5 text-center no-print">💡 कार्ड पर टच करने से बटन छुप/दिख जाएंगे।</p>
     </div>
 
-    <!-- Modal C: Full Plan Renewal Modal (Change Shift, Change Duration 1M/3M/6M/12M, Locker Auto ₹50/M + ₹200 Security, Manual Bill Date) -->
+    <!-- Modal C: Full Plan Renewal Modal (All 6 Shift Plans, Locker Auto ₹50/M + ₹200 Security, Manual Bill Date) -->
     <div id="renewModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-2.5 overflow-y-auto">
         <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xl w-full max-w-lg fade-in my-auto">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
@@ -454,7 +453,6 @@
             <div id="renewStudentInfo" class="bg-slate-50 p-2.5 rounded-xl border text-xs mb-3 font-semibold"></div>
 
             <div class="space-y-3 text-xs">
-                <!-- All 6 Shift Plans Available During Renewal -->
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">⏱️ Select / Change Shift Plan *</label>
                     <select id="renewShiftSelect" onchange="recalcRenewalBill()" class="w-full border-2 border-indigo-300 p-2 rounded-lg font-extrabold bg-indigo-50 text-slate-900">
@@ -467,7 +465,6 @@
                     </select>
                 </div>
 
-                <!-- Locker Allocation inside Renewal -->
                 <div class="grid grid-cols-2 gap-2.5 bg-slate-50 p-2.5 rounded-xl border">
                     <div>
                         <label class="block font-bold text-indigo-800 mb-1">🗄️ Locker No (+₹50/M Auto)</label>
@@ -485,7 +482,6 @@
                     </div>
                 </div>
 
-                <!-- Manual Start Date, Package Months & Auto Valid Upto -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
                         <label class="block font-bold text-blue-800 mb-1">▶️ Plan Start Date *</label>
@@ -506,7 +502,6 @@
                     </div>
                 </div>
 
-                <!-- Optional Checkboxes: Locker Security ₹200 & 5% GST -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div class="flex items-center gap-2 bg-indigo-50 p-2 rounded-xl border border-indigo-200">
                         <input type="checkbox" id="renewLockerSecCheck" onchange="recalcRenewalBill()" class="w-4 h-4 accent-indigo-900">
@@ -533,7 +528,6 @@
                     </div>
                 </div>
 
-                <!-- Manual Bill Date, Payment Mode & Promise Date -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div>
                         <label class="block font-bold text-purple-800 mb-1">🧾 Bill Date (Manual) *</label>
@@ -599,7 +593,7 @@
         </div>
     </div>
 
-    <!-- Modal G: Today's Birthdays List Modal (With Wished Tracking & Hindi Name) -->
+    <!-- Modal G: Today's Birthdays List Modal -->
     <div id="birthdayModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
@@ -683,7 +677,6 @@
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
         }
 
-        // Automatic English-to-Hindi Name Transliteration
         const commonHindiNames = {
             "pintu": "पिंटू", "kumar": "कुमार", "singh": "सिंह", "ramesh": "रमेश", "suresh": "सुरेश",
             "rahul": "राहुल", "rohit": "रोहित", "aman": "अमन", "ankit": "अंकित", "vikas": "विकास",
@@ -823,7 +816,6 @@
         function onLockerInputChanged() {
             const lVal = cleanResNum(document.getElementById('lockerNo').value);
             const editIdx = document.getElementById('editIndex').value;
-            // Auto check ₹200 security deposit on new admission when locker number is typed
             if(editIdx === "") {
                 document.getElementById('lockerSecurityCheck').checked = (lVal !== "");
             }
@@ -851,11 +843,9 @@
             else if(months === 6) shiftTotal = Math.round(shiftTotal * 0.90);
             else if(months === 12) shiftTotal = Math.round(shiftTotal * 0.85);
 
-            // Auto Locker Monthly Charge (₹50 per month if Locker No is entered)
             const hasLocker = cleanResNum(document.getElementById('lockerNo').value) !== "";
             const lockerRent = hasLocker ? (LOCKER_MONTHLY_FEE * months) : 0;
 
-            // Optional ₹200 Locker Security Deposit
             const hasSecDeposit = document.getElementById('lockerSecurityCheck').checked;
             const secDepositAmt = hasSecDeposit ? LOCKER_SECURITY_DEPOSIT : 0;
 
@@ -904,6 +894,7 @@
                 document.getElementById('otherCourseWrap').classList.add('hidden');
                 tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '' };
                 update28DayValidity();
+                window.scrollTo({ top: box.offsetTop - 20, behavior: 'smooth' });
             }
         }
 
@@ -915,7 +906,6 @@
                     const img = new Image();
                     img.src = e.target.result;
                     img.onload = function () {
-                        // 1) Save Full Uncropped HD Photo (for click-to-zoom)
                         const fullCanvas = document.createElement('canvas');
                         let fw = img.width, fh = img.height;
                         const MAX_FULL = 900;
@@ -928,7 +918,6 @@
                         fCtx.drawImage(img, 0, 0, fw, fh);
                         tempUploads.photoFull = fullCanvas.toDataURL('image/jpeg', 0.85);
 
-                        // 2) Create Face & Neck Focused Square HD Thumbnail (crops top-center portrait area so face is large & clear)
                         const thumbCanvas = document.createElement('canvas');
                         thumbCanvas.width = 450;
                         thumbCanvas.height = 450;
@@ -936,9 +925,8 @@
                         tCtx.imageSmoothingEnabled = true;
                         tCtx.imageSmoothingQuality = 'high';
 
-                        let cropSize = Math.min(img.width, img.height) * 0.78;
+                        let cropSize = Math.min(img.width, img.height) * 0.76;
                         let sx = (img.width - cropSize) / 2;
-                        // Focus near top (10% from top) so head & neck fill the square nicely
                         let sy = Math.max(0, img.height * 0.08);
                         if (sy + cropSize > img.height) sy = 0;
 
@@ -1119,7 +1107,6 @@
         function cleanShiftName(shiftStr) {
             if(!shiftStr) return '';
             let s = shiftStr.split(' - ₹')[0].split(' — [')[0].replace(/^\d+\.\s*/, '').trim();
-            // Keep compact so it fits on a single line in ID Card
             return s.replace('12 Hrs: ', '');
         }
 
@@ -1133,7 +1120,7 @@
             renderStudentList();
         }
 
-        // 6. Render Student List (Serial Number WITHOUT '#' Symbol, Face-Focused Square Photo, Full Zoom on Click)
+        // 6. Render Student List (Balanced Desktop/Mobile Layout + Equal 2x4 Grid Action Buttons + 3-Step Delete Lock)
         function renderStudentList() {
             const container = document.getElementById('studentListContainer');
             const rawQuery = document.getElementById('searchInput').value.trim();
@@ -1169,13 +1156,21 @@
             });
 
             if(filtered.length === 0) {
-                container.innerHTML = `<div class="col-span-full bg-white p-8 rounded-2xl text-center text-slate-500 font-bold shadow-sm">📭 कोई छात्र रिकॉर्ड नहीं मिला।</div>`;
+                container.className = "grid grid-cols-1 gap-3.5";
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl text-center text-slate-500 font-bold shadow-sm">📭 कोई छात्र रिकॉर्ड नहीं मिला।</div>`;
                 document.getElementById('loadMoreWrap').classList.add('hidden');
                 return;
             }
 
             const visibleItems = filtered.slice(0, displayLimit);
             document.getElementById('loadMoreWrap').classList.toggle('hidden', filtered.length <= displayLimit);
+
+            // Smart Desktop/Mobile Balancing: If only 1 card is visible, span full width neatly so right side isn't empty on Desktop
+            if(visibleItems.length === 1) {
+                container.className = "grid grid-cols-1 max-w-3xl mx-auto gap-3.5";
+            } else {
+                container.className = "grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch";
+            }
 
             visibleItems.forEach(({ item: s, originalIdx }, serialIdx) => {
                 const isActive = s.validUpto >= today;
@@ -1191,7 +1186,7 @@
                 const startShow = s.cycleStartDate || s.admissionDate || '-';
 
                 let card = document.createElement('div');
-                card.className = `bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition border-l-4 ${isActive ? 'border-emerald-600' : 'border-rose-600'} relative`;
+                card.className = `bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition border-l-4 ${isActive ? 'border-emerald-600' : 'border-rose-600'} flex flex-col justify-between`;
 
                 card.innerHTML = `
                     <div class="flex items-start gap-3">
@@ -1241,18 +1236,16 @@
                         </div>
                     </div>
 
-                    <!-- Collapsible Hidden Action Bar -->
-                    <div id="cardMenu-${originalIdx}" class="hidden mt-3 pt-2.5 border-t border-slate-200 flex flex-wrap gap-1.5 justify-between items-center bg-slate-50 p-2 rounded-xl fade-in">
-                        <div class="flex flex-wrap gap-1.5">
-                            <button onclick="openIdCardModal(${originalIdx})" class="theme-maroon text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🪪 ID Card</button>
-                            <button onclick="openProfileModal(${originalIdx})" class="bg-purple-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">👤 Profile & Docs</button>
-                            <button onclick="openRenewModal(${originalIdx})" class="bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔄 Renew / Change Plan</button>
-                            <button onclick="openLatestInvoice(${originalIdx})" class="bg-teal-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🧾 GST Bill</button>
-                            <button onclick="openPromiseUpdatePrompt(${originalIdx})" class="bg-rose-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">📅 Promise Date</button>
-                            <button onclick="openReminderModal(${originalIdx})" class="bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">🔔 Send Reminder</button>
-                            <button onclick="editStudentRecord(${originalIdx})" class="bg-amber-500 text-black px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm">✏️ Edit</button>
-                        </div>
-                        <button onclick="deleteStudentRecord(${originalIdx})" class="bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white px-2.5 py-1.5 rounded-lg text-xs font-bold">🗑️</button>
+                    <!-- Equal-Sized Justified 8-Button Action Grid (2 Cols on Mobile, 4 Cols on Tablet/Desktop) -->
+                    <div id="cardMenu-${originalIdx}" class="hidden mt-3 pt-2.5 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl fade-in">
+                        <button onclick="openIdCardModal(${originalIdx})" class="w-full theme-maroon text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">🪪 ID Card</button>
+                        <button onclick="openProfileModal(${originalIdx})" class="w-full bg-purple-700 hover:bg-purple-600 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">👤 Profile</button>
+                        <button onclick="openRenewModal(${originalIdx})" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">🔄 Renew Plan</button>
+                        <button onclick="openLatestInvoice(${originalIdx})" class="w-full bg-teal-700 hover:bg-teal-600 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">🧾 GST Bill</button>
+                        <button onclick="openPromiseUpdatePrompt(${originalIdx})" class="w-full bg-rose-600 hover:bg-rose-500 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">📅 Promise Date</button>
+                        <button onclick="openReminderModal(${originalIdx})" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">🔔 Reminder</button>
+                        <button onclick="editStudentRecord(${originalIdx})" class="w-full bg-amber-500 hover:bg-amber-400 text-black py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">✏️ Edit</button>
+                        <button onclick="deleteStudentRecord(${originalIdx})" class="w-full bg-slate-200 hover:bg-red-600 text-red-700 hover:text-white py-2 px-2 rounded-lg text-xs font-extrabold border border-red-200 transition flex items-center justify-center gap-1">🗑️ Delete</button>
                     </div>
                 `;
                 container.appendChild(card);
@@ -1264,7 +1257,27 @@
             if(el) el.classList.toggle('hidden');
         }
 
-        // 7. Promise Date Update & Due Cleared with Manual Bill Date
+        // 7. Triple Confirmation Delete Protection (Never Deletes by Mistake!)
+        function deleteStudentRecord(index) {
+            const s = students[index];
+            const step1 = confirm(`⚠️ सावधान (Step 1/3):\nक्या आप वाकई छात्र "${s.fullName} (ID: ${s.uniId})" को डिलीट करना चाहते हैं?`);
+            if(!step1) return;
+
+            const step2 = confirm(`🛑 अंतिम चेतावनी (Step 2/3):\nडिलीट करने पर "${s.fullName}" का सारा पेमेंट लेजर और आधार रिकॉर्ड हमेशा के लिए मिट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`);
+            if(!step2) return;
+
+            const step3 = prompt(`🔐 सुरक्षा पुष्टि (Step 3/3):\nपरमानेंट डिलीट करने के लिए इस छात्र का ID नंबर (${s.uniId}) नीचे टाइप करें:`);
+            if(step3 !== null && String(step3).trim() === String(s.uniId)) {
+                students.splice(index, 1);
+                syncAndSaveData();
+                renderStudentList();
+                alert(`✅ छात्र "${s.fullName} (ID: ${s.uniId})" का रिकॉर्ड डिलीट कर दिया गया।`);
+            } else if(step3 !== null) {
+                alert("❌ ID नंबर मैच नहीं हुआ! आपका डेटा सुरक्षित है (डिलीट रद्द किया गया)।");
+            }
+        }
+
+        // 8. Promise Date Update & Due Cleared with Manual Bill Date
         function openPromiseUpdatePrompt(index) {
             let s = students[index];
             const today = new Date().toISOString().split('T')[0];
@@ -1313,7 +1326,7 @@
             renderStudentList();
         }
 
-        // 8. Vacant Seat (250), Chair (250), Locker (90) Finder
+        // 9. Vacant Seat (250), Chair (250), Locker (90) Finder
         function openVacantModal() {
             document.getElementById('vacantModal').classList.remove('hidden');
             renderVacantGrid('seat');
@@ -1359,7 +1372,7 @@
             }
         }
 
-        // 9. Zero-Clip HD ID Card Modal
+        // 10. 100% Visible Plain-Text ID Card Modal (ID Number Never Vanishes!)
         function openIdCardModal(index) {
             const s = students[index];
             const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
@@ -1369,7 +1382,7 @@
                 document.getElementById('idCardLogoEmoji').classList.add('hidden');
             }
             document.getElementById('idCardPhoto').src = avatar;
-            document.getElementById('idCardUniId').innerText = `ID: ${s.uniId}`;
+            document.getElementById('idCardUniId').innerText = `ID NO: ${s.uniId}`;
             document.getElementById('idCardName').innerText = s.fullName;
             document.getElementById('idCardMobile').innerText = `📞 ${s.mobile}`;
             document.getElementById('idCardAddress').innerText = `📍 ${s.address || 'Kachchhi Dargah, Patna'}`;
@@ -1438,14 +1451,13 @@
             }
         }
 
-        // 10. Full Plan Renewal Modal (With All 6 Shift Plans, Locker Auto ₹50/M + ₹200 Security, Manual Bill Date)
+        // 11. Full Plan Renewal Modal
         function openRenewModal(index) {
             const s = students[index];
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('renewStudentIdx').value = index;
             document.getElementById('renewStudentInfo').innerHTML = `<b>ID: ${s.uniId} — ${s.fullName}</b> (${s.gender || 'Male'})<br>Current Shift: <span class="text-indigo-800">${cleanShiftName(s.shiftPlan)}</span> | Previous Expiry: <span class="text-red-600">${s.validUpto}</span>`;
 
-            // Pre-select current shift in dropdown
             const shiftDropdown = document.getElementById('renewShiftSelect');
             let matched = false;
             for(let i = 0; i < shiftDropdown.options.length; i++) {
@@ -1577,7 +1589,7 @@
             showInvoiceDetails(studentIdx, s.paymentHistory.length - 1);
         }
 
-        // 11. Professional GST / Non-GST PDF Tax Invoice (Shows Manual Bill Date, Payment Count, Mode, Locker Breakdown & Gender)
+        // 12. Professional GST / Non-GST PDF Tax Invoice
         function showInvoiceDetails(studentIdx, payIdx) {
             const s = students[studentIdx];
             const p = s.paymentHistory[payIdx];
@@ -1669,7 +1681,7 @@
                             <td class="border p-1.5 text-right">₹${totalBill}</td>
                         </tr>
                         <tr class="text-emerald-800 font-extrabold">
-                            <td class="border p-1.5">Paid Amount (Mode: ${p.mode} | Date: ${p.date})</td>
+                            <td class="border p-1.5">Paid Amount (Mode: ${p.mode} | Bill Date: ${p.date})</td>
                             <td class="border p-1.5 text-right">₹${p.amount}</td>
                         </tr>
                         <tr class="text-red-600 font-extrabold">
@@ -1705,7 +1717,7 @@
             });
         }
 
-        // 12. Complete Profile Modal
+        // 13. Complete Profile Modal
         function calculateStudentTenure(admDateStr) {
             if(!admDateStr) return "0 Months, 0 Days";
             const start = new Date(admDateStr);
@@ -1766,7 +1778,6 @@
             `).join('');
 
             document.getElementById('profileModalBody').innerHTML = `
-                <!-- Top Summary Banner -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
                     <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl">
                         <p class="text-[11px] font-bold text-purple-800">⏳ Student Tenure (कितना पुराना)</p>
@@ -1785,7 +1796,6 @@
                     </div>
                 </div>
 
-                <!-- Direct Date Editor Box inside Profile -->
                 <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 mb-4 text-xs">
                     <h4 class="font-extrabold text-blue-900 mb-2">📅 Direct Admission & Plan Date Editor</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
@@ -1816,7 +1826,6 @@
                     </div>
                 </div>
 
-                <!-- Personal & Official Details -->
                 <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border mb-4 text-xs">
                     <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (Full Photo)')" class="w-24 h-24 rounded-xl face-focus-thumb border-2 border-red-900 shadow cursor-pointer" title="Click for Full Uncropped HD Photo">
                     <div class="space-y-1 w-full">
@@ -1832,7 +1841,6 @@
                     </div>
                 </div>
 
-                <!-- HD Documents for Official Verification -->
                 <h4 class="text-xs sm:text-sm font-extrabold theme-maroon-text mb-2">🆔 Uploaded Verification Documents (Click Image for Full HD Zoom)</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div class="border-2 border-slate-200 p-2.5 rounded-xl bg-slate-50 text-center">
@@ -1845,13 +1853,11 @@
                     </div>
                 </div>
 
-                <!-- Promise Date Failure History -->
                 <div class="bg-red-50 p-3 rounded-xl border border-red-200 mb-4">
                     <h4 class="text-xs font-extrabold text-red-900 mb-1">⚠️ Promise Date History (कुल बार तारीख बढ़ाई: ${(s.promiseHistory || []).length})</h4>
                     ${failHtml ? `<ul class="space-y-1">${failHtml}</ul>` : `<p class="text-xs text-slate-500">कोई वादा फेल रिकॉर्ड नहीं है।</p>`}
                 </div>
 
-                <!-- Complete Payment History Table -->
                 <h4 class="text-xs sm:text-sm font-extrabold theme-maroon-text mb-2">📜 All-Time Payment & Invoice Ledger</h4>
                 <div class="overflow-x-auto border rounded-xl">
                     <table class="w-full text-left text-xs">
@@ -1867,7 +1873,7 @@
 
         function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
 
-        // 13. Multi-Channel Reminder with Automatic Hindi Name & Sent Counter
+        // 14. Multi-Channel Reminder with Automatic Hindi Name & Sent Counter
         async function openReminderModal(index) {
             const s = students[index];
             if(!s.reminderStats) s.reminderStats = { wa: 0, sms: 0, mail: 0 };
@@ -1921,7 +1927,7 @@
             document.getElementById('reminderStatsBadge').innerText = `📊 अब तक कुल भेजे गए रिमाइंडर: ${tot} (💬 WA: ${r.wa||0} | ✉️ SMS: ${r.sms||0} | 📧 Mail: ${r.mail||0})`;
         }
 
-        // 14. Today's Birthdays Modal
+        // 15. Today's Birthdays Modal
         async function openBirthdayModal() {
             const todayIso = new Date().toISOString().split('T')[0];
             const currentYear = todayIso.slice(0, 4);
@@ -1978,7 +1984,6 @@
             window.open(`https://wa.me/91${s.mobile}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        // Edit & Delete Student
         function editStudentRecord(index) {
             const s = students[index];
             document.getElementById('editIndex').value = index;
@@ -2012,14 +2017,6 @@
             tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '' };
             document.getElementById('admissionFormBox').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function deleteStudentRecord(index) {
-            if(confirm(`⚠️ क्या आप वाकई "${students[index].fullName} (ID: ${students[index].uniId})" का रिकॉर्ड डिलीट करना चाहते हैं?`)) {
-                students.splice(index, 1);
-                syncAndSaveData();
-                renderStudentList();
-            }
         }
 
         // Dashboard Analytics
@@ -2085,9 +2082,15 @@
         function setTab(tab) {
             currentTab = tab;
             displayLimit = 50;
-            ['all', 'active', 'expired', 'dues', 'promise'].forEach(t => {
-                const btn = document.getElementById(`tab-${t}`);
-                btn.className = (t === tab) ? "px-3 py-1.5 rounded-xl text-xs font-extrabold theme-maroon text-white shadow-sm" : "px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700";
+            ['all', 'active', 'expired', 'promise'].forEach(t => {
+                const card = document.getElementById(`cardTab-${t}`);
+                if(card) {
+                    if(t === tab || (tab === 'dues' && t === 'promise')) {
+                        card.classList.add('active-filter-ring');
+                    } else {
+                        card.classList.remove('active-filter-ring');
+                    }
+                }
             });
             renderStudentList();
         }
@@ -2100,7 +2103,6 @@
         }
         function closeZoomModal() { document.getElementById('zoomModal').classList.add('hidden'); }
 
-        // Logo, Expenses, Cloud Sync & CSV Export
         function openLogoModal() { document.getElementById('logoModal').classList.remove('hidden'); }
         function uploadLibraryLogo(input) {
             if (input.files && input.files[0]) {
