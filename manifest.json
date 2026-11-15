@@ -11,13 +11,13 @@
   "theme_color": "#5c061c",
   "icons": [
     {
-      "src": "https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&size=192&format=png",
+      "src": "./logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&size=512&format=png",
+      "src": "./logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
