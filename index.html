@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Buddha Library - Management System</title>
-    <!-- Dynamic Favicon & Mobile App Icon Support -->
-    <link id="dynamicFavicon" rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true">
-    <link id="dynamicAppleIcon" rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true">
+    <!-- Dynamic Favicon & PWA App Icon Support -->
+    <link id="dynamicFavicon" rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true&size=512">
+    <link id="dynamicAppleIcon" rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true&size=512">
+    <link id="dynamicManifest" rel="manifest" href="">
     <meta name="theme-color" content="#5c061c">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,19 +24,26 @@
         .theme-border { border-color: #5c061c; }
         .fade-in { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .id-safe-line { line-height: 1.38 !important; padding-top: 1px; padding-bottom: 1px; }
+        .id-safe-line { line-height: 1.32 !important; padding-top: 1px; padding-bottom: 1px; }
         .face-focus-thumb { object-fit: cover; object-position: center 15%; }
         .active-filter-ring { box-shadow: 0 0 0 3px #5c061c !important; background-color: #fffbeb !important; }
+        /* Auto Capitalize First Letter in Form Inputs */
+        .capitalize-input { text-transform: capitalize; }
+
+        /* Strict Single-Page A4 Print Formatting for GST Invoice */
         @media print {
-            .no-print { display: none !important; }
-            body { background: #fff !important; }
+            @page { size: A4 portrait; margin: 8mm; }
+            html, body { background: #ffffff !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
+            #mainApp, #pinModal, .no-print { display: none !important; }
+            #invoiceModal { position: static !important; display: block !important; background: transparent !important; padding: 0 !important; overflow: visible !important; }
+            #invoiceCaptureBox { box-shadow: none !important; border: 1.5px solid #1e293b !important; width: 100% !important; max-width: 100% !important; margin: 0 auto !important; padding: 14px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
         }
     </style>
 </head>
 <body class="min-h-screen pb-12">
 
     <!-- 1. Security PIN Lock Modal (Default: 7050 or 2026) -->
-    <div id="pinModal" class="fixed inset-0 bg-slate-900 bg-opacity-90 z-50 flex items-center justify-center p-4">
+    <div id="pinModal" class="fixed inset-0 bg-slate-900 bg-opacity-90 z-50 flex items-center justify-center p-4 no-print">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-xs text-center border-t-4 theme-border fade-in">
             <div class="w-14 h-14 mx-auto mb-2 rounded-full theme-maroon text-white flex items-center justify-center text-2xl shadow-md">🏛️</div>
             <h2 class="text-lg font-extrabold theme-maroon-text">BUDDHA LIBRARY</h2>
@@ -48,21 +56,23 @@
     </div>
 
     <!-- Main Application Wrapper -->
-    <div id="mainApp" class="max-w-7xl mx-auto p-2.5 sm:p-4 hidden fade-in">
+    <div id="mainApp" class="max-w-7xl mx-auto p-2.5 sm:p-4 hidden fade-in no-print">
 
-        <!-- 2. Balanced Royal Header: Left Logo (ESTD 2023) | Center Title | Right Founder Box & 3-Line Menu (☰) -->
+        <!-- 2. Balanced Royal Header: No Green Dot, Thin 3-Line Menu (No Box), Borderless Founder Photo, Two-Line Address & Phone -->
         <header class="theme-maroon text-white px-3 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-lg mb-3 relative border-b-2 border-yellow-400">
-            <!-- Top Right Hamburger Menu Button -->
-            <div class="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 flex items-center gap-1.5 z-20">
-                <span id="syncStatusDot" title="Cloud Sync Status" class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block shadow"></span>
-                <button onclick="toggleHeaderMenu()" class="bg-white bg-opacity-15 hover:bg-opacity-25 text-white px-2.5 py-1 rounded-xl font-extrabold text-base sm:text-lg shadow transition">☰</button>
-            </div>
+            <!-- Top Right Thin 3-Line Menu Button (No Background Box, No Green Dot) -->
+            <button onclick="toggleHeaderMenu()" title="Menu" class="absolute top-2.5 right-3 sm:top-3.5 sm:right-4 text-white hover:text-yellow-300 p-1 z-20 transition focus:outline-none">
+                <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
 
-            <!-- 3-Line Dropdown Menu -->
-            <div id="headerDropdown" class="hidden absolute top-14 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-64 py-2 z-40 text-xs font-bold fade-in">
+            <!-- Dropdown Menu -->
+            <div id="headerDropdown" class="hidden absolute top-12 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-64 py-2 z-40 text-xs font-bold fade-in">
+                <button id="pwaInstallMenuBtn" onclick="installPwaApp(); toggleHeaderMenu();" class="hidden w-full text-left px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold flex items-center gap-2 border-b">📲 Install Buddha Library App</button>
                 <button onclick="openLogoModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">🖼️ Set Official Library Logo</button>
                 <button onclick="openFounderModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-amber-900 flex items-center gap-2">👔 Set Founder HD Photo (Pintu Ji)</button>
-                <button onclick="openCloudSyncModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">☁️ Firebase Cloud Sync</button>
+                <button onclick="openCloudSyncModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">☁️ Firebase Cloud Sync <span id="menuSyncText" class="text-[10px] text-slate-400 ml-auto">(Offline)</span></button>
                 <button onclick="exportDriveBackup(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">💾 Download JSON Backup</button>
                 <button onclick="triggerRestore(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">📂 Restore JSON Backup</button>
                 <button onclick="exportExcelCsv(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">📊 Export Excel Sheet (CSV)</button>
@@ -72,37 +82,38 @@
             </div>
 
             <!-- 3-Column Header Content -->
-            <div class="grid grid-cols-12 items-center gap-2">
-                <!-- Left: Logo + ESTD 2023 -->
+            <div class="grid grid-cols-12 items-center gap-1 sm:gap-2">
+                <!-- Left: Logo + Plain ESTD: 2023 tightly below -->
                 <div class="col-span-3 sm:col-span-2 flex flex-col items-center justify-center">
-                    <div class="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center text-2xl shadow-md border-2 border-yellow-400 overflow-hidden">
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center text-2xl shadow-md overflow-hidden">
                         <img id="headerLogoImg" src="" class="w-full h-full object-cover hidden">
                         <span id="headerLogoEmoji">🏛️</span>
                     </div>
-                    <span class="text-[9px] sm:text-[10px] font-extrabold text-yellow-300 tracking-wider mt-1 bg-black bg-opacity-25 px-2 py-0.5 rounded-full">ESTD: 2023</span>
+                    <span class="text-[9.5px] sm:text-[11px] font-extrabold text-yellow-300 tracking-wide mt-0.5 leading-none">ESTD: 2023</span>
                 </div>
 
-                <!-- Center: BUDDHA LIBRARY & A Unit of Flair Foundation Perfectly Centered -->
-                <div class="col-span-6 sm:col-span-7 text-center px-1">
-                    <h1 class="text-lg sm:text-3xl font-extrabold tracking-wider leading-tight">BUDDHA LIBRARY</h1>
-                    <p class="text-[11px] sm:text-sm text-yellow-300 font-extrabold tracking-wide mt-0.5">A Unit of Flair Foundation</p>
-                    <p class="text-[9.5px] sm:text-xs text-slate-200 mt-1">📍 Kachchhi Dargah, Patna | 📞 <a href="tel:7050668855" class="no-underline font-bold text-white">7050668855</a></p>
+                <!-- Center: Large BUDDHA LIBRARY to fill space + 2-Line Address & Contact without Slash -->
+                <div class="col-span-6 sm:col-span-7 text-center px-0.5">
+                    <h1 class="text-xl sm:text-4xl font-black tracking-wider leading-none text-white drop-shadow">BUDDHA LIBRARY</h1>
+                    <p class="text-xs sm:text-base text-yellow-300 font-extrabold tracking-wide mt-1 leading-tight">A Unit of Flair Foundation</p>
+                    <p class="text-[10.5px] sm:text-xs text-slate-100 font-semibold mt-1 leading-tight">📍 Kachchhi Dargah, Patna</p>
+                    <p class="text-[11px] sm:text-xs text-white font-extrabold mt-0.5 leading-tight"><a href="tel:7050668855" class="no-underline text-white">📞 7050668855</a></p>
                 </div>
 
-                <!-- Right: Founder Photo & Designation -->
-                <div class="col-span-3 sm:col-span-3 flex flex-col items-center justify-center text-center pr-4 sm:pr-8">
-                    <div onclick="openFounderModal()" title="Click to Upload Founder HD Photo" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-xl border-2 border-yellow-400 shadow-md overflow-hidden flex items-center justify-center cursor-pointer">
+                <!-- Right: Borderless Founder Photo + Tightly Spaced Name & Title -->
+                <div class="col-span-3 sm:col-span-3 flex flex-col items-center justify-center text-center pr-5 sm:pr-7">
+                    <div onclick="openFounderModal()" title="Click to Upload Founder HD Photo" class="w-11 h-11 sm:w-14 sm:h-14 bg-white/10 rounded-xl shadow-md overflow-hidden flex items-center justify-center cursor-pointer">
                         <img id="headerFounderImg" src="" class="w-full h-full face-focus-thumb hidden">
                         <span id="headerFounderEmoji" class="text-xl">👔</span>
                     </div>
-                    <p class="text-[9px] sm:text-[11px] font-extrabold text-white mt-1 leading-tight">Pintu Kumar Singh</p>
-                    <p class="text-[8px] sm:text-[10px] font-bold text-yellow-300 leading-tight">Founder & Director</p>
-                    <p class="hidden sm:block text-[8.5px] text-slate-200 leading-tight">(Social Entrepreneur & Businessman)</p>
+                    <p class="text-[9.5px] sm:text-xs font-extrabold text-white mt-0.5 leading-none whitespace-nowrap">Pintu Kumar Singh</p>
+                    <p class="text-[8px] sm:text-[10px] font-bold text-yellow-300 leading-tight mt-0.5 whitespace-nowrap">Founder & Director</p>
+                    <p class="hidden sm:block text-[8.5px] text-slate-200 leading-none mt-0.5">(Social Entrepreneur)</p>
                 </div>
             </div>
         </header>
 
-        <!-- 3. Clean Search Bar right at Top (Supports 1 to 5000+ Student IDs, Mobile or Name) -->
+        <!-- 3. Clean Search Bar right at Top -->
         <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200 mb-3 flex items-center gap-2">
             <div class="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-300 flex-grow">
                 <span class="text-base">🔍</span>
@@ -155,14 +166,13 @@
                 <p class="text-[10px] text-amber-900 font-bold">🏦 This Year Total</p>
                 <h4 id="colThisYear" class="text-base sm:text-lg font-extrabold text-amber-800 mt-0.5">₹0</h4>
             </div>
-            <!-- New Admission Button right beside This Year Total -->
             <button onclick="toggleAdmissionForm()" class="col-span-2 sm:col-span-1 theme-maroon text-white p-2.5 rounded-xl shadow-md hover:opacity-95 transition flex flex-col justify-center items-center text-center">
                 <span class="text-[10px] text-yellow-300 font-extrabold tracking-wider">➕ ADMISSION</span>
                 <span class="text-xs sm:text-sm font-extrabold mt-0.5">New Admission</span>
             </button>
         </div>
 
-        <!-- Row 3: Equal 4-Box Utility Strip (Vacant Finder, My Collection, Expense Tracker, Birthdays) -->
+        <!-- Row 3: Equal 4-Box Utility Strip -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
             <div onclick="openVacantModal()" class="bg-purple-50 p-2.5 rounded-xl shadow-sm border-l-4 border-purple-700 cursor-pointer hover:bg-purple-100 transition">
                 <p class="text-[10px] sm:text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="text-[9px] bg-purple-200 px-1.5 rounded">View</span></p>
@@ -188,7 +198,7 @@
             </div>
         </div>
 
-        <!-- 5. Collapsible Admission / Edit Form (With All 4 Tick Boxes: +₹199 Admission, +₹50/M Locker, +₹200 Security, +5% GST) -->
+        <!-- 5. Collapsible Admission / Edit Form (Auto Capitalizes First Letter of Every Word) -->
         <div id="admissionFormBox" class="bg-white p-4 sm:p-5 rounded-2xl shadow-xl mb-5 hidden border-2 theme-border fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-4">
                 <h2 id="formHeading" class="text-base sm:text-lg font-extrabold theme-maroon-text">📝 Student Admission & Plan Form (28-Day Cycle)</h2>
@@ -203,8 +213,8 @@
                     <input type="number" id="uniId" min="1" max="5000" required class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-red-900 bg-amber-50" placeholder="1, 2, 3...">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Student Full Name *</label>
-                    <input type="text" id="fullName" required class="w-full border border-slate-300 p-2 rounded-lg font-semibold" placeholder="Enter Full Name">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Student Full Name * (Auto Capital)</label>
+                    <input type="text" id="fullName" required oninput="autoTitleCaseInput(this)" class="w-full border border-slate-300 p-2 rounded-lg font-bold capitalize-input" placeholder="Enter Full Name">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">🚻 Gender *</label>
@@ -252,7 +262,7 @@
 
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-bold text-slate-700 mb-1">📍 Full Address / Village *</label>
-                    <input type="text" id="address" required class="w-full border border-slate-300 p-2 rounded-lg" placeholder="Kachchhi Dargah, Patna">
+                    <input type="text" id="address" required oninput="autoTitleCaseInput(this)" class="w-full border border-slate-300 p-2 rounded-lg font-semibold capitalize-input" placeholder="Kachchhi Dargah, Patna">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">🏠 Guardian Mobile (Optional)</label>
@@ -280,7 +290,7 @@
                 </div>
                 <div id="otherCourseWrap" class="hidden sm:col-span-2">
                     <label class="block text-xs font-bold text-indigo-700 mb-1">✍️ Specify Course Name</label>
-                    <input type="text" id="otherCourseInput" class="w-full border-2 border-indigo-400 p-2 rounded-lg" placeholder="Type course...">
+                    <input type="text" id="otherCourseInput" oninput="autoTitleCaseInput(this)" class="w-full border-2 border-indigo-400 p-2 rounded-lg capitalize-input" placeholder="Type course...">
                 </div>
 
                 <!-- All 6 Shift Plans -->
@@ -410,7 +420,7 @@
     <!-- ================= MODALS ================= -->
 
     <!-- Modal A: Vacant Seat (250), Chair (250) & Locker (90) Finder -->
-    <div id="vacantModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-3">
+    <div id="vacantModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-3 no-print">
         <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
                 <h3 class="text-base sm:text-lg font-extrabold theme-maroon-text">💺 Live Vacant Resource Finder (250 Seats | 250 Chairs | 90 Lockers)</h3>
@@ -426,51 +436,52 @@
         </div>
     </div>
 
-    <!-- Modal B: Royal Compact HD ID Card Modal (Left Logo+ESTD 2023 | Center Title | Right Founder Box) -->
-    <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2 overflow-y-auto">
+    <!-- Modal B: Royal Compact HD ID Card Modal (Large Center Title, Borderless Photos, Royal Blue ALL-CAPS Student Name) -->
+    <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2 overflow-y-auto no-print">
         <!-- Outer Padded Capture Frame -->
         <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
-            <div class="bg-white w-[360px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
-                <!-- Royal 3-Column Header: Left Logo (ESTD 2023) | Center Title | Right Founder Box -->
+            <div class="bg-white w-[360px] rounded-2xl overflow-hidden border-[2.5px] border-amber-500 shadow-md">
+                <!-- Royal 3-Column Header: Left Logo (ESTD: 2023) | Large Center Title | Right Borderless Founder Box -->
                 <div class="theme-maroon text-white px-2.5 py-2.5 grid grid-cols-12 items-center gap-1 border-b-2 border-amber-400">
-                    <!-- Left: Logo + ESTD 2023 -->
+                    <!-- Left: Logo + Plain ESTD: 2023 tightly below -->
                     <div class="col-span-3 flex flex-col items-center justify-center">
-                        <div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-base border-2 border-amber-300 overflow-hidden shadow">
+                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-base overflow-hidden shadow-md">
                             <img id="idCardLogoImg" src="" class="w-full h-full object-cover hidden">
                             <span id="idCardLogoEmoji">🏛️</span>
                         </div>
-                        <span class="text-[8px] font-extrabold text-yellow-300 mt-0.5 tracking-tight id-safe-line">ESTD: 2023</span>
+                        <span class="text-[8.5px] font-extrabold text-yellow-300 mt-0.5 tracking-tight leading-none id-safe-line">ESTD: 2023</span>
                     </div>
 
-                    <!-- Center: BUDDHA LIBRARY & A Unit of Flair Foundation -->
-                    <div class="col-span-6 text-center">
-                        <h2 class="text-[15px] font-extrabold tracking-wide leading-tight id-safe-line">BUDDHA LIBRARY</h2>
-                        <p class="text-[9.5px] text-yellow-300 font-extrabold leading-tight id-safe-line">A Unit of Flair Foundation</p>
-                        <p class="text-[8.5px] text-slate-200 leading-tight mt-0.5 id-safe-line">Kachchhi Dargah, Patna</p>
-                        <p class="text-[9px] text-white font-bold leading-tight id-safe-line">📞 7050668855</p>
+                    <!-- Center: Larger Bold BUDDHA LIBRARY filling middle space -->
+                    <div class="col-span-6 text-center px-0.5">
+                        <h2 class="text-[17px] font-black tracking-wide leading-none text-white id-safe-line">BUDDHA LIBRARY</h2>
+                        <p class="text-[10.5px] text-yellow-300 font-extrabold leading-tight mt-0.5 id-safe-line">A Unit of Flair Foundation</p>
+                        <p class="text-[9px] text-slate-100 font-semibold leading-tight mt-0.5 id-safe-line">📍 Kachchhi Dargah, Patna</p>
+                        <p class="text-[9.5px] text-white font-extrabold leading-tight id-safe-line">📞 7050668855</p>
                     </div>
 
-                    <!-- Right: Founder Photo & Name -->
+                    <!-- Right: Borderless Founder Photo & Tightly Spaced Name -->
                     <div class="col-span-3 flex flex-col items-center justify-center text-center">
-                        <div class="w-10 h-10 bg-white rounded-lg border-2 border-amber-300 overflow-hidden shadow flex items-center justify-center">
+                        <div class="w-11 h-11 bg-white/10 rounded-xl overflow-hidden shadow-md flex items-center justify-center">
                             <img id="idCardFounderImg" src="" class="w-full h-full face-focus-thumb hidden">
                             <span id="idCardFounderEmoji" class="text-sm">👔</span>
                         </div>
-                        <p class="text-[7.5px] font-extrabold text-white mt-0.5 leading-tight id-safe-line">Pintu Kumar Singh</p>
-                        <p class="text-[7px] font-bold text-yellow-300 leading-tight id-safe-line">Founder & Director</p>
-                        <p class="text-[6px] text-slate-200 leading-tight id-safe-line">(Social Entrepreneur)</p>
+                        <p class="text-[8px] font-extrabold text-white mt-0.5 leading-none whitespace-nowrap id-safe-line">Pintu Kumar Singh</p>
+                        <p class="text-[7px] font-bold text-yellow-300 leading-none mt-0.5 whitespace-nowrap id-safe-line">Founder & Director</p>
+                        <p class="text-[6px] text-slate-200 leading-none mt-0.5 whitespace-nowrap id-safe-line">(Social Entrepreneur)</p>
                     </div>
                 </div>
 
-                <!-- Compact Body: Student Photo on Left + Plain Unboxed ID, Name, Mobile & Clean Address on Right -->
+                <!-- Compact Body: Borderless Soft-Shadow Student Photo + Royal Navy ALL-CAPS Name -->
                 <div class="p-3.5 bg-gradient-to-b from-white to-slate-50">
                     <div class="flex items-center gap-3 mb-2.5 pb-2.5 border-b border-slate-200">
-                        <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl face-focus-thumb border-2 border-red-900 shadow-sm bg-slate-100 flex-shrink-0">
+                        <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl face-focus-thumb shadow-md bg-slate-100 flex-shrink-0">
                         <div class="text-left min-w-0 flex-grow">
-                            <div id="idCardUniId" class="text-xs font-extrabold text-red-800 tracking-wide uppercase id-safe-line">ID NO: 1</div>
-                            <div id="idCardName" class="text-base font-extrabold text-slate-900 leading-snug id-safe-line">Student Name</div>
-                            <div id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-safe-line">📞 0000000000</div>
-                            <div id="idCardAddress" class="text-[11px] font-bold text-slate-600 mt-0.5 id-safe-line">📍 Address</div>
+                            <div id="idCardUniId" class="text-xs font-black text-red-800 tracking-wider uppercase leading-tight id-safe-line">ID NO: 1</div>
+                            <!-- ALL CAPS & Royal Navy Blue Color for Student Name -->
+                            <div id="idCardName" class="text-[16px] font-black text-indigo-950 uppercase tracking-wide leading-tight mt-0.5 id-safe-line">STUDENT NAME</div>
+                            <div id="idCardMobile" class="text-xs font-extrabold text-blue-700 mt-1 leading-tight id-safe-line">📞 0000000000</div>
+                            <div id="idCardAddress" class="text-[11px] font-bold text-slate-600 mt-0.5 leading-tight id-safe-line">📍 Address</div>
                         </div>
                     </div>
 
@@ -512,7 +523,7 @@
     </div>
 
     <!-- Modal C: Full Plan Renewal Modal -->
-    <div id="renewModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-2.5 overflow-y-auto">
+    <div id="renewModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-2.5 overflow-y-auto no-print">
         <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xl w-full max-w-lg fade-in my-auto">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
                 <h3 class="text-base font-extrabold theme-maroon-text">🔄 Plan Renewal & Shift / Locker Upgrade</h3>
@@ -628,7 +639,7 @@
     </div>
 
     <!-- Modal D: Complete Profile, Quick Date Editor, Reminder Counter & HD Docs -->
-    <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center hidden p-2.5 sm:p-4 overflow-y-auto">
+    <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center hidden p-2.5 sm:p-4 overflow-y-auto no-print">
         <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-3 mb-4">
                 <h3 class="text-base sm:text-lg font-extrabold theme-maroon-text">👤 Complete Student Profile, Dates & Lifetime Ledger</h3>
@@ -638,20 +649,20 @@
         </div>
     </div>
 
-    <!-- Modal E: Perfectly Aligned Single-Line GST / Non-GST PDF Tax Invoice -->
+    <!-- Modal E: Single-Page A4 GST / Non-GST PDF Tax Invoice (No Pakka Traders, Unclipped Logo, Clean GST Badge) -->
     <div id="invoiceModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2.5 overflow-y-auto">
         <div id="invoiceCaptureBox" class="bg-white p-5 sm:p-6 rounded-xl shadow-2xl w-full max-w-xl border-2 border-slate-800 text-xs">
             <div id="invoiceBodyContent"></div>
         </div>
         <div class="mt-4 flex flex-wrap gap-2.5 justify-center no-print">
             <button onclick="shareInvoiceAsImage()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">📤 Share Bill Image</button>
-            <button onclick="window.print()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">🖨️ Print / Save PDF</button>
+            <button onclick="window.print()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">🖨️ Print / Save 1-Page A4 PDF</button>
             <button onclick="closeInvoiceModal()" class="bg-slate-600 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold shadow-lg">✖ Close</button>
         </div>
     </div>
 
     <!-- Modal F: My Collection (ID-Wise Complete Student Payment Summary) -->
-    <div id="myCollectionModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center hidden p-3">
+    <div id="myCollectionModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center hidden p-3 no-print">
         <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
                 <h3 class="text-base sm:text-lg font-extrabold theme-maroon-text">💰 My Collection — ID-Wise Student Payment Summary</h3>
@@ -680,7 +691,7 @@
     </div>
 
     <!-- Modal G: Multi-Channel Reminder with Auto Hindi Name & Sent Counter -->
-    <div id="reminderModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4">
+    <div id="reminderModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-sm text-center fade-in">
             <h3 class="text-base font-extrabold theme-maroon-text mb-1">🔔 Send Due / Renewal Reminder</h3>
             <p id="reminderStudentLabel" class="text-xs text-slate-700 font-bold mb-1"></p>
@@ -696,7 +707,7 @@
     </div>
 
     <!-- Modal H: Today's Birthdays List Modal -->
-    <div id="birthdayModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4">
+    <div id="birthdayModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
                 <h3 class="text-base font-extrabold text-pink-600">🎂 Today's Student Birthdays</h3>
@@ -707,7 +718,7 @@
     </div>
 
     <!-- Modal I: Full HD Photo / Doc Zoom Viewer -->
-    <div id="zoomModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center hidden p-3" onclick="closeZoomModal()">
+    <div id="zoomModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center hidden p-3 no-print" onclick="closeZoomModal()">
         <div class="bg-white p-3 rounded-2xl max-w-2xl w-full text-center relative shadow-2xl" onclick="event.stopPropagation()">
             <button onclick="closeZoomModal()" class="absolute top-2 right-3 text-slate-600 hover:text-red-600 font-bold text-xl">✖</button>
             <h4 id="zoomModalTitle" class="font-extrabold text-sm mb-2 theme-maroon-text">Full HD View</h4>
@@ -716,17 +727,17 @@
     </div>
 
     <!-- Modal J: Upload Official Library Logo -->
-    <div id="logoModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
+    <div id="logoModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white p-5 rounded-2xl shadow-xl w-80 text-center">
             <h3 class="text-base font-extrabold theme-maroon-text mb-1">🖼️ Set Official Library Logo</h3>
-            <p class="text-[11px] text-slate-500 mb-3">यह लोगो हेडर, आईडी कार्ड, जीएसटी बिल और ब्राउज़र टैब (Favicon) में सेट हो जाएगा।</p>
+            <p class="text-[11px] text-slate-500 mb-3">यह लोगो हेडर, आईडी कार्ड, जीएसटी बिल और मोबाइल होम स्क्रीन ऐप आइकॉन में सेट हो जाएगा।</p>
             <input type="file" accept="image/*" onchange="uploadLibraryLogo(this)" class="w-full text-xs mb-4 border p-2 rounded">
             <button onclick="document.getElementById('logoModal').classList.add('hidden')" class="bg-slate-400 text-white text-xs px-4 py-2 rounded-lg font-bold">Close</button>
         </div>
     </div>
 
     <!-- Modal K: Upload Founder HD Photo (Pintu Kumar Singh) -->
-    <div id="founderModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
+    <div id="founderModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white p-5 rounded-2xl shadow-xl w-80 text-center">
             <h3 class="text-base font-extrabold theme-maroon-text mb-1">👔 Set Founder HD Photo</h3>
             <p class="text-[11px] text-slate-600 font-bold mb-3">Pintu Kumar Singh<br><span class="text-[10px] text-slate-500 font-normal">Founder & Director (Social Entrepreneur & Businessman)</span></p>
@@ -735,7 +746,7 @@
         </div>
     </div>
 
-    <div id="cloudModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
+    <div id="cloudModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white p-5 rounded-2xl shadow-xl w-96">
             <h3 class="text-base font-extrabold mb-2 theme-maroon-text">☁️ Firebase Live Cloud Sync</h3>
             <input type="text" id="firebaseUrlInput" class="w-full border p-2.5 rounded-lg text-xs mb-3" placeholder="https://your-app-rtdb.firebaseio.com">
@@ -746,14 +757,14 @@
         </div>
     </div>
 
-    <div id="expenseModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
+    <div id="expenseModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white p-5 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-2 mb-3">
                 <h3 class="text-base font-extrabold theme-maroon-text">📊 Library Expense Tracker</h3>
                 <button onclick="document.getElementById('expenseModal').classList.add('hidden')" class="text-slate-500 font-bold">✖</button>
             </div>
             <form id="expenseForm" onsubmit="saveExpenseRecord(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs mb-4">
-                <input type="text" id="expTitle" required class="border p-2 rounded-lg" placeholder="Expense Item (e.g. Electricity)">
+                <input type="text" id="expTitle" required oninput="autoTitleCaseInput(this)" class="border p-2 rounded-lg capitalize-input" placeholder="Expense Item (e.g. Electricity)">
                 <input type="number" id="expAmount" required class="border p-2 rounded-lg" placeholder="Amount (₹)">
                 <input type="date" id="expDate" required class="border p-2 rounded-lg">
                 <select id="expMode" class="border p-2 rounded-lg"><option value="Cash">Cash</option><option value="Online / UPI">Online / UPI</option></select>
@@ -784,13 +795,70 @@
         let founderPhoto = localStorage.getItem('buddha_library_founder_photo') || '';
         let tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '' };
         let hindiNameCache = {};
+        let deferredPwaPrompt = null;
 
         try { students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]'); } catch(e) { students = []; }
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
 
+        // Auto Capitalize First Letter of Every Word Helper
+        function toTitleCaseWords(str) {
+            if(!str) return '';
+            return String(str).replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function autoTitleCaseInput(inputEl) {
+            const start = inputEl.selectionStart;
+            const end = inputEl.selectionEnd;
+            inputEl.value = toTitleCaseWords(inputEl.value);
+            if(start !== null && end !== null) inputEl.setSelectionRange(start, end);
+        }
+
         function cleanResNum(val) {
             if(!val) return '';
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
+        }
+
+        // Setup Dynamic Web App Manifest & Service Worker for Real App Installation (No Chrome Badge)
+        function setupDynamicPwaManifest(iconUrl) {
+            const appIcon = iconUrl || "https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true&size=512";
+            const manifestObj = {
+                name: "Buddha Library Management",
+                short_name: "Buddha Library",
+                description: "Buddha Library - A Unit of Flair Foundation",
+                start_url: window.location.href.split('?')[0],
+                scope: "./",
+                display: "standalone",
+                orientation: "portrait",
+                background_color: "#5c061c",
+                theme_color: "#5c061c",
+                icons: [
+                    { src: appIcon, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+                    { src: appIcon, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+                ]
+            };
+            const blob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+            document.getElementById('dynamicManifest').href = URL.createObjectURL(blob);
+        }
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPwaPrompt = e;
+            const btn = document.getElementById('pwaInstallMenuBtn');
+            if(btn) btn.classList.remove('hidden');
+        });
+
+        async function installPwaApp() {
+            if (deferredPwaPrompt) {
+                deferredPwaPrompt.prompt();
+                await deferredPwaPrompt.userChoice;
+                deferredPwaPrompt = null;
+            } else {
+                alert("📲 ऐप इंस्टॉल करने के लिए अपने GitHub में 3 लाइन वाली 'sw.js' फाइल सेव करें और फिर ब्राउज़र मेनू से 'Install App' दबाएं।");
+            }
         }
 
         const commonHindiNames = {
@@ -800,7 +868,7 @@
             "shiv": "शिव", "ram": "राम", "priya": "प्रिया", "kumari": "कुमारी", "neha": "नेहा",
             "pooja": "पूजा", "arti": "आरती", "anjali": "अंजलि", "sonu": "सोनू", "monu": "मोनू",
             "ravi": "रवि", "amit": "अमित", "sumit": "सुमित", "deepak": "दीपक", "ajay": "अजय",
-            "vijay": "विजय", "sanjay": "संजय", "nitish": "नीतीश", "vishal": "विशाल", "aditya": "आदित्य"
+            "vijay": "विजय", "sanjay": "संजय", "nitish": "नीतीश", "vishal": "विशाल", "aditya": "आदित्य", "sapna": "सपना"
         };
 
         async function toHindiName(engName) {
@@ -824,6 +892,7 @@
         }
 
         window.onload = function() {
+            setupDynamicPwaManifest(libraryLogo);
             if(localStorage.getItem('buddha_library_logged_in') === 'true') {
                 unlockDashboard();
             }
@@ -893,6 +962,8 @@
         function normalizeStudentDates() {
             const today = new Date().toISOString().split('T')[0];
             students.forEach(s => {
+                if(s.fullName) s.fullName = toTitleCaseWords(s.fullName);
+                if(s.address) s.address = toTitleCaseWords(s.address);
                 if(!s.cycleStartDate) {
                     if(s.admissionDate) s.cycleStartDate = s.admissionDate;
                     else if(s.validUpto) {
@@ -922,7 +993,8 @@
             if(founderPhoto) applyFounderPhotoToUi(founderPhoto);
             update28DayValidity();
             if(firebaseDbUrl) {
-                document.getElementById('syncStatusDot').classList.replace('bg-red-400', 'bg-emerald-400');
+                const syncTxt = document.getElementById('menuSyncText');
+                if(syncTxt) { syncTxt.innerText = "(Connected 🟢)"; syncTxt.className = "text-[10px] text-emerald-600 ml-auto font-extrabold"; }
                 fetchFromFirebase();
             }
             renderStudentList();
@@ -961,21 +1033,17 @@
             else if(months === 6) shiftTotal = Math.round(shiftTotal * 0.90);
             else if(months === 12) shiftTotal = Math.round(shiftTotal * 0.85);
 
-            // 1. Optional ₹199 One-Time Admission Fee
             const hasAdmFee = document.getElementById('admissionFeeCheck').checked;
             const admFeeAmt = hasAdmFee ? ADMISSION_ONE_TIME_FEE : 0;
 
-            // 2. Locker Monthly Charge (₹50 per month if Locker No is entered OR checkbox is ticked)
             const hasLockerNum = cleanResNum(document.getElementById('lockerNo').value) !== "";
             const isLockerMonthlyChecked = document.getElementById('lockerMonthlyCheck').checked || hasLockerNum;
             if(hasLockerNum) document.getElementById('lockerMonthlyCheck').checked = true;
             const lockerRent = isLockerMonthlyChecked ? (LOCKER_MONTHLY_FEE * months) : 0;
 
-            // 3. Optional ₹200 Locker Security Deposit
             const hasSecDeposit = document.getElementById('lockerSecurityCheck').checked;
             const secDepositAmt = hasSecDeposit ? LOCKER_SECURITY_DEPOSIT : 0;
 
-            // 4. Optional 5% GST
             const subTotal = shiftTotal + admFeeAmt + lockerRent + secDepositAmt;
             const addGst = document.getElementById('applyGstCheck').checked;
             const gstAmt = addGst ? Math.round(subTotal * 0.05) : 0;
@@ -1099,13 +1167,13 @@
             e.preventDefault();
             const editIdx = document.getElementById('editIndex').value;
             const uniId = parseInt(document.getElementById('uniId').value);
-            const fullName = document.getElementById('fullName').value.trim();
+            const fullName = toTitleCaseWords(document.getElementById('fullName').value.trim());
             const gender = document.getElementById('gender').value;
             const mobile = document.getElementById('mobile').value.trim();
             const guardianMobile = document.getElementById('guardianMobile').value.trim();
             const emailId = document.getElementById('emailId').value.trim();
             const dob = document.getElementById('dob').value;
-            const address = document.getElementById('address').value.trim();
+            const address = toTitleCaseWords(document.getElementById('address').value.trim());
 
             const seatNo = cleanResNum(document.getElementById('seatNo').value);
             const chairNo = cleanResNum(document.getElementById('chairNo').value);
@@ -1113,7 +1181,7 @@
             const keyNo = cleanResNum(document.getElementById('keyNo').value);
 
             let studyCourse = document.getElementById('studyCourse').value;
-            if(studyCourse === 'Other') studyCourse = document.getElementById('otherCourseInput').value.trim() || 'Other';
+            if(studyCourse === 'Other') studyCourse = toTitleCaseWords(document.getElementById('otherCourseInput').value.trim()) || 'Other';
 
             const shiftPlan = document.getElementById('shiftPlan').value;
             const durationMonths = parseInt(document.getElementById('durationMonths').value) || 1;
@@ -1329,7 +1397,7 @@
                 card.innerHTML = `
                     <div class="flex items-start gap-3">
                         <div class="relative flex-shrink-0">
-                            <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl face-focus-thumb border-2 border-red-900 cursor-pointer shadow-sm bg-slate-100" title="Click to View Full Original HD Photo">
+                            <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl face-focus-thumb shadow-md bg-slate-100 cursor-pointer" title="Click to View Full Original HD Photo">
                             <span class="absolute -top-1.5 -left-1.5 bg-slate-800 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded shadow">${serialIdx + 1}</span>
                         </div>
 
@@ -1337,7 +1405,7 @@
                             <div class="flex items-start justify-between gap-2">
                                 <div class="flex flex-wrap items-center gap-1.5">
                                     <span class="theme-maroon-solid text-white text-xs px-2.5 py-0.5 rounded-md font-extrabold">ID: ${s.uniId}</span>
-                                    <h3 onclick="openProfileModal(${originalIdx})" class="font-extrabold text-slate-900 text-sm sm:text-base cursor-pointer hover:text-red-800">${s.fullName}</h3>
+                                    <h3 onclick="openProfileModal(${originalIdx})" class="font-extrabold text-indigo-950 text-sm sm:text-base cursor-pointer hover:text-red-800">${toTitleCaseWords(s.fullName)}</h3>
                                 </div>
                                 <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition flex-shrink-0">⚙️ Options</button>
                             </div>
@@ -1345,7 +1413,7 @@
                             <p class="text-xs text-slate-700 font-semibold mt-1">
                                 📞 <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold no-underline hover:underline">${s.mobile}</a>
                                 <span class="text-slate-300 mx-1">|</span>
-                                📍 ${s.address || 'Patna'}
+                                📍 ${toTitleCaseWords(s.address || 'Patna')}
                             </p>
 
                             <div class="flex flex-wrap items-center gap-2 text-[11px] mt-1.5 font-bold">
@@ -1509,7 +1577,7 @@
             }
         }
 
-        // 10. Royal Compact HD ID Card Modal (With Left Logo+ESTD 2023, Center Title, Right Founder Box)
+        // 10. Royal Compact HD ID Card Modal (With ALL-CAPS Royal Blue Student Name)
         function openIdCardModal(index) {
             const s = students[index];
             const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
@@ -1525,9 +1593,10 @@
             }
             document.getElementById('idCardPhoto').src = avatar;
             document.getElementById('idCardUniId').innerText = `ID NO: ${s.uniId}`;
-            document.getElementById('idCardName').innerText = s.fullName;
+            // Always convert Student Name to ALL CAPS on ID Card
+            document.getElementById('idCardName').innerText = (s.fullName || '').toUpperCase();
             document.getElementById('idCardMobile').innerText = `📞 ${s.mobile}`;
-            document.getElementById('idCardAddress').innerText = `📍 ${s.address || 'Kachchhi Dargah, Patna'}`;
+            document.getElementById('idCardAddress').innerText = `📍 ${toTitleCaseWords(s.address || 'Kachchhi Dargah, Patna')}`;
             document.getElementById('idCardShift').innerText = cleanShiftName(s.shiftPlan);
             document.getElementById('idCardResources').innerHTML = formatResDualColorHtml(s);
             document.getElementById('idCardStart').innerText = s.cycleStartDate || s.admissionDate || '-';
@@ -1741,7 +1810,7 @@
             showInvoiceDetails(studentIdx, s.paymentHistory.length - 1);
         }
 
-        // 12. Perfectly Aligned Single-Line GST / Non-GST PDF Tax Invoice
+        // 12. Single-Page A4 GST / Non-GST PDF Tax Invoice (No Pakka Traders, Unclipped Logo, Plain GST Heading)
         function showInvoiceDetails(studentIdx, payIdx) {
             const s = students[studentIdx];
             const p = s.paymentHistory[payIdx];
@@ -1759,34 +1828,34 @@
             const pEnd = p.endDate || s.validUpto || '-';
             const shiftUsed = cleanShiftName(p.shiftAtTime || s.shiftPlan);
 
-            const logoHtml = libraryLogo ? `<img src="${libraryLogo}" class="w-12 h-12 rounded-full object-cover border-2 border-amber-400">` : `<div class="w-12 h-12 rounded-full theme-maroon text-white flex items-center justify-center text-xl">🏛️</div>`;
+            const logoHtml = libraryLogo ? `<img src="${libraryLogo}" class="w-12 h-12 rounded-full object-contain bg-white p-0.5 shadow-sm mx-auto">` : `<div class="w-12 h-12 rounded-full theme-maroon text-white flex items-center justify-center text-xl mx-auto">🏛️</div>`;
 
             document.getElementById('invoiceBodyContent').innerHTML = `
-                <!-- Aligned Invoice Header -->
-                <div class="flex justify-between items-center border-b-2 border-red-900 pb-3 mb-3 gap-2">
-                    <div class="flex items-center gap-2.5">
-                        <div class="text-center">
+                <!-- Clean Unclipped Invoice Header (No Pakka Traders, No Background Box on GST Title) -->
+                <div class="flex justify-between items-center border-b-2 border-red-900 pb-2.5 mb-3 gap-2">
+                    <div class="flex items-center gap-3">
+                        <div class="text-center flex-shrink-0">
                             ${logoHtml}
-                            <div class="text-[8px] font-extrabold text-red-900 mt-0.5">ESTD: 2023</div>
+                            <div class="text-[8.5px] font-extrabold text-red-900 mt-0.5 leading-none">ESTD: 2023</div>
                         </div>
                         <div>
-                            <h2 class="text-base font-extrabold theme-maroon-text leading-tight">BUDDHA LIBRARY</h2>
-                            <p class="text-[10px] font-extrabold text-amber-700 leading-tight">A Unit of Flair Foundation / Pakka Traders</p>
-                            <p class="text-[10px] text-slate-600 leading-tight">Kachchhi Dargah, Patna | 📞 7050668855</p>
+                            <h2 class="text-lg font-black theme-maroon-text leading-none tracking-wide">BUDDHA LIBRARY</h2>
+                            <p class="text-[11px] font-extrabold text-amber-700 leading-tight mt-0.5">A Unit of Flair Foundation</p>
+                            <p class="text-[10px] text-slate-600 leading-tight mt-0.5">📍 Kachchhi Dargah, Patna | 📞 7050668855</p>
                             <p class="text-[10px] font-extrabold text-slate-900 leading-tight mt-0.5">GSTIN: ${LIBRARY_GSTIN} | SAC: ${HSN_SAC_CODE}</p>
                         </div>
                     </div>
                     <div class="text-right whitespace-nowrap">
-                        <span class="bg-red-900 text-white px-2.5 py-1 rounded text-[10px] font-extrabold inline-block">${isGst ? 'GST TAX INVOICE' : 'OFFICIAL RECEIPT'}</span>
+                        <p class="text-xs font-black text-red-900 uppercase tracking-wider leading-none">${isGst ? 'GST TAX INVOICE' : 'FEE RECEIPT'}</p>
                         <p class="text-[10.5px] font-bold text-slate-800 mt-1">Invoice No: <b>${p.invNo || 'BL-001'}</b></p>
-                        <p class="text-[10.5px] text-purple-900 font-extrabold">Bill Date: ${p.date}</p>
+                        <p class="text-[10.5px] text-purple-900 font-extrabold mt-0.5">Bill Date: ${p.date}</p>
                     </div>
                 </div>
 
                 <!-- Strictly Aligned 2-Column Student Info Grid -->
-                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-300 mb-3 text-[11px]">
+                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-300 mb-2.5 text-[11px]">
                     <div class="space-y-1">
-                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Student Name:</span> <b class="text-slate-900">${s.fullName} (${s.gender || 'Male'})</b></div>
+                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Student Name:</span> <b class="text-indigo-950 uppercase font-extrabold">${s.fullName} (${s.gender || 'Male'})</b></div>
                         <div class="flex justify-between"><span class="text-slate-500 font-bold">Unique ID:</span> <b class="text-red-800 font-extrabold">ID NO: ${s.uniId}</b></div>
                         <div class="flex justify-between"><span class="text-slate-500 font-bold">Mobile No:</span> <b class="text-blue-800">${s.mobile}</b></div>
                     </div>
@@ -1798,77 +1867,77 @@
                 </div>
 
                 <!-- Single-Line Validity Banner -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 mb-3 flex justify-between items-center text-[11px] font-extrabold text-blue-900 whitespace-nowrap">
-                    <span>🗓️ Plan Type: ${p.type} (28-Day Cycle)</span>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 mb-2.5 flex justify-between items-center text-[11px] font-extrabold text-blue-900 whitespace-nowrap">
+                    <span>🗓️ Plan: ${p.type} (28-Day Cycle)</span>
                     <span>▶️ Start: ${pStart} &nbsp;➔&nbsp; ⏳ Valid Upto: ${pEnd}</span>
                 </div>
 
                 <!-- Invoice Particulars Table -->
-                <table class="w-full border-collapse border border-slate-300 text-[11px] mb-3">
+                <table class="w-full border-collapse border border-slate-300 text-[11px] mb-2.5">
                     <thead class="bg-slate-800 text-white">
                         <tr>
-                            <th class="border border-slate-300 p-2 text-left">Particulars / Fee Description</th>
-                            <th class="border border-slate-300 p-2 text-center w-20">SAC Code</th>
-                            <th class="border border-slate-300 p-2 text-right w-28">Amount (₹)</th>
+                            <th class="border border-slate-300 p-1.5 text-left">Particulars / Fee Description</th>
+                            <th class="border border-slate-300 p-1.5 text-center w-20">SAC Code</th>
+                            <th class="border border-slate-300 p-1.5 text-right w-28">Amount (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="border p-2 font-bold text-slate-800">Library Study Shift Fee (${shiftUsed})</td>
-                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
-                            <td class="border p-2 text-right font-bold">₹${tuitionBase}</td>
+                            <td class="border p-1.5 font-bold text-slate-800">Library Study Shift Fee (${shiftUsed})</td>
+                            <td class="border p-1.5 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-1.5 text-right font-bold">₹${tuitionBase}</td>
                         </tr>
                         ${admFee > 0 ? `
                         <tr>
-                            <td class="border p-2 font-semibold text-rose-900">📝 One-Time Admission & Registration Charge</td>
-                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
-                            <td class="border p-2 text-right font-bold">₹${admFee.toFixed(2)}</td>
+                            <td class="border p-1.5 font-semibold text-rose-900">📝 One-Time Admission & Registration Charge</td>
+                            <td class="border p-1.5 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-1.5 text-right font-bold">₹${admFee.toFixed(2)}</td>
                         </tr>
                         ` : ''}
                         ${lockerRent > 0 ? `
                         <tr>
-                            <td class="border p-2 font-semibold text-teal-900">🗄️ Locker Monthly Rent (₹50/Month)</td>
-                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
-                            <td class="border p-2 text-right font-bold">₹${lockerRent.toFixed(2)}</td>
+                            <td class="border p-1.5 font-semibold text-teal-900">🗄️ Locker Monthly Rent (₹50/Month)</td>
+                            <td class="border p-1.5 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-1.5 text-right font-bold">₹${lockerRent.toFixed(2)}</td>
                         </tr>
                         ` : ''}
                         ${lockerSec > 0 ? `
                         <tr>
-                            <td class="border p-2 font-semibold text-indigo-900">🔑 Locker Security Deposit (Refundable on Key Return)</td>
-                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
-                            <td class="border p-2 text-right font-bold">₹${lockerSec.toFixed(2)}</td>
+                            <td class="border p-1.5 font-semibold text-indigo-900">🔑 Locker Security Deposit (Refundable on Key Return)</td>
+                            <td class="border p-1.5 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-1.5 text-right font-bold">₹${lockerSec.toFixed(2)}</td>
                         </tr>
                         ` : ''}
                         ${isGst ? `
-                        <tr class="bg-amber-50">
-                            <td class="border p-2 text-slate-700 font-semibold">CGST @ 2.5%</td>
-                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
-                            <td class="border p-2 text-right font-bold">₹${cgst}</td>
+                        <tr>
+                            <td class="border p-1.5 text-slate-700 font-semibold">CGST @ 2.5%</td>
+                            <td class="border p-1.5 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-1.5 text-right font-bold">₹${cgst}</td>
                         </tr>
-                        <tr class="bg-amber-50">
-                            <td class="border p-2 text-slate-700 font-semibold">SGST @ 2.5%</td>
-                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
-                            <td class="border p-2 text-right font-bold">₹${sgst}</td>
+                        <tr>
+                            <td class="border p-1.5 text-slate-700 font-semibold">SGST @ 2.5%</td>
+                            <td class="border p-1.5 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-1.5 text-right font-bold">₹${sgst}</td>
                         </tr>
                         ` : ''}
                         <tr class="bg-slate-100 font-extrabold text-slate-900">
-                            <td colspan="2" class="border p-2 text-right">Total Payable Bill</td>
-                            <td class="border p-2 text-right">₹${totalBill.toFixed(2)}</td>
+                            <td colspan="2" class="border p-1.5 text-right">Total Payable Bill</td>
+                            <td class="border p-1.5 text-right">₹${totalBill.toFixed(2)}</td>
                         </tr>
                         <tr class="bg-emerald-50 text-emerald-900 font-extrabold">
-                            <td colspan="2" class="border p-2 text-right">Amount Paid (${p.mode} on ${p.date})</td>
-                            <td class="border p-2 text-right">₹${parseFloat(p.amount).toFixed(2)}</td>
+                            <td colspan="2" class="border p-1.5 text-right">Amount Paid (${p.mode} on ${p.date})</td>
+                            <td class="border p-1.5 text-right">₹${parseFloat(p.amount).toFixed(2)}</td>
                         </tr>
                         <tr class="bg-red-50 text-red-700 font-extrabold">
-                            <td colspan="2" class="border p-2 text-right">Remaining Balance Due</td>
-                            <td class="border p-2 text-right">₹${parseFloat(p.dueAfter !== undefined ? p.dueAfter : s.remainingDue).toFixed(2)}</td>
+                            <td colspan="2" class="border p-1.5 text-right">Remaining Balance Due</td>
+                            <td class="border p-1.5 text-right">₹${parseFloat(p.dueAfter !== undefined ? p.dueAfter : s.remainingDue).toFixed(2)}</td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div class="flex justify-between items-end pt-2 text-[10px] text-slate-600 border-t">
                     <div>* यह कंप्यूटर जनित आधिकारिक रसीद है।</div>
-                    <div class="text-right font-extrabold text-slate-900">Pintu Kumar Singh<br><span class="text-[9px] text-red-900">Founder & Director, Buddha Library</span></div>
+                    <div class="text-right font-extrabold text-slate-900 leading-tight">Pintu Kumar Singh<br><span class="text-[9px] text-red-900">Founder & Director, Buddha Library</span></div>
                 </div>
             `;
             document.getElementById('invoiceModal').classList.remove('hidden');
@@ -1918,7 +1987,7 @@
                 tbody.innerHTML += `
                     <tr class="border-b hover:bg-slate-50">
                         <td class="p-2.5 font-extrabold text-red-900">ID: ${s.uniId}</td>
-                        <td class="p-2.5 font-bold text-slate-900">${s.fullName}</td>
+                        <td class="p-2.5 font-bold text-indigo-950">${s.fullName}</td>
                         <td class="p-2.5 font-semibold text-blue-800">${s.mobile}</td>
                         <td class="p-2.5 text-center font-extrabold">${hist.length} बार</td>
                         <td class="p-2.5 text-right font-bold text-slate-700">₹${cPaid}</td>
@@ -2049,11 +2118,11 @@
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border mb-4 text-xs">
-                    <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (Full Photo)')" class="w-24 h-24 rounded-xl face-focus-thumb border-2 border-red-900 shadow cursor-pointer" title="Click for Full Uncropped HD Photo">
+                    <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (Full Photo)')" class="w-24 h-24 rounded-xl face-focus-thumb shadow-md cursor-pointer" title="Click for Full Uncropped HD Photo">
                     <div class="space-y-1 w-full">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="theme-maroon-solid text-white px-2.5 py-0.5 rounded font-extrabold">ID: ${s.uniId}</span>
-                            <h2 class="text-lg font-extrabold text-slate-900">${s.fullName}</h2>
+                            <h2 class="text-lg font-extrabold text-indigo-950 uppercase">${s.fullName}</h2>
                             <span class="bg-slate-200 text-slate-800 px-2 py-0.5 rounded font-bold text-[11px]">${s.gender || 'Male'}</span>
                         </div>
                         <p>📞 Student Mobile: <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold">${s.mobile}</a> | 🏠 Guardian: <b>${s.guardianMobile || 'N/A'}</b></p>
@@ -2174,7 +2243,7 @@
                 row.className = `p-3 rounded-xl border flex items-center justify-between gap-2 ${isWished ? 'bg-emerald-50 border-emerald-300' : 'bg-pink-50 border-pink-200'}`;
                 row.innerHTML = `
                     <div class="flex items-center gap-2.5">
-                        <img src="${avatar}" class="w-11 h-11 rounded-lg face-focus-thumb border border-pink-400">
+                        <img src="${avatar}" class="w-11 h-11 rounded-lg face-focus-thumb shadow-sm">
                         <div>
                             <span class="bg-pink-600 text-white text-[10px] font-extrabold px-2 py-0.2 rounded">ID: ${s.uniId}</span>
                             <h4 class="font-extrabold text-slate-900 text-xs mt-0.5">${hiName} <span class="text-slate-500 font-normal">(${s.fullName})</span></h4>
@@ -2211,13 +2280,13 @@
             document.getElementById('editIndex').value = index;
             document.getElementById('formHeading').innerText = `✏️ Edit Member: ${s.fullName} (ID: ${s.uniId})`;
             document.getElementById('uniId').value = s.uniId;
-            document.getElementById('fullName').value = s.fullName;
+            document.getElementById('fullName').value = toTitleCaseWords(s.fullName);
             document.getElementById('gender').value = s.gender || 'Male';
             document.getElementById('mobile').value = s.mobile;
             document.getElementById('guardianMobile').value = s.guardianMobile || '';
             document.getElementById('emailId').value = s.emailId || '';
             document.getElementById('dob').value = s.dob || '';
-            document.getElementById('address').value = s.address || '';
+            document.getElementById('address').value = toTitleCaseWords(s.address || '');
 
             document.getElementById('seatNo').value = cleanResNum(s.seatNo);
             document.getElementById('chairNo').value = cleanResNum(s.chairNo);
@@ -2327,7 +2396,7 @@
         }
         function closeZoomModal() { document.getElementById('zoomModal').classList.add('hidden'); }
 
-        // Upload Library Logo (Also sets Browser Tab Favicon & Mobile App Icon automatically)
+        // Upload Library Logo (Also updates PWA App Icon & Favicon)
         function openLogoModal() { document.getElementById('logoModal').classList.remove('hidden'); }
         function uploadLibraryLogo(input) {
             if (input.files && input.files[0]) {
@@ -2337,9 +2406,12 @@
                     img.src = e.target.result;
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 256; canvas.height = 256;
-                        canvas.getContext('2d').drawImage(img, 0, 0, 256, 256);
-                        libraryLogo = canvas.toDataURL('image/png', 0.9);
+                        canvas.width = 512; canvas.height = 512;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, 512, 512);
+                        libraryLogo = canvas.toDataURL('image/png', 0.92);
                         localStorage.setItem('buddha_library_logo', libraryLogo);
                         applyLogoToUi(libraryLogo);
                         document.getElementById('logoModal').classList.add('hidden');
@@ -2352,11 +2424,11 @@
             const img = document.getElementById('headerLogoImg');
             img.src = src; img.classList.remove('hidden');
             document.getElementById('headerLogoEmoji').classList.add('hidden');
-            // Set Favicon & Apple Touch Icon dynamically
             const fav = document.getElementById('dynamicFavicon');
             const appIc = document.getElementById('dynamicAppleIcon');
             if(fav) fav.href = src;
             if(appIc) appIc.href = src;
+            setupDynamicPwaManifest(src);
         }
 
         // Upload Founder HD Photo (Pintu Kumar Singh)
@@ -2369,7 +2441,7 @@
                     img.src = e.target.result;
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 320; canvas.height = 320;
+                        canvas.width = 360; canvas.height = 360;
                         const ctx = canvas.getContext('2d');
                         ctx.imageSmoothingEnabled = true;
                         ctx.imageSmoothingQuality = 'high';
@@ -2377,8 +2449,8 @@
                         let sx = (img.width - crop) / 2;
                         let sy = Math.max(0, img.height * 0.05);
                         if(sy + crop > img.height) sy = 0;
-                        ctx.drawImage(img, sx, sy, crop, crop, 0, 0, 320, 320);
-                        founderPhoto = canvas.toDataURL('image/jpeg', 0.9);
+                        ctx.drawImage(img, sx, sy, crop, crop, 0, 0, 360, 360);
+                        founderPhoto = canvas.toDataURL('image/jpeg', 0.92);
                         localStorage.setItem('buddha_library_founder_photo', founderPhoto);
                         applyFounderPhotoToUi(founderPhoto);
                         document.getElementById('founderModal').classList.add('hidden');
@@ -2397,7 +2469,7 @@
         function saveExpenseRecord(e) {
             e.preventDefault();
             expenses.push({
-                title: document.getElementById('expTitle').value,
+                title: toTitleCaseWords(document.getElementById('expTitle').value),
                 amount: parseFloat(document.getElementById('expAmount').value) || 0,
                 date: document.getElementById('expDate').value,
                 mode: document.getElementById('expMode').value
@@ -2424,7 +2496,8 @@
             localStorage.setItem('buddha_library_firebase_url', firebaseDbUrl);
             document.getElementById('cloudModal').classList.add('hidden');
             if(firebaseDbUrl) {
-                document.getElementById('syncStatusDot').classList.replace('bg-red-400', 'bg-emerald-400');
+                const syncTxt = document.getElementById('menuSyncText');
+                if(syncTxt) { syncTxt.innerText = "(Connected 🟢)"; syncTxt.className = "text-[10px] text-emerald-600 ml-auto font-extrabold"; }
                 fetchFromFirebase();
             }
             alert("✅ Firebase Cloud Sync URL सेव हो गया!");
