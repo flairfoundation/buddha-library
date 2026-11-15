@@ -2,8 +2,17 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Buddha Library - Management System</title>
+    <!-- Dynamic Favicon & Mobile App Icon Support -->
+    <link id="dynamicFavicon" rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true">
+    <link id="dynamicAppleIcon" rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true">
+    <meta name="theme-color" content="#5c061c">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Buddha Library">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
@@ -14,7 +23,7 @@
         .theme-border { border-color: #5c061c; }
         .fade-in { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .id-safe-line { line-height: 1.4 !important; padding-top: 1px; padding-bottom: 1px; }
+        .id-safe-line { line-height: 1.38 !important; padding-top: 1px; padding-bottom: 1px; }
         .face-focus-thumb { object-fit: cover; object-position: center 15%; }
         .active-filter-ring { box-shadow: 0 0 0 3px #5c061c !important; background-color: #fffbeb !important; }
         @media print {
@@ -41,30 +50,18 @@
     <!-- Main Application Wrapper -->
     <div id="mainApp" class="max-w-7xl mx-auto p-2.5 sm:p-4 hidden fade-in">
 
-        <!-- 2. Compact Horizontal Header (Logo on Left Side to Save Vertical Space) -->
-        <header class="theme-maroon text-white px-4 py-3 sm:px-6 sm:py-3.5 rounded-2xl shadow-lg mb-3 relative flex items-center justify-between">
-            <!-- Left Side Logo + Title -->
-            <div class="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full flex items-center justify-center text-2xl shadow-md border-2 border-yellow-400 overflow-hidden flex-shrink-0">
-                    <img id="headerLogoImg" src="" class="w-full h-full object-cover hidden">
-                    <span id="headerLogoEmoji">🏛️</span>
-                </div>
-                <div class="text-left min-w-0">
-                    <h1 class="text-lg sm:text-2xl font-extrabold tracking-wider leading-tight truncate">BUDDHA LIBRARY</h1>
-                    <p class="text-[11px] sm:text-xs text-yellow-300 font-bold tracking-wide">A Unit of Flair Foundation</p>
-                    <p class="text-[10px] sm:text-xs text-slate-200 mt-0.5">📍 Kachchhi Dargah, Patna | 📞 <a href="tel:7050668855" class="no-underline font-bold text-white">7050668855</a></p>
-                </div>
-            </div>
-
-            <!-- Right Side 3-Line Menu (☰) -->
-            <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- 2. Balanced Royal Header: Left Logo (ESTD 2023) | Center Title | Right Founder Box & 3-Line Menu (☰) -->
+        <header class="theme-maroon text-white px-3 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-lg mb-3 relative border-b-2 border-yellow-400">
+            <!-- Top Right Hamburger Menu Button -->
+            <div class="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 flex items-center gap-1.5 z-20">
                 <span id="syncStatusDot" title="Cloud Sync Status" class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block shadow"></span>
-                <button onclick="toggleHeaderMenu()" class="bg-white bg-opacity-15 hover:bg-opacity-25 text-white px-3 py-1.5 rounded-xl font-extrabold text-lg shadow transition">☰</button>
+                <button onclick="toggleHeaderMenu()" class="bg-white bg-opacity-15 hover:bg-opacity-25 text-white px-2.5 py-1 rounded-xl font-extrabold text-base sm:text-lg shadow transition">☰</button>
             </div>
 
-            <!-- Dropdown Menu -->
-            <div id="headerDropdown" class="hidden absolute top-16 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-60 py-2 z-40 text-xs font-bold fade-in">
+            <!-- 3-Line Dropdown Menu -->
+            <div id="headerDropdown" class="hidden absolute top-14 right-3 sm:right-4 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 w-64 py-2 z-40 text-xs font-bold fade-in">
                 <button onclick="openLogoModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">🖼️ Set Official Library Logo</button>
+                <button onclick="openFounderModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-amber-50 text-amber-900 flex items-center gap-2">👔 Set Founder HD Photo (Pintu Ji)</button>
                 <button onclick="openCloudSyncModal(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">☁️ Firebase Cloud Sync</button>
                 <button onclick="exportDriveBackup(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">💾 Download JSON Backup</button>
                 <button onclick="triggerRestore(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2">📂 Restore JSON Backup</button>
@@ -73,18 +70,48 @@
                 <button onclick="changeAppPin(); toggleHeaderMenu();" class="w-full text-left px-4 py-2.5 hover:bg-slate-100 flex items-center gap-2 text-indigo-700">🔑 Change Security PIN</button>
                 <button onclick="logoutApp()" class="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-2 text-red-600">🔒 Lock / Logout</button>
             </div>
+
+            <!-- 3-Column Header Content -->
+            <div class="grid grid-cols-12 items-center gap-2">
+                <!-- Left: Logo + ESTD 2023 -->
+                <div class="col-span-3 sm:col-span-2 flex flex-col items-center justify-center">
+                    <div class="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center text-2xl shadow-md border-2 border-yellow-400 overflow-hidden">
+                        <img id="headerLogoImg" src="" class="w-full h-full object-cover hidden">
+                        <span id="headerLogoEmoji">🏛️</span>
+                    </div>
+                    <span class="text-[9px] sm:text-[10px] font-extrabold text-yellow-300 tracking-wider mt-1 bg-black bg-opacity-25 px-2 py-0.5 rounded-full">ESTD: 2023</span>
+                </div>
+
+                <!-- Center: BUDDHA LIBRARY & A Unit of Flair Foundation Perfectly Centered -->
+                <div class="col-span-6 sm:col-span-7 text-center px-1">
+                    <h1 class="text-lg sm:text-3xl font-extrabold tracking-wider leading-tight">BUDDHA LIBRARY</h1>
+                    <p class="text-[11px] sm:text-sm text-yellow-300 font-extrabold tracking-wide mt-0.5">A Unit of Flair Foundation</p>
+                    <p class="text-[9.5px] sm:text-xs text-slate-200 mt-1">📍 Kachchhi Dargah, Patna | 📞 <a href="tel:7050668855" class="no-underline font-bold text-white">7050668855</a></p>
+                </div>
+
+                <!-- Right: Founder Photo & Designation -->
+                <div class="col-span-3 sm:col-span-3 flex flex-col items-center justify-center text-center pr-4 sm:pr-8">
+                    <div onclick="openFounderModal()" title="Click to Upload Founder HD Photo" class="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-xl border-2 border-yellow-400 shadow-md overflow-hidden flex items-center justify-center cursor-pointer">
+                        <img id="headerFounderImg" src="" class="w-full h-full face-focus-thumb hidden">
+                        <span id="headerFounderEmoji" class="text-xl">👔</span>
+                    </div>
+                    <p class="text-[9px] sm:text-[11px] font-extrabold text-white mt-1 leading-tight">Pintu Kumar Singh</p>
+                    <p class="text-[8px] sm:text-[10px] font-bold text-yellow-300 leading-tight">Founder & Director</p>
+                    <p class="hidden sm:block text-[8.5px] text-slate-200 leading-tight">(Social Entrepreneur & Businessman)</p>
+                </div>
+            </div>
         </header>
 
-        <!-- 3. Clean Search Bar right at Top (Supports 2000+ Student IDs, Mobile or Name) -->
+        <!-- 3. Clean Search Bar right at Top (Supports 1 to 5000+ Student IDs, Mobile or Name) -->
         <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200 mb-3 flex items-center gap-2">
             <div class="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-300 flex-grow">
                 <span class="text-base">🔍</span>
-                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search Any Student ID (1 to 2000+), Mobile Number, or Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
+                <input type="text" id="searchInput" oninput="resetLimitAndRender()" placeholder="Search Any Student ID (1 to 5000+), Mobile Number, or Name..." class="w-full text-xs sm:text-sm bg-transparent outline-none font-bold text-slate-800">
                 <button onclick="document.getElementById('searchInput').value=''; resetLimitAndRender();" class="text-xs text-slate-400 hover:text-red-600 font-extrabold px-1">✖</button>
             </div>
         </div>
 
-        <!-- 4. Row 1: Member Status Filter Cards (Starts with Total Members) -->
+        <!-- 4. Row 1: Member Status Filter Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-2.5">
             <div id="cardTab-all" onclick="setTab('all')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow transition active-filter-ring">
                 <p class="text-[11px] text-slate-500 font-bold">👥 Total Members</p>
@@ -135,11 +162,16 @@
             </button>
         </div>
 
-        <!-- Row 3: Equal 3-Box Utility Strip (Vacant Finder, Expense Tracker, Birthdays) -->
-        <div class="grid grid-cols-3 gap-2.5 mb-4">
+        <!-- Row 3: Equal 4-Box Utility Strip (Vacant Finder, My Collection, Expense Tracker, Birthdays) -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
             <div onclick="openVacantModal()" class="bg-purple-50 p-2.5 rounded-xl shadow-sm border-l-4 border-purple-700 cursor-pointer hover:bg-purple-100 transition">
-                <p class="text-[10px] sm:text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="hidden sm:inline text-[10px] bg-purple-200 px-1.5 rounded">View</span></p>
+                <p class="text-[10px] sm:text-[11px] text-purple-900 font-extrabold flex items-center justify-between"><span>💺 Vacant Finder</span> <span class="text-[9px] bg-purple-200 px-1.5 rounded">View</span></p>
                 <h3 id="statVacantSummary" class="text-[11px] sm:text-xs font-extrabold text-purple-800 mt-0.5">S:250 | C:250 | L:90</h3>
+            </div>
+
+            <div onclick="openMyCollectionModal()" class="bg-teal-50 p-2.5 rounded-xl shadow-sm border-l-4 border-teal-700 cursor-pointer hover:bg-teal-100 transition">
+                <p class="text-[10px] sm:text-[11px] text-teal-900 font-extrabold flex items-center justify-between"><span>💰 My Collection</span> <span class="text-[9px] bg-teal-200 px-1.5 rounded">ID-Wise</span></p>
+                <h3 class="text-[11px] sm:text-xs font-extrabold text-teal-800 mt-0.5">All Student Ledger ➔</h3>
             </div>
 
             <div onclick="openExpenseModal()" class="bg-indigo-50 p-2.5 rounded-xl shadow-sm border-l-4 border-indigo-700 cursor-pointer hover:bg-indigo-100 transition">
@@ -156,7 +188,7 @@
             </div>
         </div>
 
-        <!-- 5. Collapsible Admission / Edit Form (With Explicit +₹50/M Locker Rent Checkbox + ₹200 Security + 5% GST) -->
+        <!-- 5. Collapsible Admission / Edit Form (With All 4 Tick Boxes: +₹199 Admission, +₹50/M Locker, +₹200 Security, +5% GST) -->
         <div id="admissionFormBox" class="bg-white p-4 sm:p-5 rounded-2xl shadow-xl mb-5 hidden border-2 theme-border fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-4">
                 <h2 id="formHeading" class="text-base sm:text-lg font-extrabold theme-maroon-text">📝 Student Admission & Plan Form (28-Day Cycle)</h2>
@@ -294,19 +326,23 @@
                     <input type="date" id="manualBillDate" required class="w-full border-2 border-purple-300 p-2 rounded-lg font-extrabold bg-purple-50">
                 </div>
 
-                <!-- 3 Clear Tick Boxes: +₹50/M Locker Monthly Charge, +₹200 Locker Security, +5% GST -->
-                <div class="sm:col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <!-- 4 Clear Equal Tick Boxes: +₹199 Admission Fee, +₹50/M Locker Charge, +₹200 Locker Security, +5% GST -->
+                <div class="sm:col-span-2 md:col-span-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                    <div class="flex items-center gap-2 bg-rose-50 p-2.5 rounded-xl border border-rose-300">
+                        <input type="checkbox" id="admissionFeeCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-rose-800 cursor-pointer">
+                        <label for="admissionFeeCheck" class="text-xs font-extrabold text-rose-900 cursor-pointer">📝 +₹199 Admission Charge</label>
+                    </div>
                     <div class="flex items-center gap-2 bg-teal-50 p-2.5 rounded-xl border border-teal-300">
                         <input type="checkbox" id="lockerMonthlyCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-teal-800 cursor-pointer">
                         <label for="lockerMonthlyCheck" class="text-xs font-extrabold text-teal-900 cursor-pointer">🗄️ +₹50/Month Locker Charge</label>
                     </div>
                     <div class="flex items-center gap-2 bg-indigo-50 p-2.5 rounded-xl border border-indigo-300">
                         <input type="checkbox" id="lockerSecurityCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-indigo-900 cursor-pointer">
-                        <label for="lockerSecurityCheck" class="text-xs font-extrabold text-indigo-900 cursor-pointer">🔑 +₹200 Locker Security (Refundable)</label>
+                        <label for="lockerSecurityCheck" class="text-xs font-extrabold text-indigo-900 cursor-pointer">🔑 +₹200 Locker Security</label>
                     </div>
                     <div class="flex items-center gap-2 bg-amber-50 p-2.5 rounded-xl border border-amber-300">
                         <input type="checkbox" id="applyGstCheck" onchange="recalcAdmissionBill()" class="w-4 h-4 accent-red-900 cursor-pointer">
-                        <label for="applyGstCheck" class="text-xs font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Optional Tax Bill)</label>
+                        <label for="applyGstCheck" class="text-xs font-extrabold text-amber-900 cursor-pointer">🧾 Add +5% GST (Tax Bill)</label>
                     </div>
                 </div>
 
@@ -390,34 +426,50 @@
         </div>
     </div>
 
-    <!-- Modal B: Compact Horizontal HD ID Card Modal (Left Logo in Header + Side-by-Side Photo & Plain Info - Short & Crisp!) -->
+    <!-- Modal B: Royal Compact HD ID Card Modal (Left Logo+ESTD 2023 | Center Title | Right Founder Box) -->
     <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2 overflow-y-auto">
         <!-- Outer Padded Capture Frame -->
         <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
-            <div class="bg-white w-[335px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
-                <!-- Compact Header: Logo on Left Side, Text on Right Side -->
-                <div class="theme-maroon text-white px-3.5 py-2.5 flex items-center gap-3 border-b-2 border-amber-400">
-                    <div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-lg border-2 border-amber-300 overflow-hidden shadow flex-shrink-0">
-                        <img id="idCardLogoImg" src="" class="w-full h-full object-cover hidden">
-                        <span id="idCardLogoEmoji">🏛️</span>
+            <div class="bg-white w-[360px] rounded-2xl overflow-hidden border-[3px] border-amber-500 shadow-md">
+                <!-- Royal 3-Column Header: Left Logo (ESTD 2023) | Center Title | Right Founder Box -->
+                <div class="theme-maroon text-white px-2.5 py-2.5 grid grid-cols-12 items-center gap-1 border-b-2 border-amber-400">
+                    <!-- Left: Logo + ESTD 2023 -->
+                    <div class="col-span-3 flex flex-col items-center justify-center">
+                        <div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-base border-2 border-amber-300 overflow-hidden shadow">
+                            <img id="idCardLogoImg" src="" class="w-full h-full object-cover hidden">
+                            <span id="idCardLogoEmoji">🏛️</span>
+                        </div>
+                        <span class="text-[8px] font-extrabold text-yellow-300 mt-0.5 tracking-tight id-safe-line">ESTD: 2023</span>
                     </div>
-                    <div class="text-left min-w-0">
-                        <h2 class="text-base font-extrabold tracking-wider leading-tight id-safe-line">BUDDHA LIBRARY</h2>
-                        <p class="text-[10px] text-yellow-300 font-bold leading-tight id-safe-line">A Unit of Flair Foundation</p>
-                        <p class="text-[9.5px] text-slate-200 leading-tight mt-0.5 id-safe-line">Kachchhi Dargah, Patna | 📞 7050668855</p>
+
+                    <!-- Center: BUDDHA LIBRARY & A Unit of Flair Foundation -->
+                    <div class="col-span-6 text-center">
+                        <h2 class="text-[15px] font-extrabold tracking-wide leading-tight id-safe-line">BUDDHA LIBRARY</h2>
+                        <p class="text-[9.5px] text-yellow-300 font-extrabold leading-tight id-safe-line">A Unit of Flair Foundation</p>
+                        <p class="text-[8.5px] text-slate-200 leading-tight mt-0.5 id-safe-line">Kachchhi Dargah, Patna</p>
+                        <p class="text-[9px] text-white font-bold leading-tight id-safe-line">📞 7050668855</p>
+                    </div>
+
+                    <!-- Right: Founder Photo & Name -->
+                    <div class="col-span-3 flex flex-col items-center justify-center text-center">
+                        <div class="w-10 h-10 bg-white rounded-lg border-2 border-amber-300 overflow-hidden shadow flex items-center justify-center">
+                            <img id="idCardFounderImg" src="" class="w-full h-full face-focus-thumb hidden">
+                            <span id="idCardFounderEmoji" class="text-sm">👔</span>
+                        </div>
+                        <p class="text-[7.5px] font-extrabold text-white mt-0.5 leading-tight id-safe-line">Pintu Kumar Singh</p>
+                        <p class="text-[7px] font-bold text-yellow-300 leading-tight id-safe-line">Founder & Director</p>
+                        <p class="text-[6px] text-slate-200 leading-tight id-safe-line">(Social Entrepreneur)</p>
                     </div>
                 </div>
 
-                <!-- Compact Body: Photo on Left + Plain Unboxed ID, Name, Mobile & Clean Address on Right -->
+                <!-- Compact Body: Student Photo on Left + Plain Unboxed ID, Name, Mobile & Clean Address on Right -->
                 <div class="p-3.5 bg-gradient-to-b from-white to-slate-50">
                     <div class="flex items-center gap-3 mb-2.5 pb-2.5 border-b border-slate-200">
                         <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl face-focus-thumb border-2 border-red-900 shadow-sm bg-slate-100 flex-shrink-0">
                         <div class="text-left min-w-0 flex-grow">
-                            <!-- Plain Colored ID Text right beside photo (No Box so it never vanishes) -->
                             <div id="idCardUniId" class="text-xs font-extrabold text-red-800 tracking-wide uppercase id-safe-line">ID NO: 1</div>
                             <div id="idCardName" class="text-base font-extrabold text-slate-900 leading-snug id-safe-line">Student Name</div>
                             <div id="idCardMobile" class="text-xs font-extrabold text-blue-800 mt-0.5 id-safe-line">📞 0000000000</div>
-                            <!-- Clean Plain Address (No grey box that clips) -->
                             <div id="idCardAddress" class="text-[11px] font-bold text-slate-600 mt-0.5 id-safe-line">📍 Address</div>
                         </div>
                     </div>
@@ -459,7 +511,7 @@
         <p id="idCardHint" class="text-[11px] text-slate-300 mt-1.5 text-center no-print">💡 कार्ड पर टच करने से बटन छुप/दिख जाएंगे।</p>
     </div>
 
-    <!-- Modal C: Full Plan Renewal Modal (All 6 Shift Plans, Locker Auto ₹50/M + ₹200 Security, Manual Bill Date) -->
+    <!-- Modal C: Full Plan Renewal Modal -->
     <div id="renewModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-2.5 overflow-y-auto">
         <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xl w-full max-w-lg fade-in my-auto">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
@@ -586,9 +638,9 @@
         </div>
     </div>
 
-    <!-- Modal E: Professional GST / Non-GST PDF Tax Invoice -->
-    <div id="invoiceModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-3 overflow-y-auto">
-        <div id="invoiceCaptureBox" class="bg-white p-5 sm:p-6 rounded-xl shadow-2xl w-full max-w-lg border-2 border-slate-800 text-xs">
+    <!-- Modal E: Perfectly Aligned Single-Line GST / Non-GST PDF Tax Invoice -->
+    <div id="invoiceModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2.5 overflow-y-auto">
+        <div id="invoiceCaptureBox" class="bg-white p-5 sm:p-6 rounded-xl shadow-2xl w-full max-w-xl border-2 border-slate-800 text-xs">
             <div id="invoiceBodyContent"></div>
         </div>
         <div class="mt-4 flex flex-wrap gap-2.5 justify-center no-print">
@@ -598,7 +650,36 @@
         </div>
     </div>
 
-    <!-- Modal F: Multi-Channel Reminder with Auto Hindi Name & Sent Counter -->
+    <!-- Modal F: My Collection (ID-Wise Complete Student Payment Summary) -->
+    <div id="myCollectionModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center hidden p-3">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-2.5 mb-3">
+                <h3 class="text-base sm:text-lg font-extrabold theme-maroon-text">💰 My Collection — ID-Wise Student Payment Summary</h3>
+                <button onclick="document.getElementById('myCollectionModal').classList.add('hidden')" class="text-slate-500 hover:text-red-600 font-bold text-xl">✖</button>
+            </div>
+            <div id="myCollectionSummaryStrip" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-xs font-extrabold"></div>
+            <div class="overflow-auto flex-grow border rounded-xl">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead class="bg-slate-800 text-white sticky top-0">
+                        <tr>
+                            <th class="p-2.5 whitespace-nowrap">ID No</th>
+                            <th class="p-2.5 whitespace-nowrap">Student Name</th>
+                            <th class="p-2.5 whitespace-nowrap">Mobile</th>
+                            <th class="p-2.5 whitespace-nowrap text-center">Times Paid</th>
+                            <th class="p-2.5 whitespace-nowrap text-right">Cash Paid</th>
+                            <th class="p-2.5 whitespace-nowrap text-right">Online Paid</th>
+                            <th class="p-2.5 whitespace-nowrap text-right">Total Paid</th>
+                            <th class="p-2.5 whitespace-nowrap text-right">Current Due</th>
+                            <th class="p-2.5 whitespace-nowrap text-center">Last Bill Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="myCollectionTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal G: Multi-Channel Reminder with Auto Hindi Name & Sent Counter -->
     <div id="reminderModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-sm text-center fade-in">
             <h3 class="text-base font-extrabold theme-maroon-text mb-1">🔔 Send Due / Renewal Reminder</h3>
@@ -614,7 +695,7 @@
         </div>
     </div>
 
-    <!-- Modal G: Today's Birthdays List Modal -->
+    <!-- Modal H: Today's Birthdays List Modal -->
     <div id="birthdayModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white p-5 rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col fade-in">
             <div class="flex justify-between items-center border-b pb-2.5 mb-3">
@@ -625,7 +706,7 @@
         </div>
     </div>
 
-    <!-- Modal H: Full HD Photo / Doc Zoom Viewer -->
+    <!-- Modal I: Full HD Photo / Doc Zoom Viewer -->
     <div id="zoomModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center hidden p-3" onclick="closeZoomModal()">
         <div class="bg-white p-3 rounded-2xl max-w-2xl w-full text-center relative shadow-2xl" onclick="event.stopPropagation()">
             <button onclick="closeZoomModal()" class="absolute top-2 right-3 text-slate-600 hover:text-red-600 font-bold text-xl">✖</button>
@@ -634,11 +715,23 @@
         </div>
     </div>
 
+    <!-- Modal J: Upload Official Library Logo -->
     <div id="logoModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-white p-5 rounded-2xl shadow-xl w-80 text-center">
-            <h3 class="text-base font-extrabold theme-maroon-text mb-2">🖼️ Set Library Official Logo</h3>
+            <h3 class="text-base font-extrabold theme-maroon-text mb-1">🖼️ Set Official Library Logo</h3>
+            <p class="text-[11px] text-slate-500 mb-3">यह लोगो हेडर, आईडी कार्ड, जीएसटी बिल और ब्राउज़र टैब (Favicon) में सेट हो जाएगा।</p>
             <input type="file" accept="image/*" onchange="uploadLibraryLogo(this)" class="w-full text-xs mb-4 border p-2 rounded">
             <button onclick="document.getElementById('logoModal').classList.add('hidden')" class="bg-slate-400 text-white text-xs px-4 py-2 rounded-lg font-bold">Close</button>
+        </div>
+    </div>
+
+    <!-- Modal K: Upload Founder HD Photo (Pintu Kumar Singh) -->
+    <div id="founderModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white p-5 rounded-2xl shadow-xl w-80 text-center">
+            <h3 class="text-base font-extrabold theme-maroon-text mb-1">👔 Set Founder HD Photo</h3>
+            <p class="text-[11px] text-slate-600 font-bold mb-3">Pintu Kumar Singh<br><span class="text-[10px] text-slate-500 font-normal">Founder & Director (Social Entrepreneur & Businessman)</span></p>
+            <input type="file" accept="image/*" onchange="uploadFounderPhoto(this)" class="w-full text-xs mb-4 border p-2 rounded">
+            <button onclick="document.getElementById('founderModal').classList.add('hidden')" class="bg-slate-400 text-white text-xs px-4 py-2 rounded-lg font-bold">Close</button>
         </div>
     </div>
 
@@ -675,6 +768,7 @@
         const TOTAL_SEATS = 250;
         const TOTAL_CHAIRS = 250;
         const TOTAL_LOCKERS = 90;
+        const ADMISSION_ONE_TIME_FEE = 199;
         const LOCKER_MONTHLY_FEE = 50;
         const LOCKER_SECURITY_DEPOSIT = 200;
         const ADMIN_MOBILE = "7050668855";
@@ -687,6 +781,7 @@
         let displayLimit = 50;
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
+        let founderPhoto = localStorage.getItem('buddha_library_founder_photo') || '';
         let tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '' };
         let hindiNameCache = {};
 
@@ -824,6 +919,7 @@
             document.getElementById('manualBillDate').value = today;
             document.getElementById('expDate').value = today;
             if(libraryLogo) applyLogoToUi(libraryLogo);
+            if(founderPhoto) applyFounderPhotoToUi(founderPhoto);
             update28DayValidity();
             if(firebaseDbUrl) {
                 document.getElementById('syncStatusDot').classList.replace('bg-red-400', 'bg-emerald-400');
@@ -833,11 +929,10 @@
             updateDashboardStats();
         }
 
-        // 2. 28-Day Cycle + Explicit Locker ₹50/M Auto Check + ₹200 Security Deposit + Optional 5% GST
+        // 2. 28-Day Cycle + +₹199 Admission Fee + +₹50/M Locker + +₹200 Security Deposit + +5% GST
         function onLockerInputChanged() {
             const lVal = cleanResNum(document.getElementById('lockerNo').value);
             const editIdx = document.getElementById('editIndex').value;
-            // Automatically check "+₹50/Month Locker Charge" whenever Locker No is filled
             document.getElementById('lockerMonthlyCheck').checked = (lVal !== "");
             if(editIdx === "") {
                 document.getElementById('lockerSecurityCheck').checked = (lVal !== "");
@@ -866,24 +961,29 @@
             else if(months === 6) shiftTotal = Math.round(shiftTotal * 0.90);
             else if(months === 12) shiftTotal = Math.round(shiftTotal * 0.85);
 
-            // Locker Monthly Charge (₹50 per month if Locker No is entered OR checkbox is ticked)
+            // 1. Optional ₹199 One-Time Admission Fee
+            const hasAdmFee = document.getElementById('admissionFeeCheck').checked;
+            const admFeeAmt = hasAdmFee ? ADMISSION_ONE_TIME_FEE : 0;
+
+            // 2. Locker Monthly Charge (₹50 per month if Locker No is entered OR checkbox is ticked)
             const hasLockerNum = cleanResNum(document.getElementById('lockerNo').value) !== "";
             const isLockerMonthlyChecked = document.getElementById('lockerMonthlyCheck').checked || hasLockerNum;
             if(hasLockerNum) document.getElementById('lockerMonthlyCheck').checked = true;
             const lockerRent = isLockerMonthlyChecked ? (LOCKER_MONTHLY_FEE * months) : 0;
 
-            // Optional ₹200 Locker Security Deposit
+            // 3. Optional ₹200 Locker Security Deposit
             const hasSecDeposit = document.getElementById('lockerSecurityCheck').checked;
             const secDepositAmt = hasSecDeposit ? LOCKER_SECURITY_DEPOSIT : 0;
 
-            const subTotal = shiftTotal + lockerRent + secDepositAmt;
+            // 4. Optional 5% GST
+            const subTotal = shiftTotal + admFeeAmt + lockerRent + secDepositAmt;
             const addGst = document.getElementById('applyGstCheck').checked;
             const gstAmt = addGst ? Math.round(subTotal * 0.05) : 0;
             const finalPayable = subTotal + gstAmt;
 
             document.getElementById('totalBill').value = finalPayable;
             document.getElementById('paidNow').value = finalPayable;
-            document.getElementById('admissionBillBreakdown').innerHTML = `💡 <b>Bill Breakdown:</b> Shift Fee (${months}M): ₹${shiftTotal} + Locker Rent: ₹${lockerRent} + Security Deposit: ₹${secDepositAmt} + GST: ₹${gstAmt} = <b class="text-red-800">Total ₹${finalPayable}</b>`;
+            document.getElementById('admissionBillBreakdown').innerHTML = `💡 <b>Bill Breakdown:</b> Shift (${months}M): ₹${shiftTotal} + Admission Fee: ₹${admFeeAmt} + Locker Rent: ₹${lockerRent} + Security Deposit: ₹${secDepositAmt} + GST: ₹${gstAmt} = <b class="text-red-800">Total ₹${finalPayable}</b>`;
             recalcDuesOnly();
         }
 
@@ -920,6 +1020,7 @@
                 document.getElementById('admissionDateInput').value = today;
                 document.getElementById('cycleStartDate').value = today;
                 document.getElementById('manualBillDate').value = today;
+                document.getElementById('admissionFeeCheck').checked = false;
                 document.getElementById('lockerMonthlyCheck').checked = false;
                 document.getElementById('lockerSecurityCheck').checked = false;
                 document.getElementById('applyGstCheck').checked = false;
@@ -1020,9 +1121,13 @@
             const cycleStartDate = document.getElementById('cycleStartDate').value;
             const validUpto = document.getElementById('validUpto').value;
             const billDate = document.getElementById('manualBillDate').value || new Date().toISOString().split('T')[0];
+
             const isGst = document.getElementById('applyGstCheck').checked;
+            const hasAdmFee = document.getElementById('admissionFeeCheck').checked;
             const hasLockerMonth = document.getElementById('lockerMonthlyCheck').checked || (lockerNo !== "");
             const hasLockerSec = document.getElementById('lockerSecurityCheck').checked;
+
+            const admFeeAmt = hasAdmFee ? ADMISSION_ONE_TIME_FEE : 0;
             const lockerRentAmt = hasLockerMonth ? (LOCKER_MONTHLY_FEE * durationMonths) : 0;
             const lockerSecAmt = hasLockerSec ? LOCKER_SECURITY_DEPOSIT : 0;
 
@@ -1033,7 +1138,7 @@
             const paymentMode = document.getElementById('paymentMode').value;
 
             if(isNaN(uniId) || uniId < 1 || uniId > 5000) {
-                alert("❌ Invalid Unique ID! कृपया सही आईडी नंबर डालें।");
+                alert("❌ Invalid Unique ID! कृपया 1 से 5000 के बीच सही आईडी नंबर डालें।");
                 return;
             }
             if(!/^\d{10}$/.test(mobile)) {
@@ -1099,6 +1204,7 @@
                         endDate: validUpto,
                         amount: paidNow,
                         totalBill: totalBill,
+                        admissionFee: admFeeAmt,
                         lockerRent: lockerRentAmt,
                         lockerSecurity: lockerSecAmt,
                         dueAfter: remainingDue,
@@ -1153,7 +1259,7 @@
             renderStudentList();
         }
 
-        // 6. Render Student List (Supports Any Student ID 1 to 5000+ Search)
+        // 6. Render Student List
         function renderStudentList() {
             const container = document.getElementById('studentListContainer');
             const rawQuery = document.getElementById('searchInput').value.trim();
@@ -1179,11 +1285,9 @@
 
                 if(!rawQuery) return true;
                 if(/^\d+$/.test(rawQuery)) {
-                    // Pure digits up to 5 digits (e.g. 1 to 2000+): Match Exact Unique ID
                     if(rawQuery.length <= 5) {
                         return parseInt(s.uniId) === parseInt(rawQuery);
                     }
-                    // 6+ digits: Match Mobile Number
                     return (s.mobile && s.mobile.includes(rawQuery));
                 }
                 return (s.fullName && s.fullName.toLowerCase().includes(qLower)) ||
@@ -1329,6 +1433,7 @@
                     endDate: s.validUpto,
                     amount: paidAmt,
                     totalBill: paidAmt,
+                    admissionFee: 0,
                     lockerRent: 0,
                     lockerSecurity: 0,
                     dueAfter: 0,
@@ -1404,7 +1509,7 @@
             }
         }
 
-        // 10. Compact Horizontal HD ID Card Modal
+        // 10. Royal Compact HD ID Card Modal (With Left Logo+ESTD 2023, Center Title, Right Founder Box)
         function openIdCardModal(index) {
             const s = students[index];
             const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
@@ -1412,6 +1517,11 @@
                 document.getElementById('idCardLogoImg').src = libraryLogo;
                 document.getElementById('idCardLogoImg').classList.remove('hidden');
                 document.getElementById('idCardLogoEmoji').classList.add('hidden');
+            }
+            if(founderPhoto) {
+                document.getElementById('idCardFounderImg').src = founderPhoto;
+                document.getElementById('idCardFounderImg').classList.remove('hidden');
+                document.getElementById('idCardFounderEmoji').classList.add('hidden');
             }
             document.getElementById('idCardPhoto').src = avatar;
             document.getElementById('idCardUniId').innerText = `ID NO: ${s.uniId}`;
@@ -1604,6 +1714,7 @@
                 endDate: newValid,
                 amount: paidAmt,
                 totalBill: billAmt,
+                admissionFee: 0,
                 lockerRent: lockerRentAmt,
                 lockerSecurity: lockerSecAmt,
                 dueAfter: s.remainingDue,
@@ -1630,111 +1741,134 @@
             showInvoiceDetails(studentIdx, s.paymentHistory.length - 1);
         }
 
-        // 12. Professional GST / Non-GST PDF Tax Invoice
+        // 12. Perfectly Aligned Single-Line GST / Non-GST PDF Tax Invoice
         function showInvoiceDetails(studentIdx, payIdx) {
             const s = students[studentIdx];
             const p = s.paymentHistory[payIdx];
             const totalPayCount = s.paymentHistory.length;
             const isGst = p.isGst;
             const totalBill = parseFloat(p.totalBill || p.amount) || 0;
+            const admFee = parseFloat(p.admissionFee) || 0;
             const lockerRent = parseFloat(p.lockerRent) || 0;
             const lockerSec = parseFloat(p.lockerSecurity) || 0;
             const subBeforeTax = isGst ? (totalBill / 1.05) : totalBill;
-            const tuitionBase = Math.max(0, subBeforeTax - lockerRent - lockerSec).toFixed(2);
+            const tuitionBase = Math.max(0, subBeforeTax - admFee - lockerRent - lockerSec).toFixed(2);
             const cgst = isGst ? ((totalBill - subBeforeTax) / 2).toFixed(2) : "0.00";
             const sgst = cgst;
             const pStart = p.startDate || s.cycleStartDate || s.admissionDate || '-';
             const pEnd = p.endDate || s.validUpto || '-';
             const shiftUsed = cleanShiftName(p.shiftAtTime || s.shiftPlan);
 
-            const logoHtml = libraryLogo ? `<img src="${libraryLogo}" class="w-12 h-12 rounded-full object-cover border border-red-900">` : `<div class="w-12 h-12 rounded-full theme-maroon text-white flex items-center justify-center text-xl">🏛️</div>`;
+            const logoHtml = libraryLogo ? `<img src="${libraryLogo}" class="w-12 h-12 rounded-full object-cover border-2 border-amber-400">` : `<div class="w-12 h-12 rounded-full theme-maroon text-white flex items-center justify-center text-xl">🏛️</div>`;
 
             document.getElementById('invoiceBodyContent').innerHTML = `
-                <div class="flex justify-between items-center border-b-2 border-red-900 pb-3 mb-3">
+                <!-- Aligned Invoice Header -->
+                <div class="flex justify-between items-center border-b-2 border-red-900 pb-3 mb-3 gap-2">
                     <div class="flex items-center gap-2.5">
-                        ${logoHtml}
+                        <div class="text-center">
+                            ${logoHtml}
+                            <div class="text-[8px] font-extrabold text-red-900 mt-0.5">ESTD: 2023</div>
+                        </div>
                         <div>
-                            <h2 class="text-base font-extrabold theme-maroon-text leading-none">BUDDHA LIBRARY</h2>
-                            <p class="text-[10px] font-bold text-slate-600">A Unit of Flair Foundation / Pakka Traders</p>
-                            <p class="text-[10px] text-slate-500">Kachchhi Dargah, Patna | 📞 7050668855</p>
-                            <p class="text-[10px] font-extrabold text-slate-800">GSTIN: ${LIBRARY_GSTIN} | HSN/SAC: ${HSN_SAC_CODE}</p>
+                            <h2 class="text-base font-extrabold theme-maroon-text leading-tight">BUDDHA LIBRARY</h2>
+                            <p class="text-[10px] font-extrabold text-amber-700 leading-tight">A Unit of Flair Foundation / Pakka Traders</p>
+                            <p class="text-[10px] text-slate-600 leading-tight">Kachchhi Dargah, Patna | 📞 7050668855</p>
+                            <p class="text-[10px] font-extrabold text-slate-900 leading-tight mt-0.5">GSTIN: ${LIBRARY_GSTIN} | SAC: ${HSN_SAC_CODE}</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <span class="bg-red-900 text-white px-2.5 py-1 rounded text-[10px] font-extrabold">${isGst ? 'TAX INVOICE' : 'FEE RECEIPT'}</span>
-                        <p class="text-[10px] font-bold mt-1">Inv No: <b>${p.invNo || 'BL-001'}</b></p>
-                        <p class="text-[10px] text-purple-800 font-extrabold">Bill Date: ${p.date}</p>
+                    <div class="text-right whitespace-nowrap">
+                        <span class="bg-red-900 text-white px-2.5 py-1 rounded text-[10px] font-extrabold inline-block">${isGst ? 'GST TAX INVOICE' : 'OFFICIAL RECEIPT'}</span>
+                        <p class="text-[10.5px] font-bold text-slate-800 mt-1">Invoice No: <b>${p.invNo || 'BL-001'}</b></p>
+                        <p class="text-[10.5px] text-purple-900 font-extrabold">Bill Date: ${p.date}</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg border mb-3 text-[11px]">
-                    <div>
-                        <p>Name: <b>${s.fullName}</b> (${s.gender || 'Male'})</p>
-                        <p>Unique ID: <b>ID: ${s.uniId}</b></p>
-                        <p>Mobile: <b>${s.mobile}</b></p>
+                <!-- Strictly Aligned 2-Column Student Info Grid -->
+                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-300 mb-3 text-[11px]">
+                    <div class="space-y-1">
+                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Student Name:</span> <b class="text-slate-900">${s.fullName} (${s.gender || 'Male'})</b></div>
+                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Unique ID:</span> <b class="text-red-800 font-extrabold">ID NO: ${s.uniId}</b></div>
+                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Mobile No:</span> <b class="text-blue-800">${s.mobile}</b></div>
                     </div>
-                    <div class="text-right">
-                        <p>Shift: <b>${shiftUsed}</b></p>
-                        <p>Seat/Locker: <b>${formatResPlain(s)}</b></p>
-                        <p>Payment Track: <b class="text-indigo-800">Paid #${payIdx + 1} of ${totalPayCount} (${p.mode})</b></p>
+                    <div class="space-y-1 border-l pl-3 border-slate-300">
+                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Shift Timing:</span> <b class="text-slate-900 whitespace-nowrap">${shiftUsed}</b></div>
+                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Seat / Locker:</span> <b class="text-indigo-900 whitespace-nowrap">${formatResPlain(s)}</b></div>
+                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Payment Count:</span> <b class="text-emerald-800 whitespace-nowrap">#${payIdx + 1} of ${totalPayCount} (${p.mode})</b></div>
                     </div>
                 </div>
 
+                <!-- Single-Line Validity Banner -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 mb-3 flex justify-between items-center text-[11px] font-extrabold text-blue-900 whitespace-nowrap">
+                    <span>🗓️ Plan Type: ${p.type} (28-Day Cycle)</span>
+                    <span>▶️ Start: ${pStart} &nbsp;➔&nbsp; ⏳ Valid Upto: ${pEnd}</span>
+                </div>
+
+                <!-- Invoice Particulars Table -->
                 <table class="w-full border-collapse border border-slate-300 text-[11px] mb-3">
-                    <thead class="bg-slate-100">
+                    <thead class="bg-slate-800 text-white">
                         <tr>
-                            <th class="border p-1.5 text-left">Description & Validity Period (28-Day Cycle)</th>
-                            <th class="border p-1.5 text-right">Amount (₹)</th>
+                            <th class="border border-slate-300 p-2 text-left">Particulars / Fee Description</th>
+                            <th class="border border-slate-300 p-2 text-center w-20">SAC Code</th>
+                            <th class="border border-slate-300 p-2 text-right w-28">Amount (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="border p-1.5">
-                                <b>Library Plan — ${p.type}</b> (${shiftUsed})<br>
-                                <span class="text-[10px] text-blue-800 font-bold">Start Date: ${pStart} ➔ Valid Upto: ${pEnd}</span>
-                            </td>
-                            <td class="border p-1.5 text-right font-bold">₹${tuitionBase}</td>
+                            <td class="border p-2 font-bold text-slate-800">Library Study Shift Fee (${shiftUsed})</td>
+                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-2 text-right font-bold">₹${tuitionBase}</td>
                         </tr>
+                        ${admFee > 0 ? `
+                        <tr>
+                            <td class="border p-2 font-semibold text-rose-900">📝 One-Time Admission & Registration Charge</td>
+                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-2 text-right font-bold">₹${admFee.toFixed(2)}</td>
+                        </tr>
+                        ` : ''}
                         ${lockerRent > 0 ? `
                         <tr>
-                            <td class="border p-1.5 text-slate-700">🗄️ Locker Monthly Charges (₹50/Month)</td>
-                            <td class="border p-1.5 text-right font-bold">₹${lockerRent.toFixed(2)}</td>
+                            <td class="border p-2 font-semibold text-teal-900">🗄️ Locker Monthly Rent (₹50/Month)</td>
+                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-2 text-right font-bold">₹${lockerRent.toFixed(2)}</td>
                         </tr>
                         ` : ''}
                         ${lockerSec > 0 ? `
                         <tr>
-                            <td class="border p-1.5 text-indigo-800 font-semibold">🔑 Locker Security Deposit (Refundable on Key Return)</td>
-                            <td class="border p-1.5 text-right font-bold">₹${lockerSec.toFixed(2)}</td>
+                            <td class="border p-2 font-semibold text-indigo-900">🔑 Locker Security Deposit (Refundable on Key Return)</td>
+                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-2 text-right font-bold">₹${lockerSec.toFixed(2)}</td>
                         </tr>
                         ` : ''}
                         ${isGst ? `
-                        <tr>
-                            <td class="border p-1.5 text-slate-600">CGST @ 2.5% (SAC: ${HSN_SAC_CODE})</td>
-                            <td class="border p-1.5 text-right">₹${cgst}</td>
+                        <tr class="bg-amber-50">
+                            <td class="border p-2 text-slate-700 font-semibold">CGST @ 2.5%</td>
+                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-2 text-right font-bold">₹${cgst}</td>
                         </tr>
-                        <tr>
-                            <td class="border p-1.5 text-slate-600">SGST @ 2.5% (SAC: ${HSN_SAC_CODE})</td>
-                            <td class="border p-1.5 text-right">₹${sgst}</td>
+                        <tr class="bg-amber-50">
+                            <td class="border p-2 text-slate-700 font-semibold">SGST @ 2.5%</td>
+                            <td class="border p-2 text-center text-slate-600">${HSN_SAC_CODE}</td>
+                            <td class="border p-2 text-right font-bold">₹${sgst}</td>
                         </tr>
                         ` : ''}
-                        <tr class="bg-slate-50 font-extrabold">
-                            <td class="border p-1.5">Total Bill Amount</td>
-                            <td class="border p-1.5 text-right">₹${totalBill}</td>
+                        <tr class="bg-slate-100 font-extrabold text-slate-900">
+                            <td colspan="2" class="border p-2 text-right">Total Payable Bill</td>
+                            <td class="border p-2 text-right">₹${totalBill.toFixed(2)}</td>
                         </tr>
-                        <tr class="text-emerald-800 font-extrabold">
-                            <td class="border p-1.5">Paid Amount (Mode: ${p.mode} | Bill Date: ${p.date})</td>
-                            <td class="border p-1.5 text-right">₹${p.amount}</td>
+                        <tr class="bg-emerald-50 text-emerald-900 font-extrabold">
+                            <td colspan="2" class="border p-2 text-right">Amount Paid (${p.mode} on ${p.date})</td>
+                            <td class="border p-2 text-right">₹${parseFloat(p.amount).toFixed(2)}</td>
                         </tr>
-                        <tr class="text-red-600 font-extrabold">
-                            <td class="border p-1.5">Balance Due</td>
-                            <td class="border p-1.5 text-right">₹${p.dueAfter !== undefined ? p.dueAfter : s.remainingDue}</td>
+                        <tr class="bg-red-50 text-red-700 font-extrabold">
+                            <td colspan="2" class="border p-2 text-right">Remaining Balance Due</td>
+                            <td class="border p-2 text-right">₹${parseFloat(p.dueAfter !== undefined ? p.dueAfter : s.remainingDue).toFixed(2)}</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="flex justify-between items-end pt-2 text-[10px] text-slate-500">
+                <div class="flex justify-between items-end pt-2 text-[10px] text-slate-600 border-t">
                     <div>* यह कंप्यूटर जनित आधिकारिक रसीद है।</div>
-                    <div class="text-right font-bold text-slate-800">Buddha Library, Patna</div>
+                    <div class="text-right font-extrabold text-slate-900">Pintu Kumar Singh<br><span class="text-[9px] text-red-900">Founder & Director, Buddha Library</span></div>
                 </div>
             `;
             document.getElementById('invoiceModal').classList.remove('hidden');
@@ -1758,7 +1892,54 @@
             });
         }
 
-        // 13. Complete Profile Modal
+        // 13. My Collection Modal (ID-Wise Student Payment Summary)
+        function openMyCollectionModal() {
+            let sorted = [...students].sort((a, b) => (parseInt(a.uniId) || 99999) - (parseInt(b.uniId) || 99999));
+            let grandCash = 0, grandOnline = 0, grandTotal = 0, grandDue = 0;
+            const tbody = document.getElementById('myCollectionTableBody');
+            tbody.innerHTML = '';
+
+            sorted.forEach(s => {
+                const hist = s.paymentHistory || [];
+                let cPaid = 0, oPaid = 0, lastD = '-';
+                hist.forEach(p => {
+                    const amt = parseFloat(p.amount) || 0;
+                    if(p.mode === 'Cash') cPaid += amt;
+                    else oPaid += amt;
+                    if(p.date) lastD = p.date;
+                });
+                const tot = cPaid + oPaid;
+                const due = parseFloat(s.remainingDue) || 0;
+                grandCash += cPaid;
+                grandOnline += oPaid;
+                grandTotal += tot;
+                grandDue += due;
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-2.5 font-extrabold text-red-900">ID: ${s.uniId}</td>
+                        <td class="p-2.5 font-bold text-slate-900">${s.fullName}</td>
+                        <td class="p-2.5 font-semibold text-blue-800">${s.mobile}</td>
+                        <td class="p-2.5 text-center font-extrabold">${hist.length} बार</td>
+                        <td class="p-2.5 text-right font-bold text-slate-700">₹${cPaid}</td>
+                        <td class="p-2.5 text-right font-bold text-indigo-700">₹${oPaid}</td>
+                        <td class="p-2.5 text-right font-extrabold text-emerald-700 bg-emerald-50">₹${tot}</td>
+                        <td class="p-2.5 text-right font-extrabold ${due > 0 ? 'text-red-600 bg-red-50' : 'text-slate-400'}">₹${due}</td>
+                        <td class="p-2.5 text-center font-semibold text-purple-900">${lastD}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('myCollectionSummaryStrip').innerHTML = `
+                <div class="bg-slate-100 p-2.5 rounded-xl border">💵 Total Cash: <span class="text-slate-900">₹${grandCash}</span></div>
+                <div class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200">📱 Total Online/UPI: <span class="text-indigo-800">₹${grandOnline}</span></div>
+                <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">🏦 Grand Total Received: <span class="text-emerald-700">₹${grandTotal}</span></div>
+                <div class="bg-red-50 p-2.5 rounded-xl border border-red-200">⚠️ Total Pending Due: <span class="text-red-600">₹${grandDue}</span></div>
+            `;
+            document.getElementById('myCollectionModal').classList.remove('hidden');
+        }
+
+        // 14. Complete Profile Modal
         function calculateStudentTenure(admDateStr) {
             if(!admDateStr) return "0 Months, 0 Days";
             const start = new Date(admDateStr);
@@ -1914,7 +2095,7 @@
 
         function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
 
-        // 14. Multi-Channel Reminder with Automatic Hindi Name & Sent Counter
+        // 15. Multi-Channel Reminder with Automatic Hindi Name & Sent Counter
         async function openReminderModal(index) {
             const s = students[index];
             if(!s.reminderStats) s.reminderStats = { wa: 0, sms: 0, mail: 0 };
@@ -1968,7 +2149,7 @@
             document.getElementById('reminderStatsBadge').innerText = `📊 अब तक कुल भेजे गए रिमाइंडर: ${tot} (💬 WA: ${r.wa||0} | ✉️ SMS: ${r.sms||0} | 📧 Mail: ${r.mail||0})`;
         }
 
-        // 15. Today's Birthdays Modal
+        // 16. Today's Birthdays Modal
         async function openBirthdayModal() {
             const todayIso = new Date().toISOString().split('T')[0];
             const currentYear = todayIso.slice(0, 4);
@@ -2049,6 +2230,7 @@
             document.getElementById('cycleStartDate').value = s.cycleStartDate || s.admissionDate || '';
             document.getElementById('validUpto').value = s.validUpto;
             document.getElementById('manualBillDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('admissionFeeCheck').checked = false;
             document.getElementById('lockerMonthlyCheck').checked = (cleanResNum(s.lockerNo) !== "");
             document.getElementById('lockerSecurityCheck').checked = (parseFloat(s.lockerSecurityPaid) > 0);
             document.getElementById('totalBill').value = s.totalBill || 0;
@@ -2145,6 +2327,7 @@
         }
         function closeZoomModal() { document.getElementById('zoomModal').classList.add('hidden'); }
 
+        // Upload Library Logo (Also sets Browser Tab Favicon & Mobile App Icon automatically)
         function openLogoModal() { document.getElementById('logoModal').classList.remove('hidden'); }
         function uploadLibraryLogo(input) {
             if (input.files && input.files[0]) {
@@ -2154,9 +2337,9 @@
                     img.src = e.target.result;
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 240; canvas.height = 240;
-                        canvas.getContext('2d').drawImage(img, 0, 0, 240, 240);
-                        libraryLogo = canvas.toDataURL('image/jpeg', 0.88);
+                        canvas.width = 256; canvas.height = 256;
+                        canvas.getContext('2d').drawImage(img, 0, 0, 256, 256);
+                        libraryLogo = canvas.toDataURL('image/png', 0.9);
                         localStorage.setItem('buddha_library_logo', libraryLogo);
                         applyLogoToUi(libraryLogo);
                         document.getElementById('logoModal').classList.add('hidden');
@@ -2169,6 +2352,45 @@
             const img = document.getElementById('headerLogoImg');
             img.src = src; img.classList.remove('hidden');
             document.getElementById('headerLogoEmoji').classList.add('hidden');
+            // Set Favicon & Apple Touch Icon dynamically
+            const fav = document.getElementById('dynamicFavicon');
+            const appIc = document.getElementById('dynamicAppleIcon');
+            if(fav) fav.href = src;
+            if(appIc) appIc.href = src;
+        }
+
+        // Upload Founder HD Photo (Pintu Kumar Singh)
+        function openFounderModal() { document.getElementById('founderModal').classList.remove('hidden'); }
+        function uploadFounderPhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 320; canvas.height = 320;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        let crop = Math.min(img.width, img.height);
+                        let sx = (img.width - crop) / 2;
+                        let sy = Math.max(0, img.height * 0.05);
+                        if(sy + crop > img.height) sy = 0;
+                        ctx.drawImage(img, sx, sy, crop, crop, 0, 0, 320, 320);
+                        founderPhoto = canvas.toDataURL('image/jpeg', 0.9);
+                        localStorage.setItem('buddha_library_founder_photo', founderPhoto);
+                        applyFounderPhotoToUi(founderPhoto);
+                        document.getElementById('founderModal').classList.add('hidden');
+                    };
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        function applyFounderPhotoToUi(src) {
+            const img = document.getElementById('headerFounderImg');
+            img.src = src; img.classList.remove('hidden');
+            document.getElementById('headerFounderEmoji').classList.add('hidden');
         }
 
         function openExpenseModal() { document.getElementById('expenseModal').classList.remove('hidden'); renderExpenseList(); }
