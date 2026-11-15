@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Buddha Library - Management System</title>
-    <!-- Transparent Circular PNG Favicon & PWA Manifest -->
+    <!-- Transparent Circular PNG Favicon & Static Real PWA Manifest -->
     <link id="dynamicFavicon" rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true&size=512">
     <link id="dynamicAppleIcon" rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true&size=512">
-    <link id="dynamicManifest" rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#5c061c">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,15 +17,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; color: #1e293b; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
         .theme-maroon { background: linear-gradient(135deg, #5c061c 0%, #3b0311 100%); }
         .theme-maroon-solid { background-color: #5c061c; }
         .theme-maroon-text { color: #5c061c; }
         .theme-border { border-color: #5c061c; }
         .fade-in { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .id-safe-line { line-height: 1.28 !important; padding-top: 1px; padding-bottom: 1px; }
-        .tight-founder-line { line-height: 1.08 !important; margin: 0 !important; padding: 0 !important; }
+        .id-safe-line { line-height: 1.3 !important; padding-top: 1px; padding-bottom: 1px; }
+        .tight-founder-line { line-height: 1.15 !important; margin: 0 !important; padding: 0 !important; }
         .face-focus-thumb { object-fit: cover; object-position: center 15%; image-rendering: -webkit-optimize-contrast; }
         .active-filter-ring { box-shadow: 0 0 0 3px #5c061c !important; background-color: #fffbeb !important; }
         .capitalize-input { text-transform: capitalize; }
@@ -60,8 +67,8 @@
     <!-- Main Application Wrapper -->
     <div id="mainApp" class="max-w-7xl mx-auto p-2 sm:p-4 hidden fade-in no-print">
 
-        <!-- 2. Clean Balanced Header: Single-Line BUDDHA LIBRARY on Mobile & Desktop, Proper ESTD Gap, Tight Founder Lines -->
-        <header class="theme-maroon text-white px-2.5 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-lg mb-3 relative border-b-2 border-yellow-400">
+        <!-- 2. Crystal-Clear Responsive Header: Sharp Digits & Words on Both Mobile & Laptop/Desktop -->
+        <header class="theme-maroon text-white px-2.5 py-3 sm:px-7 sm:py-4 rounded-2xl shadow-lg mb-3 relative border-b-2 border-yellow-400">
             <!-- Top Right Thin 3-Line Menu Button -->
             <button onclick="toggleHeaderMenu()" title="Menu" class="absolute top-2 right-2 sm:top-3.5 sm:right-3.5 text-white hover:text-yellow-300 p-1 z-20 transition focus:outline-none">
                 <svg class="w-5 h-5 sm:w-7 sm:h-7" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
@@ -83,35 +90,35 @@
                 <button onclick="logoutApp()" class="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-2 text-red-600">🔒 Lock / Logout</button>
             </div>
 
-            <!-- Balanced Flex Layout so BUDDHA LIBRARY Never Wraps to 2 Lines -->
-            <div class="flex items-center justify-between gap-1.5 sm:gap-4 pr-5 sm:pr-7">
-                <!-- Left: Logo + Proper 5px Gap before ESTD: 2023 -->
+            <!-- Balanced Flex Layout: Crisp on Mobile, Large & Ultra-Sharp on Laptop/Desktop -->
+            <div class="flex items-center justify-between gap-1.5 sm:gap-6 pr-5 sm:pr-8">
+                <!-- Left: Logo + Crisp ESTD: 2023 -->
                 <div class="flex flex-col items-center justify-center flex-shrink-0">
-                    <div class="w-11 h-11 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xl shadow-md overflow-hidden bg-transparent">
+                    <div class="w-11 h-11 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-xl shadow-md overflow-hidden bg-transparent">
                         <img id="headerLogoImg" src="" class="w-full h-full object-contain hidden">
                         <span id="headerLogoEmoji">🏛️</span>
                     </div>
-                    <span class="text-[8.5px] sm:text-[11px] font-extrabold text-yellow-300 tracking-wide mt-1.5 leading-none whitespace-nowrap">ESTD: 2023</span>
+                    <span class="text-[8.5px] sm:text-xs md:text-sm font-bold text-yellow-300 tracking-wider sm:tracking-widest mt-1.5 leading-none whitespace-nowrap">ESTD: 2023</span>
                 </div>
 
-                <!-- Center: Single-Line BUDDHA LIBRARY Guaranteed -->
+                <!-- Center: Single-Line BUDDHA LIBRARY + Clear Readable Address & Phone on Desktop -->
                 <div class="text-center flex-grow min-w-0 px-1">
-                    <h1 class="text-[16px] xs:text-[18px] sm:text-4xl font-black tracking-wide sm:tracking-wider leading-none text-white whitespace-nowrap drop-shadow">BUDDHA LIBRARY</h1>
-                    <p class="text-[10px] sm:text-base text-yellow-300 font-extrabold tracking-wide mt-1 leading-tight whitespace-nowrap">A Unit of Flair Foundation</p>
-                    <p class="text-[9.5px] sm:text-xs text-slate-100 font-semibold mt-0.5 leading-tight whitespace-nowrap">📍 Kachchhi Dargah, Patna</p>
-                    <p class="text-[10px] sm:text-xs text-white font-extrabold mt-0.5 leading-tight whitespace-nowrap"><a href="tel:7050668855" class="no-underline text-white">📞 7050668855</a></p>
+                    <h1 class="text-[16px] xs:text-[18px] sm:text-3xl md:text-4xl font-extrabold tracking-wide sm:tracking-widest leading-none text-white whitespace-nowrap drop-shadow-sm">BUDDHA LIBRARY</h1>
+                    <p class="text-[10px] sm:text-base md:text-lg text-yellow-300 font-bold tracking-wide sm:tracking-wider mt-1 leading-tight whitespace-nowrap">A Unit of Flair Foundation</p>
+                    <p class="text-[9.5px] sm:text-sm md:text-[15px] text-slate-100 font-medium tracking-normal sm:tracking-wide mt-1 leading-tight whitespace-nowrap">📍 Kachchhi Dargah, Patna</p>
+                    <p class="text-[10px] sm:text-sm md:text-base text-white font-bold tracking-wider sm:tracking-widest mt-0.5 leading-tight whitespace-nowrap"><a href="tel:7050668855" class="no-underline text-white">📞 7050668855</a></p>
                 </div>
 
-                <!-- Right: Sharp HD Founder Photo + Tightly Stacked Text (No Ugly Gaps) -->
+                <!-- Right: Sharp HD Founder Photo + Crisp Stacked Text -->
                 <div class="flex flex-col items-center justify-center text-center flex-shrink-0">
-                    <div onclick="openFounderModal()" title="Click to Upload Founder HD Photo" class="w-10 h-10 sm:w-14 sm:h-14 rounded-lg shadow-md overflow-hidden flex items-center justify-center cursor-pointer bg-white/10">
+                    <div onclick="openFounderModal()" title="Click to Upload Founder HD Photo" class="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-lg shadow-md overflow-hidden flex items-center justify-center cursor-pointer bg-white/10">
                         <img id="headerFounderImg" src="" class="w-full h-full face-focus-thumb hidden">
                         <span id="headerFounderEmoji" class="text-lg">👔</span>
                     </div>
-                    <div class="mt-1 flex flex-col items-center space-y-[1px]">
-                        <p class="text-[8.5px] sm:text-xs font-extrabold text-white tight-founder-line whitespace-nowrap">Pintu Kumar Singh</p>
-                        <p class="text-[7.5px] sm:text-[10px] font-bold text-yellow-300 tight-founder-line whitespace-nowrap">Founder & Director</p>
-                        <p class="text-[6.5px] sm:text-[8.5px] text-slate-200 tight-founder-line whitespace-nowrap">(Social Entrepreneur)</p>
+                    <div class="mt-1 flex flex-col items-center space-y-[1px] sm:space-y-[2px]">
+                        <p class="text-[8.5px] sm:text-xs md:text-[13.5px] font-bold text-white tight-founder-line tracking-normal sm:tracking-wide whitespace-nowrap">Pintu Kumar Singh</p>
+                        <p class="text-[7.5px] sm:text-[11px] md:text-xs font-semibold text-yellow-300 tight-founder-line tracking-normal sm:tracking-wide whitespace-nowrap">Founder & Director</p>
+                        <p class="text-[6.5px] sm:text-[10px] md:text-[11px] text-slate-200 font-normal tight-founder-line tracking-normal whitespace-nowrap">(Social Entrepreneur)</p>
                     </div>
                 </div>
             </div>
@@ -440,40 +447,39 @@
         </div>
     </div>
 
-    <!-- Modal B: Royal Compact HD ID Card Modal (Single-Line BUDDHA LIBRARY, Proper ESTD Gap, Tight Founder Lines, Official Crimson Name) -->
+    <!-- Modal B: Royal Compact HD ID Card Modal -->
     <div id="idCardModal" class="fixed inset-0 bg-black bg-opacity-85 z-50 flex flex-col items-center justify-center hidden p-2 overflow-y-auto no-print">
-        <!-- Outer Padded Capture Frame -->
         <div id="idCardOuterCapture" onclick="toggleIdCardBtns()" class="p-3 bg-white rounded-3xl shadow-2xl cursor-pointer select-none">
             <div class="bg-white w-[365px] rounded-2xl overflow-hidden border-[2.5px] border-amber-500 shadow-md">
-                <!-- Balanced Flex Header inside ID Card: Never Breaks BUDDHA LIBRARY into 2 Lines -->
+                <!-- Balanced Flex Header inside ID Card -->
                 <div class="theme-maroon text-white px-3 py-2.5 flex items-center justify-between gap-2 border-b-2 border-amber-400">
-                    <!-- Left: Logo + 5px Gap before ESTD: 2023 -->
+                    <!-- Left: Logo + Crisp ESTD: 2023 -->
                     <div class="flex flex-col items-center justify-center flex-shrink-0">
                         <div class="w-11 h-11 rounded-full flex items-center justify-center text-base overflow-hidden shadow-md bg-transparent">
                             <img id="idCardLogoImg" src="" class="w-full h-full object-contain hidden">
                             <span id="idCardLogoEmoji">🏛️</span>
                         </div>
-                        <span class="text-[8px] font-extrabold text-yellow-300 mt-1.5 tracking-wide leading-none whitespace-nowrap">ESTD: 2023</span>
+                        <span class="text-[8.5px] font-bold text-yellow-300 mt-1.5 tracking-wider leading-none whitespace-nowrap">ESTD: 2023</span>
                     </div>
 
                     <!-- Center: Single-Line BUDDHA LIBRARY Guaranteed -->
                     <div class="text-center flex-grow min-w-0 px-1">
-                        <h2 class="text-[16px] font-black tracking-wide leading-none text-white whitespace-nowrap id-safe-line">BUDDHA LIBRARY</h2>
-                        <p class="text-[10px] text-yellow-300 font-extrabold leading-tight mt-1 whitespace-nowrap id-safe-line">A Unit of Flair Foundation</p>
-                        <p class="text-[8.5px] text-slate-100 font-semibold leading-tight mt-0.5 whitespace-nowrap id-safe-line">📍 Kachchhi Dargah, Patna</p>
-                        <p class="text-[9px] text-white font-extrabold leading-tight mt-0.5 whitespace-nowrap id-safe-line">📞 7050668855</p>
+                        <h2 class="text-[16px] font-extrabold tracking-wider leading-none text-white whitespace-nowrap id-safe-line">BUDDHA LIBRARY</h2>
+                        <p class="text-[10px] text-yellow-300 font-bold leading-tight mt-1 whitespace-nowrap id-safe-line">A Unit of Flair Foundation</p>
+                        <p class="text-[9px] text-slate-100 font-medium leading-tight mt-0.5 whitespace-nowrap id-safe-line">📍 Kachchhi Dargah, Patna</p>
+                        <p class="text-[9.5px] text-white font-bold tracking-wider leading-tight mt-0.5 whitespace-nowrap id-safe-line">📞 7050668855</p>
                     </div>
 
-                    <!-- Right: Sharp HD Founder Photo & Tightly Stacked Lines (Zero Extra Gap) -->
+                    <!-- Right: Sharp HD Founder Photo & Tightly Stacked Lines -->
                     <div class="flex flex-col items-center justify-center text-center flex-shrink-0">
                         <div class="w-10 h-10 bg-white/10 rounded-lg overflow-hidden shadow-md flex items-center justify-center">
                             <img id="idCardFounderImg" src="" class="w-full h-full face-focus-thumb hidden">
                             <span id="idCardFounderEmoji" class="text-sm">👔</span>
                         </div>
                         <div class="mt-1 flex flex-col items-center space-y-[1px]">
-                            <p class="text-[7.5px] font-extrabold text-white tight-founder-line whitespace-nowrap">Pintu Kumar Singh</p>
-                            <p class="text-[6.8px] font-bold text-yellow-300 tight-founder-line whitespace-nowrap">Founder & Director</p>
-                            <p class="text-[5.8px] text-slate-200 tight-founder-line whitespace-nowrap">(Social Entrepreneur)</p>
+                            <p class="text-[8px] font-bold text-white tight-founder-line whitespace-nowrap">Pintu Kumar Singh</p>
+                            <p class="text-[7px] font-semibold text-yellow-300 tight-founder-line whitespace-nowrap">Founder & Director</p>
+                            <p class="text-[6px] text-slate-200 font-normal tight-founder-line whitespace-nowrap">(Social Entrepreneur)</p>
                         </div>
                     </div>
                 </div>
@@ -483,8 +489,7 @@
                     <div class="flex items-center gap-3 mb-2.5 pb-2.5 border-b border-slate-200">
                         <img id="idCardPhoto" src="" class="w-20 h-20 rounded-xl face-focus-thumb shadow-md bg-slate-100 flex-shrink-0">
                         <div class="text-left min-w-0 flex-grow">
-                            <div id="idCardUniId" class="text-[11px] font-black text-slate-600 tracking-wider uppercase leading-tight id-safe-line">ID NO: 1</div>
-                            <!-- Official Royal Crimson Red ALL-CAPS Student Name -->
+                            <div id="idCardUniId" class="text-[11px] font-extrabold text-slate-600 tracking-wider uppercase leading-tight id-safe-line">ID NO: 1</div>
                             <div id="idCardName" class="text-[16px] font-black official-name-color uppercase tracking-wide leading-tight mt-0.5 id-safe-line">STUDENT NAME</div>
                             <div id="idCardMobile" class="text-xs font-extrabold text-blue-700 mt-1 leading-tight id-safe-line">📞 0000000000</div>
                             <div id="idCardAddress" class="text-[11px] font-bold text-slate-700 mt-0.5 leading-tight id-safe-line">📍 Address</div>
@@ -518,7 +523,6 @@
             </div>
         </div>
 
-        <!-- Single Share Option + Close -->
         <div id="idCardBtnBar" class="mt-3 flex gap-3 justify-center no-print">
             <button onclick="shareIdCardAsImage()" id="shareIdBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-lg flex items-center gap-1.5">
                 📤 Share ID Card
@@ -736,7 +740,7 @@
     <div id="logoModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4 no-print">
         <div class="bg-white p-5 rounded-2xl shadow-xl w-80 text-center">
             <h3 class="text-base font-extrabold theme-maroon-text mb-1">🖼️ Set Official Library Logo</h3>
-            <p class="text-[11px] text-slate-500 mb-3">यह लोगो पारदर्शी गोल PNG (बिना काले बैकग्राउंड के) में हेडर, आईडी कार्ड, फेविकॉन और ऐप आइकॉन में सेट हो जाएगा।</p>
+            <p class="text-[11px] text-slate-500 mb-3">यह लोगो पारदर्शी गोल PNG (बिना काले बैकग्राउंड के) में हेडर, आईडी कार्ड और फेविकॉन में सेट हो जाएगा।</p>
             <input type="file" accept="image/*" onchange="uploadLibraryLogo(this)" class="w-full text-xs mb-4 border p-2 rounded">
             <button onclick="document.getElementById('logoModal').classList.add('hidden')" class="bg-slate-400 text-white text-xs px-4 py-2 rounded-lg font-bold">Close</button>
         </div>
@@ -823,7 +827,7 @@
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
         }
 
-        // Convert any existing/uploaded logo into a 100% Transparent Circular PNG (Removes black corners in Favicon & App Icon)
+        // Convert any existing/uploaded logo into a 100% Transparent Circular PNG (Removes black corners in Favicon)
         function makeCircularTransparentPng(srcDataUrl, callback) {
             if(!srcDataUrl) return;
             const img = new Image();
@@ -853,28 +857,6 @@
             img.src = srcDataUrl;
         }
 
-        // Setup Dynamic Web App Manifest with Full Uncropped Icon (purpose: "any" so Android never crops out the yellow ring)
-        function setupDynamicPwaManifest(iconUrl) {
-            const appIcon = iconUrl || "https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true&size=512";
-            const manifestObj = {
-                name: "Buddha Library",
-                short_name: "Buddha Library",
-                description: "Buddha Library - A Unit of Flair Foundation",
-                start_url: window.location.href.split('?')[0],
-                scope: "./",
-                display: "standalone",
-                orientation: "portrait",
-                background_color: "#5c061c",
-                theme_color: "#5c061c",
-                icons: [
-                    { src: appIcon, sizes: "192x192", type: "image/png", purpose: "any" },
-                    { src: appIcon, sizes: "512x512", type: "image/png", purpose: "any" }
-                ]
-            };
-            const dataUri = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifestObj));
-            document.getElementById('dynamicManifest').setAttribute('href', dataUri);
-        }
-
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').catch(() => {});
         }
@@ -892,7 +874,7 @@
                 await deferredPwaPrompt.userChoice;
                 deferredPwaPrompt = null;
             } else {
-                alert("📲 ऐप इंस्टॉल करने के लिए ब्राउज़र के तीन डॉट (Menu) पर क्लिक करके 'Install App' चुनें।");
+                alert("📲 ऐप इंस्टॉल करने के लिए ब्राउज़र के तीन डॉट (Menu) पर क्लिक करके 'Add to Home screen' ➔ 'Install' चुनें।");
             }
         }
 
@@ -933,8 +915,6 @@
                     localStorage.setItem('buddha_library_logo', cleanPng);
                     applyLogoToUi(cleanPng);
                 });
-            } else {
-                setupDynamicPwaManifest('');
             }
             if(localStorage.getItem('buddha_library_logged_in') === 'true') {
                 unlockDashboard();
@@ -1878,11 +1858,11 @@
                     <div class="flex items-center gap-3">
                         <div class="text-center flex-shrink-0">
                             ${logoHtml}
-                            <div class="text-[8.5px] font-extrabold text-red-900 mt-1 leading-none">ESTD: 2023</div>
+                            <div class="text-[8.5px] font-bold text-red-900 mt-1 tracking-wider leading-none">ESTD: 2023</div>
                         </div>
                         <div>
-                            <h2 class="text-lg font-black theme-maroon-text leading-none tracking-wide whitespace-nowrap">BUDDHA LIBRARY</h2>
-                            <p class="text-[11px] font-extrabold text-amber-700 leading-tight mt-0.5">A Unit of Flair Foundation</p>
+                            <h2 class="text-lg font-extrabold theme-maroon-text leading-none tracking-wider whitespace-nowrap">BUDDHA LIBRARY</h2>
+                            <p class="text-[11px] font-bold text-amber-700 leading-tight mt-0.5">A Unit of Flair Foundation</p>
                             <p class="text-[10px] text-slate-600 leading-tight mt-0.5">📍 Kachchhi Dargah, Patna | 📞 7050668855</p>
                             <p class="text-[10px] font-extrabold text-slate-900 leading-tight mt-0.5">GSTIN: ${LIBRARY_GSTIN} | SAC: ${HSN_SAC_CODE}</p>
                         </div>
@@ -2438,7 +2418,7 @@
         }
         function closeZoomModal() { document.getElementById('zoomModal').classList.add('hidden'); }
 
-        // Upload Library Logo -> Automatically crops into 100% Transparent Circular PNG (No black background!)
+        // Upload Library Logo -> Automatically crops into 100% Transparent Circular PNG
         function openLogoModal() { document.getElementById('logoModal').classList.remove('hidden'); }
         function uploadLibraryLogo(input) {
             if (input.files && input.files[0]) {
@@ -2462,10 +2442,9 @@
             const appIc = document.getElementById('dynamicAppleIcon');
             if(fav) fav.href = src;
             if(appIc) appIc.href = src;
-            setupDynamicPwaManifest(src);
         }
 
-        // Upload Founder HD Photo (Pintu Kumar Singh) - High-Res 500x500 PNG for Crystal Clear Sharpness
+        // Upload Founder HD Photo (Pintu Kumar Singh)
         function openFounderModal() { document.getElementById('founderModal').classList.remove('hidden'); }
         function uploadFounderPhoto(input) {
             if (input.files && input.files[0]) {
