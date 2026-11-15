@@ -1,0 +1,23 @@
+{
+  "name": "Buddha Library",
+  "short_name": "Buddha Library",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#5c061c",
+  "theme_color": "#5c061c",
+  "icons": [
+    {
+      "src": "https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true&size=192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://ui-avatars.com/api/?name=BL&background=5c061c&color=fde047&bold=true&rounded=true&size=512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
