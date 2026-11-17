@@ -124,9 +124,10 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-2.5">
                <!-- 4. Row 1: Member Status Filter Cards (Original Clean Design) -->
             <div class="grid grid-cols-2 sm:grid-cols-6 gap-2.5 mb-2.5">
-                <div id="cardTab-all" onclick="setTab('all', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition">
+               <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-2.5">
+                <div id="cardTab-all" onclick="setTab('all', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition active-filter-ring">
                     <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between">
-                        <span>👥 All Members</span>
+                        <span>👥 Total Members</span>
                         <span class="text-[9px] text-blue-600 font-extrabold">View ➔</span>
                     </p>
                     <h3 id="statTotalMembers" class="text-xl font-extrabold text-slate-800 mt-0.5">0</h3>
@@ -156,23 +157,14 @@
                     <h3 id="statExpiring7" class="text-lg font-extrabold text-amber-800 mt-0.5">0 Students</h3>
                 </div>
 
-                <div id="cardTab-dues" onclick="setTab('dues', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600 cursor-pointer hover:shadow-md transition">
+                <div id="cardTab-promise" onclick="setTab('promise', true)" class="col-span-2 sm:col-span-1 bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600 cursor-pointer hover:shadow-md transition">
                     <p class="text-[11px] text-red-800 font-extrabold flex items-center justify-between">
-                        <span>💸 All Dues</span>
-                        <span id="duesCountBadge" class="bg-red-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
+                        <span>📅 Promise / Dues</span>
+                        <span id="promiseCountBadge" class="bg-red-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
                     </p>
                     <h3 id="colTotalDues" class="text-lg font-extrabold text-red-600 mt-0.5">₹0</h3>
                 </div>
-
-                <div id="cardTab-promise" onclick="setTab('promise', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-orange-600 cursor-pointer hover:shadow-md transition">
-                    <p class="text-[11px] text-orange-800 font-extrabold flex items-center justify-between">
-                        <span>📅 Promise Date</span>
-                        <span id="promiseCountBadge" class="bg-orange-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
-                    </p>
-                    <h3 id="statTodayPromiseCount" class="text-lg font-extrabold text-orange-700 mt-0.5">0 Today</h3>
-                </div>
             </div>
-
             <!-- Row 2: Clickable Collection Strip + New Admission Button -->
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-2.5">
                 <div onclick="openCollectionBreakdownModal('today')" class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 shadow-sm cursor-pointer hover:bg-emerald-100 transition">
