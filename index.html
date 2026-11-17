@@ -482,7 +482,12 @@
                 <button id="resetFilterBtn" onclick="setTab('all', false); clearSearchBox();" class="hidden bg-red-100 text-red-700 hover:bg-red-200 px-2 py-0.5 rounded-md text-[10px] font-extrabold">✖ Show All</button>
             </div>
             <div class="flex items-center gap-1.5 text-[11px] font-extrabold">
-               
+                <span class="text-slate-500">Sort:</span>
+                <button id="sortBtn-id" onclick="setSortOrder('id')" class="px-2.5 py-1 rounded-lg theme-maroon text-white">🔢 ID Wise</button>
+                <button id="sortBtn-latest" onclick="setSortOrder('latest')" class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700">🆕 Latest First</button>
+            </div>
+        </div>
+
         <!-- 6. Responsive Justified Student List Container -->
         <div id="studentListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch"></div>
 
@@ -493,11 +498,7 @@
 
     </div>
 
-    <!-- ================= MODALS ================= --><button id="sortBtn-id" onclick="setSortOrder('id')" class="px-2.5 py-1 rounded-lg theme-maroon text-white">🔢 ID Wise</button>
-                <button id="sortBtn-latest" onclick="setSortOrder('latest')" class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700">🆕 Latest First</button>
-            </div>
-        </div>
-
+    <!-- ================= MODALS ================= -->
 
     <!-- Modal 0: Interactive Manual Frame Adjust, Pan, Zoom & Rotate Modal (Photo & PDF/Image Docs) -->
     <div id="cropModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center hidden p-3 no-print">
