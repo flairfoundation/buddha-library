@@ -840,7 +840,7 @@
     <!-- ================= APPLICATION JAVASCRIPT ================= -->
     <script>
         const TOTAL_SEATS = 250, TOTAL_CHAIRS = 250, TOTAL_LOCKERS = 90;
-        const ADMISSION_ONE_TIME_FEE = 199, LOCKER_MONTHLY_FEE = 50, LOCKER_SECURITY_DEPOSIT = 200;
+        const ADMISSION_ONE_TIME_FEE = 200, LOCKER_MONTHLY_FEE = 50, LOCKER_SECURITY_DEPOSIT = 200;
         const ADMIN_MOBILE = "7050668855", LIBRARY_GSTIN = "10IMAPS7440N1ZQ", HSN_SAC_CODE = "999299";
 
         let students = [], expenses = [], currentTab = 'all', currentSortOrder = 'id', displayLimit = 50;
@@ -889,7 +889,7 @@
             else { alert("📲 ऐप इंस्टॉल करने के लिए ब्राउज़र के तीन डॉट (Menu) पर क्लिक करके 'Add to Home screen' ➔ 'Install' चुनें।"); }
         }
 
-        const commonHindiNames = { "pintu":"पिंटू","kumar":"कुमार","singh":"सिंह","ramesh":"रमेश","suresh":"सुरेश","rahul":"राहुल","rohit":"रोहित","aman":"अमन","ankit":"अंकित","vikas":"विकास","saket":"साकेत","abhishek":"अभिषेक","golu":"गोलू","manish":"मनीष","randhir":"रणधीर","shiv":"शिव","ram":"राम","priya":"प्रिया","kumari":"कुमारी","neha":"नेहा","pooja":"पूजा","arti":"आरती","anjali":"अंजलि","sonu":"सोनू","monu":"मोनू","ravi":"रवि","amit":"अमित","sumit":"सुमित","deepak":"दीपक","ajay":"अजय","vijay":"विजय","sanjay":"संजय","nitish":"नीतीश","vishal":"विशाल","aditya":"आदित्य","sapna":"सपना" };
+        const commonHindiNames = { "pintu":"पिन्टू ","kumar":"कुमार","singh":"सिंह","ramesh":"रमेश","suresh":"सुरेश","rahul":"राहुल","rohit":"रोहित","aman":"अमन","ankit":"अंकित","vikas":"विकास","saket":"साकेत","abhishek":"अभिषेक","golu":"गोलू","manish":"मनीष","randhir":"रणधीर","shiv":"शिव","ram":"राम","priya":"प्रिया","kumari":"कुमारी","neha":"नेहा","pooja":"पूजा","arti":"आरती","anjali":"अंजलि","sonu":"सोनू","monu":"मोनू","ravi":"रवि","amit":"अमित","sumit":"सुमित","deepak":"दीपक","ajay":"अजय","vijay":"विजय","sanjay":"संजय","nitish":"नीतीश","vishal":"विशाल","aditya":"आदित्य","sapna":"सपना" };
 
         async function toHindiName(engName) {
             if(!engName) return "";
