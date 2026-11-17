@@ -483,10 +483,13 @@
             </div>
             <div class="flex items-center gap-1.5 text-[11px] font-extrabold">
                 <span class="text-slate-500">Sort:</span>
-                <button id="sortBtn-id" onclick="setSortOrder('id')" class="px-2.5 py-1 rounded-lg theme-maroon text-white">🔢 ID Wise</button>
-                <button id="sortBtn-latest" onclick="setSortOrder('latest')" class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700">🆕 Latest First</button>
-            </div>
-        </div>
+                <button id="sortBtn-id" onclick="setSortOrder('id')" class="px-2.5 py-1 rounded-lg theme-maroon text-white mb-1">🔢 ID Wise</button>
+                <button id="sortBtn-latest" onclick="setSortOrder('latest')" class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 mb-1">🆕 Latest First</button>
+
+                <span class="text-slate-500 ml-2">Filter:</span>
+                <button id="filterBtn-all" onclick="filterGender('all')" class="px-2.5 py-1 rounded-lg theme-maroon text-white mb-1">👥 All</button>
+                <button id="filterBtn-boys" onclick="filterGender('Male')" class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 mb-1">👦 Boys (<span id="count-boys">0</span>)</button>
+                <button id="filterBtn-girls" onclick="filterGender('Female')" class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700 mb-1">👧 Girls (<span id="count-girls">0</span>)</button>
 
         <!-- 6. Responsive Justified Student List Container -->
         <div id="studentListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch"></div>
