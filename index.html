@@ -120,19 +120,33 @@
         <div id="dashboardCardsWrapper">
             <!-- Row 1: Member Status Filter Cards + 1-7 Days Expiring Filter -->
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-2.5">
-                <div id="cardTab-all" onclick="setTab('all', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition active-filter-ring">
-                    <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between"><span>👥 Total Members</span><span class="text-[9px] text-blue-600 font-extrabold">List ➔</span></p>
+                HTML
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-2.5">
+                <div id="cardTab-all" onclick="setTab('all', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition">
+                    <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between">
+                        <span>👥 All Members</span>
+                        <span class="text-[9px] text-blue-600 font-extrabold">Open ➔</span>
+                    </p>
                     <h3 id="statTotalMembers" class="text-xl font-extrabold text-slate-800 mt-0.5">0</h3>
+                    <p id="statTotalGender" class="text-[10px] font-extrabold text-blue-800 mt-0.5">👦 Boys: 0 | 👧 Girls: 0</p>
                 </div>
 
                 <div id="cardTab-active" onclick="setTab('active', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-emerald-600 cursor-pointer hover:shadow-md transition">
-                    <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between"><span>🟢 Live Active</span><span class="text-[9px] text-emerald-700 font-extrabold">List ➔</span></p>
+                    <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between">
+                        <span>🟢 Live Active</span>
+                        <span class="text-[9px] text-emerald-700 font-extrabold">Open ➔</span>
+                    </p>
                     <h3 id="statActiveMembers" class="text-xl font-extrabold text-emerald-700 mt-0.5">0</h3>
+                    <p id="statActiveGender" class="text-[10px] font-extrabold text-emerald-800 mt-0.5">👦 Boys: 0 | 👧 Girls: 0</p>
                 </div>
 
                 <div id="cardTab-expired" onclick="setTab('expired', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-rose-600 cursor-pointer hover:shadow-md transition">
-                    <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between"><span>🔴 Expired Members</span><span class="text-[9px] text-rose-600 font-extrabold">List ➔</span></p>
+                    <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between">
+                        <span>🔴 Expired Members</span>
+                        <span class="text-[9px] text-rose-600 font-extrabold">Open ➔</span>
+                    </p>
                     <h3 id="statExpiredMembers" class="text-xl font-extrabold text-rose-600 mt-0.5">0</h3>
+                    <p id="statExpiredDueCount" class="text-[10px] font-extrabold text-rose-700 mt-0.5">⚠️ With Dues: 0</p>
                 </div>
 
                 <div id="cardTab-expiring7" onclick="setTab('expiring7', true)" class="bg-amber-50 p-3 rounded-xl shadow-sm border-l-4 border-amber-600 cursor-pointer hover:shadow-md transition">
@@ -140,15 +154,26 @@
                         <span>⏳ Expiring (1-7d)</span>
                         <span id="expiring7Badge" class="bg-amber-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
                     </p>
-                    <h3 id="statExpiring7" class="text-base sm:text-lg font-extrabold text-amber-800 mt-0.5">0 Students</h3>
+                    <h3 id="statExpiring7" class="text-lg font-extrabold text-amber-800 mt-0.5">0 Students</h3>
+                    <p id="statExpiringToday" class="text-[10px] font-extrabold text-red-700 mt-0.5">🚨 Today: 0</p>
                 </div>
 
-                <div id="cardTab-promise" onclick="setTab('promise', true)" class="col-span-2 sm:col-span-1 bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600 cursor-pointer hover:shadow-md transition">
-                    <p class="text-[11px] text-red-800 font-extrabold flex items-center justify-between">
-                        <span>📅 Promise / Dues</span>
-                        <span id="promiseCountBadge" class="bg-red-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
+                <div id="cardTab-dues" onclick="setTab('dues', true)" class="bg-rose-50 p-3 rounded-xl shadow-sm border-l-4 border-red-700 cursor-pointer hover:shadow-md transition">
+                    <p class="text-[11px] text-red-900 font-extrabold flex items-center justify-between">
+                        <span>💸 All Dues</span>
+                        <span id="duesCountBadge" class="bg-red-700 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
                     </p>
-                    <h3 id="colTotalDues" class="text-lg font-extrabold text-red-600 mt-0.5">₹0</h3>
+                    <h3 id="colTotalDues" class="text-lg font-extrabold text-red-700 mt-0.5">₹0</h3>
+                    <p class="text-[10px] font-extrabold text-red-800 mt-0.5">View All Baki ➔</p>
+                </div>
+
+                <div id="cardTab-promise" onclick="setTab('promise', true)" class="bg-orange-50 p-3 rounded-xl shadow-sm border-l-4 border-orange-600 cursor-pointer hover:shadow-md transition">
+                    <p class="text-[11px] text-orange-900 font-extrabold flex items-center justify-between">
+                        <span>📅 Promise Date</span>
+                        <span id="promiseCountBadge" class="bg-orange-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
+                    </p>
+                    <h3 id="statTodayPromiseCount" class="text-lg font-extrabold text-orange-800 mt-0.5">Today: 0</h3>
+                    <p class="text-[10px] font-extrabold text-red-700 mt-0.5">Defaulter Rank ➔</p>
                 </div>
             </div>
 
