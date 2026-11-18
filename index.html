@@ -172,7 +172,7 @@
                     <h3 id="statExpiring7" class="text-lg font-extrabold text-amber-800 mt-0.5">0 Students</h3>
                 </div>
 
-                <div id="cardTab-promise" onclick="setTab('promise', true)" class="col-span-2 sm:col-span-1 bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600 cursor-pointer hover:shadow-md transition">
+                <div id="cardTab-promise" onclick="openPromiseDefaulterModal()" class="col-span-2 sm:col-span-1 bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-600 cursor-pointer hover:shadow-md transition">
                     <p class="text-[11px] text-red-800 font-extrabold flex items-center justify-between">
                         <span>📅 Promise / Dues</span>
                         <span id="promiseCountBadge" class="bg-red-600 text-white px-1.5 py-0.2 rounded-full text-[10px] hidden">0</span>
@@ -857,6 +857,52 @@
             </div>
         </div>
     </div>
+      <!-- SUPER DUES TRACKER MODAL (Boys vs Girls, Fail Count, 3-Month Defaulter) -->
+    <div id="promiseDefaulterModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center hidden p-2 sm:p-4 no-print">
+        <div class="bg-white w-full max-w-4xl h-[90vh] sm:h-[85vh] rounded-2xl shadow-2xl flex flex-col fade-in">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-red-700 to-red-900 text-white px-4 py-3 rounded-t-2xl flex justify-between items-center shrink-0">
+                <h3 class="font-extrabold text-sm sm:text-base"><i class="fa-solid fa-scale-unbalanced mr-1.5"></i> जबरदस्त ड्यूज़ ट्रैकर (Defaulters)</h3>
+                <button onclick="document.getElementById('promiseDefaulterModal').classList.add('hidden')" class="bg-white text-red-700 font-extrabold text-xs px-3 py-1.5 rounded-lg shadow">✖ बंद करें</button>
+            </div>
+            
+            <!-- Smart Gender & Defaulter Stats Box -->
+            <div class="p-3 bg-slate-50 border-b-2 border-slate-200 shrink-0">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-[10px] sm:text-xs">
+                    <div class="bg-blue-100 border border-blue-300 p-2 rounded-xl text-blue-900 font-extrabold shadow-sm">
+                        <span class="block text-xl">👦</span>
+                        लड़के (Boys): <span id="trackBoysCount">0</span><br>
+                        ड्यूज़: ₹<span id="trackBoysDue">0</span>
+                    </div>
+                    <div class="bg-pink-100 border border-pink-300 p-2 rounded-xl text-pink-900 font-extrabold shadow-sm">
+                        <span class="block text-xl">👧</span>
+                        लड़कियां (Girls): <span id="trackGirlsCount">0</span><br>
+                        ड्यूज़: ₹<span id="trackGirlsDue">0</span>
+                    </div>
+                    <div class="bg-red-100 border border-red-300 p-2 rounded-xl text-red-900 font-extrabold shadow-sm">
+                        <span class="block text-xl">⚠️</span>
+                        कुल बकाया छात्र: <span id="trackTotalCount">0</span><br>
+                        कुल ड्यूज़: ₹<span id="trackTotalDue">0</span>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-900 p-2 rounded-xl text-white font-extrabold shadow-sm">
+                        <span class="block text-xl">🚨</span>
+                        3+ महीने वाले डिफॉल्टर<br>
+                        <span id="trackDefaulterCount" class="text-rose-400 text-sm">0 Students</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-3 py-2 bg-yellow-50 text-[10px] font-extrabold text-yellow-800 border-b border-yellow-200 flex justify-between shrink-0">
+                <span>💡 छँटाई नियम: जो सबसे ज्यादा बार 'तारीख पे तारीख' लेता है, वह सबसे ऊपर दिखेगा।</span>
+                <span id="trackFilterLabel">सभी छात्र</span>
+            </div>
+
+            <!-- List Area -->
+            <div id="promiseDefaulterListContainer" class="p-3 space-y-3 overflow-y-auto flex-grow bg-slate-100">
+                <!-- Data will load here -->
+            </div>
+        </div>
+    </div>  
 
     <!-- Modal H: Today's Birthdays List Modal -->
     <div id="birthdayModal" class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center hidden p-4 no-print">
@@ -1926,6 +1972,106 @@
                 alert(`✅ छात्र "${s.fullName} (ID: ${s.uniId})" का रिकॉर्ड डिलीट कर दिया गया।`);
             } else if(step3 !== null) {
                 alert("❌ ID नंबर मैच नहीं हुआ! आपका डेटा सुरक्षित है (डिलीट रद्द किया गया)।");
+            }
+        }
+        // --- NEW FEATURE: SUPER DUES TRACKER MODAL ---
+        function openPromiseDefaulterModal() {
+            const container = document.getElementById('promiseDefaulterListContainer');
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            let dueMembers = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0);
+            
+            let bCount = 0, bDue = 0, gCount = 0, gDue = 0, defCount = 0;
+
+            dueMembers.forEach(s => {
+                const dueAmt = parseFloat(s.remainingDue) || 0;
+                let rate = 300;
+                if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
+                if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
+                if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
+                
+                if (s.gender === 'Female') { gCount++; gDue += dueAmt; }
+                else { bCount++; bDue += dueAmt; }
+                
+                // 3 Month Defaulter Check
+                if (s.isOut || dueAmt >= (rate * 3)) defCount++;
+            });
+
+            document.getElementById('trackBoysCount').innerText = bCount;
+            document.getElementById('trackBoysDue').innerText = bDue;
+            document.getElementById('trackGirlsCount').innerText = gCount;
+            document.getElementById('trackGirlsDue').innerText = gDue;
+            document.getElementById('trackTotalCount').innerText = dueMembers.length;
+            document.getElementById('trackTotalDue').innerText = bDue + gDue;
+            document.getElementById('trackDefaulterCount').innerText = defCount + " Students";
+
+            // Sorting: सबसे ज्यादा बार वादा फेल करने वाले सबसे ऊपर, फिर तारीख के हिसाब से
+            dueMembers.sort((a, b) => {
+                const failsA = a.promiseHistory ? a.promiseHistory.length : 0;
+                const failsB = b.promiseHistory ? b.promiseHistory.length : 0;
+                if (failsB !== failsA) return failsB - failsA;
+                return (a.promiseDate || '9999').localeCompare(b.promiseDate || '9999');
+            });
+
+            if (dueMembers.length === 0) {
+                container.innerHTML = '<div class="text-center p-8 text-emerald-700 font-extrabold bg-white rounded-xl shadow-sm border border-emerald-200">🎉 बधाई हो! अभी किसी भी छात्र का बकाया/प्रॉमिस नहीं है।</div>';
+            } else {
+                container.innerHTML = dueMembers.map(s => {
+                    const originalIdx = students.indexOf(s);
+                    const fails = s.promiseHistory ? s.promiseHistory.length : 0;
+                    const isUrgent = s.promiseDate && s.promiseDate <= todayStr;
+                    const isGirl = s.gender === 'Female';
+                    
+                    let rate = 300;
+                    if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
+                    if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
+                    if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
+                    
+                    const is3MonthsDue = s.isOut || (parseFloat(s.remainingDue) >= (rate * 3));
+                    const outTag = is3MonthsDue ? '<div class="bg-slate-800 text-white text-center text-[10px] font-extrabold py-1 animate-pulse tracking-widest">🚨 3+ महीने का डिफॉल्टर (OUT घोषित)</div>' : '';
+                    
+                    const failAlert = fails > 0 ? `<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded ml-2 border border-rose-300 text-[9px] shadow-sm">⚠️ ${fails} बार वादा तोड़ा</span>` : '';
+
+                    return `
+                        <div class="bg-white rounded-xl border-2 ${is3MonthsDue ? 'border-slate-800' : (isUrgent ? 'border-red-400' : (isGirl ? 'border-pink-300' : 'border-blue-300'))} shadow-sm overflow-hidden flex flex-col">
+                            ${outTag}
+                            <div class="p-3 sm:p-4 flex justify-between items-center gap-2">
+                                <div class="flex-1 pr-2 border-r border-slate-100">
+                                    <h4 class="font-extrabold text-sm ${isGirl ? 'text-pink-800' : 'text-blue-900'} uppercase">
+                                        ${isGirl ? '👧' : '👦'} ${s.fullName} <span class="text-[10px] text-slate-500">(ID: ${s.uniId})</span>
+                                    </h4>
+                                    <p class="text-xs font-bold mt-1.5 text-slate-700">
+                                        बकाया: <span class="text-red-600 font-extrabold text-sm">₹${s.remainingDue}</span>
+                                        ${failAlert}
+                                    </p>
+                                    <p class="text-[11px] font-bold text-slate-600 mt-1">
+                                        प्रॉमिस डेट: <u class="${isUrgent ? 'text-red-600' : 'text-emerald-700'}">${s.promiseDate || 'तय नहीं'}</u>
+                                        | <a href="tel:${s.mobile}" class="text-blue-700 underline hover:text-blue-900">📞 ${s.mobile}</a>
+                                    </p>
+                                </div>
+                                <div class="flex flex-col gap-2 w-24 shrink-0 pl-1">
+                                    <button onclick="document.getElementById('promiseDefaulterModal').classList.add('hidden'); openPromiseUpdatePrompt(${originalIdx});" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold py-2 rounded-lg shadow-md transition">💰 वसूली / Date</button>
+                                    ${!s.isOut ? `<button onclick="markStudentOut(${originalIdx})" class="bg-rose-100 hover:bg-rose-600 hover:text-white text-rose-800 border border-rose-300 text-[9px] font-bold py-1.5 rounded-lg shadow-sm transition">🚫 Mark OUT</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            document.getElementById('promiseDefaulterModal').classList.remove('hidden');
+        }
+
+        function markStudentOut(index) {
+            const s = students[index];
+            if(confirm(`क्या आप सच में ${s.fullName} को '3 महीने का डिफॉल्टर (OUT)' घोषित करना चाहते हैं?\n\nइससे इसकी सीट खाली हो जाएगी, लेकिन यह लिस्ट में डिफॉल्टर के रूप में हमेशा लाल रंग से दिखेगा।`)){
+                s.isOut = true;
+                s.seatNo = "";
+                s.chairNo = "";
+                s.lockerNo = "";
+                s.keyNo = "";
+                syncAndSaveData();
+                renderStudentList();
+                openPromiseDefaulterModal();
             }
         }
 
