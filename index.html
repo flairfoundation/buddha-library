@@ -140,7 +140,7 @@
         <div id="dashboardCardsWrapper">
             <!-- 4. Row 1: Member Status Filter Cards + 1-7 Days Expiring Filter -->
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-2.5">
-                <div id="cardTab-all" onclick="openMemberListSection('all')" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition">
+                <div id="cardTab-all" onclick="openTotalMembersOnly()" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition">
                     <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between">
                         <span>👥 Total Members</span>
                         <span class="text-[9px] text-blue-600 font-extrabold">View ➔</span>
@@ -503,6 +503,7 @@
                 <button onclick="loadMoreMembers()" class="bg-slate-800 text-white px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-md hover:bg-slate-700">⬇️ Show Next 50 Members</button>
             </div>
         </div>
+    </div>
 
     <!-- ================= MODALS ================= -->
 
@@ -1244,6 +1245,8 @@
             }
             renderStudentList();
             updateDashboardStats();
+            const resetBtnEl = document.getElementById('resetFilterBtn');
+resetBtnEl.classList.remove('hidden'); // या classList.toggle(...)
         }
 
         // 2. Fixed Locker Logic: Auto-checks when Locker digit typed, and REMOVES charge when unticked!
