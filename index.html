@@ -140,7 +140,7 @@
         <div id="dashboardCardsWrapper">
             <!-- 4. Row 1: Member Status Filter Cards + 1-7 Days Expiring Filter -->
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-2.5">
-                <div id="cardTab-all" onclick="openTotalMembersOnly()" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition">
+                <div id="cardTab-all" onclick="setTab('all', true)" class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-blue-600 cursor-pointer hover:shadow-md transition active-filter-ring">
                     <p class="text-[11px] text-slate-500 font-bold flex items-center justify-between">
                         <span>👥 Total Members</span>
                         <span class="text-[9px] text-blue-600 font-extrabold">View ➔</span>
@@ -475,34 +475,27 @@
             </form>
         </div>
 
-     <!-- Collapsible Student List Section (Hidden by default on main dashboard) -->
-        <div id="memberListMainWrapper" class="fade-in">
-            <!-- Active Filter, Gender Count Corner & Sort Status Bar -->
-            <div id="listSectionAnchor" class="bg-white px-3.5 py-2.5 rounded-xl shadow-sm border border-slate-200 mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span id="activeFilterLabel" class="text-xs sm:text-sm font-extrabold theme-maroon-text">👥 Showing: All Members (0)</span>
-                    <!-- Corner Boys & Girls Count Buttons -->
-                    <div class="flex items-center gap-1.5 text-[11px] font-extrabold">
-                        <button onclick="setGenderFilter('All')" id="gFilter-All" class="bg-slate-800 text-white px-2 py-0.5 rounded-md">All</button>
-                        <button onclick="setGenderFilter('Male')" id="gFilter-Male" class="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md">👦 Boys: <span id="listBoysCount">0</span></button>
-                        <button onclick="setGenderFilter('Female')" id="gFilter-Female" class="bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md">👧 Girls: <span id="listGirlsCount">0</span></button>
-                    </div>
-                </div>
-                <div class="flex items-center gap-1.5 text-[11px] font-extrabold">
-                    <button id="sortBtn-id" onclick="setSortOrder('id')" class="px-2.5 py-1 rounded-lg theme-maroon text-white">🔢 ID Wise</button>
-                    <button id="sortBtn-latest" onclick="setSortOrder('latest')" class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700">🆕 Latest</button>
-                    <button onclick="closeMemberListSection()" class="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg shadow-sm">✖ Close</button>
-                </div>
+        <!-- Active Filter & Sort Status Bar right above the Student List -->
+        <div id="listSectionAnchor" class="bg-white px-3.5 py-2.5 rounded-xl shadow-sm border border-slate-200 mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span id="activeFilterLabel" class="text-xs sm:text-sm font-extrabold theme-maroon-text">👥 Showing: All Members (0)</span>
+                <button id="resetFilterBtn" onclick="setTab('all', false); clearSearchBox();" class="hidden bg-red-100 text-red-700 hover:bg-red-200 px-2 py-0.5 rounded-md text-[10px] font-extrabold">✖ Show All</button>
             </div>
-
-            <!-- 6. Responsive Justified Student List Container -->
-            <div id="studentListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch"></div>
-
-            <!-- Load More Button -->
-            <div id="loadMoreWrap" class="text-center mt-5 hidden">
-                <button onclick="loadMoreMembers()" class="bg-slate-800 text-white px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-md hover:bg-slate-700">⬇️ Show Next 50 Members</button>
+            <div class="flex items-center gap-1.5 text-[11px] font-extrabold">
+                <span class="text-slate-500">Sort:</span>
+                <button id="sortBtn-id" onclick="setSortOrder('id')" class="px-2.5 py-1 rounded-lg theme-maroon text-white">🔢 ID Wise</button>
+                <button id="sortBtn-latest" onclick="setSortOrder('latest')" class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700">🆕 Latest First</button>
             </div>
         </div>
+
+        <!-- 6. Responsive Justified Student List Container -->
+        <div id="studentListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch"></div>
+
+        <!-- Load More Button -->
+        <div id="loadMoreWrap" class="text-center mt-5 hidden">
+            <button onclick="loadMoreMembers()" class="bg-slate-800 text-white px-6 py-2.5 rounded-xl text-xs font-extrabold shadow-md hover:bg-slate-700">⬇️ Show Next 50 Members</button>
+        </div>
+
     </div>
 
     <!-- ================= MODALS ================= -->
@@ -1245,8 +1238,6 @@
             }
             renderStudentList();
             updateDashboardStats();
-            const resetBtnEl = document.getElementById('resetFilterBtn');
-resetBtnEl.classList.remove('hidden'); // या classList.toggle(...)
         }
 
         // 2. Fixed Locker Logic: Auto-checks when Locker digit typed, and REMOVES charge when unticked!
@@ -1834,15 +1825,13 @@ resetBtnEl.classList.remove('hidden'); // या classList.toggle(...)
                 }
 
                 if(/^\d+$/.test(rawQuery)) {
-                    // यदि 1 से 5000 तक का ID नंबर डाला गया है, तो केवल वही सटीक ID दिखेगी
-                    if(parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000 && rawQuery.length <= 4) {
-                        return parseInt(s.uniId) === parseInt(rawQuery);
+                    if(rawQuery.length <= 4) {
+                        return parseInt(s.uniId) === parseInt(rawQuery) || (s.mobile && s.mobile.includes(rawQuery));
                     }
-                    // अन्यथा मोबाइल नंबर या गार्जियन नंबर से खोजेगा
                     return (s.mobile && s.mobile.includes(rawQuery)) || (s.guardianMobile && s.guardianMobile.includes(rawQuery));
                 }
-                // नाम लिखने पर (जैसे 'रमेश') उस नाम से जुड़े सभी बच्चे दिखेंगे, बाकी हाइड हो जाएंगे
-                return (s.fullName && s.fullName.toLowerCase().includes(qLower));
+                return (s.fullName && s.fullName.toLowerCase().includes(qLower)) ||
+                       (s.address && s.address.toLowerCase().includes(qLower));
             });
 
             // Update Active Filter Status Bar Label
@@ -2588,9 +2577,8 @@ resetBtnEl.classList.remove('hidden'); // या classList.toggle(...)
                 </div>
 
                 <!-- Single-Line Validity Banner -->
-                <!-- Single-Line Validity Banner -->
                 <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 mb-2.5 flex justify-between items-center text-[11px] font-extrabold text-blue-900 whitespace-nowrap">
-                    <span>🗓️ Plan: ${p.type || 'Fee'} (${(p.months || 1) * 28}-Day Cycle)</span>
+                    <span>🗓️ Plan: ${p.type} (${totalDays}d - ${minusDays}d = 28-Day Cycle)</span>
                     <span>▶️ Start: ${pStart} &nbsp;➔&nbsp; ⏳ Valid Upto: ${pEnd}</span>
                 </div>
 
@@ -3320,79 +3308,6 @@ resetBtnEl.classList.remove('hidden'); // या classList.toggle(...)
             a.download = `Buddha_Library_Members_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
         }
-        // ============================================================
-        // TOTAL MEMBERS BUTTON: BOYS/GIRLS COUNTER & COLLAPSIBLE LIST
-        // ============================================================
-        let selectedGenderCorner = 'All';
-
-        function openTotalMembersOnly() {
-            selectedGenderCorner = 'All';
-            updateCornerGenderBtns();
-            const wrap = document.getElementById('memberListMainWrapper');
-            if (wrap) wrap.classList.remove('hidden');
-            setTab('all', true);
-        }
-
-        function closeTotalMembersOnly() {
-            const wrap = document.getElementById('memberListMainWrapper');
-            if (wrap) wrap.classList.add('hidden');
-            document.getElementById('searchInput').value = '';
-            document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
-        }
-
-        function filterTotalByGender(g) {
-            selectedGenderCorner = g;
-            updateCornerGenderBtns();
-            displayLimit = 50;
-            renderStudentList();
-        }
-
-        function updateCornerGenderBtns() {
-            const bAll = document.getElementById('gBtn-All');
-            const bMale = document.getElementById('gBtn-Male');
-            const bFemale = document.getElementById('gBtn-Female');
-            if (!bAll) return;
-            bAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
-            bMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-            bFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
-        }
-
-        // पुराने renderStudentList और सर्च को ऑटोमैटिक कनेक्ट करना (बिना पुराना कोड छेड़े)
-        const _origRenderStudentList = renderStudentList;
-        renderStudentList = function() {
-            // Boys और Girls की गिनती कोने में अपडेट करें
-            let boys = 0, girls = 0;
-            students.forEach(s => {
-                if ((s.gender || 'Male') === 'Female') girls++;
-                else boys++;
-            });
-            const bEl = document.getElementById('cornerBoysCount');
-            const gEl = document.getElementById('cornerGirlsCount');
-            if (bEl) bEl.innerText = boys;
-            if (gEl) gEl.innerText = girls;
-
-            // अगर Boys या Girls पर क्लिक किया है तो अस्थायी रूप से फिल्टर करें
-            const realStudentsBackup = students;
-            if (selectedGenderCorner === 'Male') {
-                students = realStudentsBackup.filter(s => (s.gender || 'Male') !== 'Female');
-            } else if (selectedGenderCorner === 'Female') {
-                students = realStudentsBackup.filter(s => s.gender === 'Female');
-            }
-
-            _origRenderStudentList();
-            students = realStudentsBackup; // असली डेटा वापस सुरक्षित रखें
-        };
-
-        const _origOnSearchInput = onSearchInputChanged;
-        onSearchInputChanged = function() {
-            const q = document.getElementById('searchInput').value.trim();
-            const wrap = document.getElementById('memberListMainWrapper');
-            if (wrap) {
-                if (q.length > 0) wrap.classList.remove('hidden');
-                else wrap.classList.add('hidden');
-            }
-            _origOnSearchInput();
-        };
     </script>
 </body>
 </html>
