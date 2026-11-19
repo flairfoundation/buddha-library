@@ -1825,13 +1825,15 @@
                 }
 
                 if(/^\d+$/.test(rawQuery)) {
-                    if(rawQuery.length <= 4) {
-                        return parseInt(s.uniId) === parseInt(rawQuery) || (s.mobile && s.mobile.includes(rawQuery));
+                    // यदि 1 से 5000 तक का ID नंबर डाला गया है, तो केवल वही सटीक ID दिखेगी
+                    if(parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000 && rawQuery.length <= 4) {
+                        return parseInt(s.uniId) === parseInt(rawQuery);
                     }
+                    // अन्यथा मोबाइल नंबर या गार्जियन नंबर से खोजेगा
                     return (s.mobile && s.mobile.includes(rawQuery)) || (s.guardianMobile && s.guardianMobile.includes(rawQuery));
                 }
-                return (s.fullName && s.fullName.toLowerCase().includes(qLower)) ||
-                       (s.address && s.address.toLowerCase().includes(qLower));
+                // नाम लिखने पर (जैसे 'रमेश') उस नाम से जुड़े सभी बच्चे दिखेंगे, बाकी हाइड हो जाएंगे
+                return (s.fullName && s.fullName.toLowerCase().includes(qLower));
             });
 
             // Update Active Filter Status Bar Label
