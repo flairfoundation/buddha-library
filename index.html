@@ -994,7 +994,8 @@
         let students = [];
         let expenses = [];
         let currentTab = 'all';
-        let currentSortOrder = 'id'; // 'id' or 'latest'
+        let currentSortOrder = 'id';
+        let selectedGenderCorner = 'All';
         let displayLimit = 50;
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
@@ -1004,9 +1005,8 @@
         let deferredPwaPrompt = null;
         let zoomModalRotation = 0;
 
-        // Interactive Crop / Frame / Rotate State
         let mediaAdjustState = {
-            targetType: 'student', // 'student', 'front', 'back', 'founder'
+            targetType: 'student',
             img: null,
             scale: 1,
             baseScale: 1,
@@ -1021,12 +1021,10 @@
         try { students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]'); } catch(e) { students = []; }
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
 
-        if (window.pdfjsLib) {
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
-// 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी
+        // 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी (Non-Blocking)
         function openBuddhaBigDB() {
             return new Promise((resolve, reject) => {
+                if (!window.indexedDB) { reject('No IDB'); return; }
                 const req = indexedDB.open('BuddhaLibraryBigDB', 1);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
@@ -1037,28 +1035,35 @@
             });
         }
 
-        async function saveStudentsToBigDB(dataArray) {
-            try {
-                const db = await openBuddhaBigDB();
+        function saveStudentsToBigDB(dataArray) {
+            openBuddhaBigDB().then(db => {
                 const tx = db.transaction('store', 'readwrite');
                 tx.objectStore('store').put(dataArray, 'students_list');
-            } catch (e) {}
+            }).catch(() => {});
             try {
                 localStorage.setItem('buddha_library_students', JSON.stringify(dataArray));
             } catch (err) {}
         }
 
-        async function loadStudentsFromBigDB() {
-            try {
-                const db = await openBuddhaBigDB();
-                return new Promise((resolve) => {
-                    const tx = db.transaction('store', 'readonly');
-                    const req = tx.objectStore('store').get('students_list');
-                    req.onsuccess = () => resolve(req.result || null);
-                    req.onerror = () => resolve(null);
-                });
-            } catch (e) { return null; }
+        function loadStudentsFromBigDBInBackground() {
+            openBuddhaBigDB().then(db => {
+                const tx = db.transaction('store', 'readonly');
+                const req = tx.objectStore('store').get('students_list');
+                req.onsuccess = () => {
+                    if (req.result && Array.isArray(req.result) && req.result.length > 0) {
+                        students = req.result;
+                        normalizeStudentDates();
+                        renderStudentList();
+                        updateDashboardStats();
+                    }
+                };
+            }).catch(() => {});
         }
+
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
         function toTitleCaseWords(str) {
             if(!str) return '';
             return String(str).replace(/\b\w/g, c => c.toUpperCase());
@@ -1076,7 +1081,6 @@
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
         }
 
-        // Convert any existing/uploaded logo into a 100% Transparent Circular PNG
         function makeCircularTransparentPng(srcDataUrl, callback) {
             if(!srcDataUrl) return;
             const img = new Image();
@@ -1088,19 +1092,16 @@
                 canvas.height = size;
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, size, size);
-
                 ctx.save();
                 ctx.beginPath();
                 ctx.arc(size / 2, size / 2, (size / 2) - 4, 0, Math.PI * 2, true);
                 ctx.closePath();
                 ctx.clip();
-
                 const minDim = Math.min(img.width, img.height);
                 const sx = (img.width - minDim) / 2;
                 const sy = (img.height - minDim) / 2;
                 ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
                 ctx.restore();
-
                 callback(canvas.toDataURL('image/png'));
             };
             img.src = srcDataUrl;
@@ -1171,7 +1172,6 @@
             }
         };
 
-        // 1. Security PIN & Admin Recovery
         function verifyAppPin() {
             const entered = document.getElementById('appPinInput').value.trim();
             const savedPin = localStorage.getItem('buddha_library_pin') || '7050';
@@ -1255,11 +1255,7 @@
             });
         }
 
-       async function initSystem() {
-            const bigData = await loadStudentsFromBigDB();
-            if (bigData && Array.isArray(bigData) && bigData.length > 0) {
-                students = bigData;
-            }
+        function initSystem() {
             normalizeStudentDates();
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('admissionDateInput').value = today;
@@ -1269,16 +1265,16 @@
             if(libraryLogo) applyLogoToUi(libraryLogo);
             if(founderPhoto) applyFounderPhotoToUi(founderPhoto);
             update28DayValidity();
+            renderStudentList();
+            updateDashboardStats();
+            loadStudentsFromBigDBInBackground();
             if(firebaseDbUrl) {
                 const syncTxt = document.getElementById('menuSyncText');
                 if(syncTxt) { syncTxt.innerText = "(Connected 🟢)"; syncTxt.className = "text-[10px] text-emerald-600 ml-auto font-extrabold"; }
                 fetchFromFirebase();
             }
-            renderStudentList();
-            updateDashboardStats();
         }
 
-        // 2. Fixed Locker Logic: Auto-checks when Locker digit typed, and REMOVES charge when unticked!
         function onLockerInputChanged() {
             const lVal = cleanResNum(document.getElementById('lockerNo').value);
             const editIdx = document.getElementById('editIndex').value;
@@ -1292,7 +1288,6 @@
         function onLockerCheckboxToggled() {
             const isChecked = document.getElementById('lockerMonthlyCheck').checked;
             if(!isChecked) {
-                // If user unticks locker, also untick security deposit by default and recalculate without forcing it back on
                 document.getElementById('lockerSecurityCheck').checked = false;
             }
             recalcAdmissionBill();
@@ -1311,7 +1306,7 @@
         function recalcAdmissionBill() {
             const shiftSel = document.getElementById('shiftPlan');
             const opt = shiftSel.options[shiftSel.selectedIndex];
-            let rate = parseFloat(opt.getAttribute('data-rate')) || 299;
+            let rate = parseFloat(opt.getAttribute('data-rate')) || 300;
             const months = parseInt(document.getElementById('durationMonths').value) || 1;
             let shiftTotal = rate * months;
 
@@ -1321,11 +1316,8 @@
 
             const hasAdmFee = document.getElementById('admissionFeeCheck').checked;
             const admFeeAmt = hasAdmFee ? ADMISSION_ONE_TIME_FEE : 0;
-
-            // Respects the checkbox state directly so unticking removes ₹50/Month!
             const isLockerMonthlyChecked = document.getElementById('lockerMonthlyCheck').checked;
             const lockerRent = isLockerMonthlyChecked ? (LOCKER_MONTHLY_FEE * months) : 0;
-
             const hasSecDeposit = document.getElementById('lockerSecurityCheck').checked;
             const secDepositAmt = hasSecDeposit ? LOCKER_SECURITY_DEPOSIT : 0;
 
@@ -1385,7 +1377,6 @@
             }
         }
 
-        // 3. Interactive Manual Frame Adjust, Pan, Zoom & Rotate for Student Photo & Documents (Image + PDF)
         function initCropCanvasEvents() {
             const canvas = document.getElementById('cropCanvas');
             if(!canvas) return;
@@ -1438,19 +1429,18 @@
             if (!input.files || !input.files[0]) return;
             const file = input.files[0];
 
-            // Handle PDF file if uploaded in Document Front or Back
             if (file.type === 'application/pdf') {
                 if (window.pdfjsLib) {
                     try {
                         const arrayBuf = await file.arrayBuffer();
                         const pdf = await window.pdfjsLib.getDocument({ data: arrayBuf }).promise;
                         const page = await pdf.getPage(1);
-                        const viewport = page.getViewport({ scale: 2.0 });
+                        const viewport = page.getViewport({ scale: 1.6 });
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = viewport.width;
                         tempCanvas.height = viewport.height;
                         await page.render({ canvasContext: tempCanvas.getContext('2d'), viewport: viewport }).promise;
-                        const pdfImgDataUrl = tempCanvas.toDataURL('image/jpeg', 0.92);
+                        const pdfImgDataUrl = tempCanvas.toDataURL('image/jpeg', 0.80);
                         loadRawDataUrlIntoAdjuster(pdfImgDataUrl, targetType);
                         return;
                     } catch (err) {
@@ -1483,24 +1473,21 @@
                 const title = document.getElementById('cropModalTitle');
 
                 if (targetType === 'student' || targetType === 'founder') {
-                    canvas.width = 450;
-                    canvas.height = 450;
+                    canvas.width = 400;
+                    canvas.height = 400;
                     guide.classList.remove('hidden');
                     title.innerText = "📷 फोटो को फ्रेम में सेट और ज़ूम/रोटेट करें";
-                    // Cover scale so face fills nicely
-                    const coverScale = Math.max(450 / img.width, 450 / img.height);
+                    const coverScale = Math.max(400 / img.width, 400 / img.height);
                     mediaAdjustState.baseScale = coverScale;
                     mediaAdjustState.scale = 1;
                     mediaAdjustState.offsetX = 0;
-                    // Slight upward shift so face (top of image) is centered by default
-                    mediaAdjustState.offsetY = (img.height * coverScale - 450) * 0.25;
+                    mediaAdjustState.offsetY = (img.height * coverScale - 400) * 0.25;
                 } else {
-                    canvas.width = 800;
-                    canvas.height = 800;
+                    canvas.width = 720;
+                    canvas.height = 720;
                     guide.classList.add('hidden');
                     title.innerText = "🆔 डॉक्यूमेंट को सीधा (Rotate) और सेट करें";
-                    // Contain scale so whole document is visible
-                    const containScale = Math.min(760 / img.width, 760 / img.height);
+                    const containScale = Math.min(680 / img.width, 680 / img.height);
                     mediaAdjustState.baseScale = containScale;
                     mediaAdjustState.scale = 1;
                     mediaAdjustState.offsetX = 0;
@@ -1585,13 +1572,12 @@
             const target = mediaAdjustState.targetType;
 
             if (target === 'student') {
-                const croppedThumb = canvas.toDataURL('image/jpeg', 0.90);
+                const croppedThumb = canvas.toDataURL('image/jpeg', 0.78);
                 tempUploads.photoThumb = croppedThumb;
-                // Also save a full rotated copy for HD zoom
                 const fullCanvas = document.createElement('canvas');
                 const img = mediaAdjustState.img;
                 const rot = Math.abs(mediaAdjustState.rotation % 180) === 90;
-                const maxD = 900;
+                const maxD = 650;
                 let w = img.width, h = img.height;
                 if (w > h && w > maxD) { h *= maxD / w; w = maxD; }
                 else if (h > maxD) { w *= maxD / h; h = maxD; }
@@ -1601,22 +1587,22 @@
                 fCtx.translate(fullCanvas.width / 2, fullCanvas.height / 2);
                 fCtx.rotate((mediaAdjustState.rotation * Math.PI) / 180);
                 fCtx.drawImage(img, -w / 2, -h / 2, w, h);
-                tempUploads.photoFull = fullCanvas.toDataURL('image/jpeg', 0.86);
+                tempUploads.photoFull = fullCanvas.toDataURL('image/jpeg', 0.75);
 
                 document.getElementById('previewImg-student').src = croppedThumb;
                 document.getElementById('previewWrap-student').classList.remove('hidden');
             } else if (target === 'front') {
-                const docUrl = canvas.toDataURL('image/jpeg', 0.88);
+                const docUrl = canvas.toDataURL('image/jpeg', 0.78);
                 tempUploads.frontBase64 = docUrl;
                 document.getElementById('previewImg-front').src = docUrl;
                 document.getElementById('previewWrap-front').classList.remove('hidden');
             } else if (target === 'back') {
-                const docUrl = canvas.toDataURL('image/jpeg', 0.88);
+                const docUrl = canvas.toDataURL('image/jpeg', 0.78);
                 tempUploads.backBase64 = docUrl;
                 document.getElementById('previewImg-back').src = docUrl;
                 document.getElementById('previewWrap-back').classList.remove('hidden');
             } else if (target === 'founder') {
-                founderPhoto = canvas.toDataURL('image/jpeg', 0.94);
+                founderPhoto = canvas.toDataURL('image/jpeg', 0.88);
                 localStorage.setItem('buddha_library_founder_photo', founderPhoto);
                 applyFounderPhotoToUi(founderPhoto);
             }
@@ -1624,7 +1610,6 @@
             closeMediaAdjuster();
         }
 
-        // 4. Save Student Record
         function saveStudentRecord(e) {
             e.preventDefault();
             const editIdx = document.getElementById('editIndex').value;
@@ -1704,7 +1689,7 @@
                 st.studyCourse = studyCourse; st.shiftPlan = shiftPlan;
                 st.admissionDate = admissionDate;
                 st.cycleStartDate = cycleStartDate;
-                st.validUpto = validUpto; st.totalBill = totalBill;
+                st.validUpto = validUpto; st.totalBill = totalBill; st.paidNow = paidNow;
                 st.remainingDue = remainingDue; st.promiseDate = promiseDate;
                 if(hasLockerSec) st.lockerSecurityPaid = LOCKER_SECURITY_DEPOSIT;
                 if(tempUploads.photoThumb) {
@@ -1755,9 +1740,9 @@
             syncAndSaveData();
             document.getElementById('admissionFormBox').classList.add('hidden');
             renderStudentList();
+            alert("✅ रिकॉर्ड और फोटो सफलतापूर्वक सेव हो गए!");
         }
 
-        // 5. Dual-Color Resource Formatting (Alphabet Maroon, Digit Blue)
         function formatResDualColorHtml(s) {
             let parts = [];
             if(cleanResNum(s.seatNo)) parts.push(`<span class="text-red-800 font-extrabold">S-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.seatNo)}</span>`);
@@ -1782,12 +1767,45 @@
             return s.replace('12 Hrs: ', '');
         }
 
-        // Instant Search directly below Search Bar (hides dashboard cards while typing)
+        function openTotalMembersOnly() {
+            selectedGenderCorner = 'All';
+            updateCornerGenderBtns();
+            const wrap = document.getElementById('memberListMainWrapper');
+            if (wrap) wrap.classList.remove('hidden');
+            setTab('all', true);
+        }
+
+        function closeTotalMembersOnly() {
+            const wrap = document.getElementById('memberListMainWrapper');
+            if (wrap) wrap.classList.add('hidden');
+            document.getElementById('searchInput').value = '';
+            document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
+        }
+
+        function filterTotalByGender(g) {
+            selectedGenderCorner = g;
+            updateCornerGenderBtns();
+            displayLimit = 50;
+            renderStudentList();
+        }
+
+        function updateCornerGenderBtns() {
+            const bAll = document.getElementById('gBtn-All');
+            const bMale = document.getElementById('gBtn-Male');
+            const bFemale = document.getElementById('gBtn-Female');
+            if (!bAll) return;
+            bAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
+            bMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
+            bFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
+        }
+
         function onSearchInputChanged() {
             const rawQuery = document.getElementById('searchInput').value.trim();
             const dashWrap = document.getElementById('dashboardCardsWrapper');
+            const listWrap = document.getElementById('memberListMainWrapper');
             if(rawQuery.length > 0) {
                 dashWrap.classList.add('hidden');
+                if(listWrap) listWrap.classList.remove('hidden');
             } else {
                 dashWrap.classList.remove('hidden');
             }
@@ -1813,11 +1831,6 @@
             renderStudentList();
         }
 
-        function resetLimitAndRender() {
-            displayLimit = 50;
-            renderStudentList();
-        }
-
         function loadMoreMembers() {
             displayLimit += 50;
             renderStudentList();
@@ -1830,15 +1843,23 @@
             return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
         }
 
-        // 6. Render Student List
         function renderStudentList() {
             const container = document.getElementById('studentListContainer');
             const rawQuery = document.getElementById('searchInput').value.trim();
             const qLower = rawQuery.toLowerCase();
             container.innerHTML = '';
 
-            const today = new Date().toISOString().split('T')[0];
+            let boysTotal = 0, girlsTotal = 0;
+            students.forEach(s => {
+                if ((s.gender || 'Male') === 'Female') girlsTotal++;
+                else boysTotal++;
+            });
+            const bEl = document.getElementById('cornerBoysCount');
+            const gEl = document.getElementById('cornerGirlsCount');
+            if (bEl) bEl.innerText = boysTotal;
+            if (gEl) gEl.innerText = girlsTotal;
 
+            const today = new Date().toISOString().split('T')[0];
             let workingList = students.map((item, idx) => ({ item, originalIdx: idx }));
 
             if(currentTab === 'promise') {
@@ -1855,8 +1876,9 @@
                 const isActive = s.validUpto >= today;
                 const daysLeft = getDaysRemaining(s.validUpto, today);
 
-                // If user is typing in Search Bar, search across ALL members so nothing is hidden!
                 if(!rawQuery) {
+                    if(selectedGenderCorner === 'Male' && (s.gender || 'Male') === 'Female') return false;
+                    if(selectedGenderCorner === 'Female' && s.gender !== 'Female') return false;
                     if(currentTab === 'active' && !isActive) return false;
                     if(currentTab === 'expired' && isActive) return false;
                     if(currentTab === 'dues' && !(parseFloat(s.remainingDue) > 0)) return false;
@@ -1866,18 +1888,14 @@
                 }
 
                 if(/^\d+$/.test(rawQuery)) {
-                    // यदि 1 से 5000 तक का ID नंबर डाला गया है, तो केवल वही सटीक ID दिखेगी
                     if(parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000 && rawQuery.length <= 4) {
                         return parseInt(s.uniId) === parseInt(rawQuery);
                     }
-                    // अन्यथा मोबाइल नंबर या गार्जियन नंबर से खोजेगा
                     return (s.mobile && s.mobile.includes(rawQuery)) || (s.guardianMobile && s.guardianMobile.includes(rawQuery));
                 }
-                // नाम लिखने पर (जैसे 'रमेश') उस नाम से जुड़े सभी बच्चे दिखेंगे, बाकी हाइड हो जाएंगे
                 return (s.fullName && s.fullName.toLowerCase().includes(qLower));
             });
 
-            // Update Active Filter Status Bar Label
             const tabNames = {
                 all: '👥 All Members',
                 active: '🟢 Live Active Members',
@@ -1888,11 +1906,11 @@
             const filterTitleEl = document.getElementById('activeFilterLabel');
             const resetBtnEl = document.getElementById('resetFilterBtn');
             if(rawQuery) {
-                filterTitleEl.innerText = `🔍 Search Results for "${rawQuery}" (${filtered.length} Found)`;
-                resetBtnEl.classList.remove('hidden');
+                if(filterTitleEl) filterTitleEl.innerText = `🔍 Search Results for "${rawQuery}" (${filtered.length} Found)`;
+                if(resetBtnEl) resetBtnEl.classList.remove('hidden');
             } else {
-                filterTitleEl.innerText = `${tabNames[currentTab] || '👥 Members'} (${filtered.length})`;
-                resetBtnEl.classList.toggle('hidden', currentTab === 'all');
+                if(filterTitleEl) filterTitleEl.innerText = `${tabNames[currentTab] || '👥 Members'} (${filtered.length})`;
+                if(resetBtnEl) resetBtnEl.classList.toggle('hidden', currentTab === 'all');
             }
 
             if(filtered.length === 0) {
@@ -1932,7 +1950,7 @@
                 card.innerHTML = `
                     <div class="flex items-start gap-3">
                         <div class="relative flex-shrink-0">
-                            <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (ID: ${s.uniId})', ${originalIdx}, 'photo')" class="w-16 h-16 rounded-xl face-focus-thumb shadow-md bg-slate-100 cursor-pointer" title="Click to View / Rotate Photo">
+                            <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl face-focus-thumb shadow-md bg-slate-100 cursor-pointer" title="Click to View / Rotate Photo">
                             <span class="absolute -top-1.5 -left-1.5 bg-slate-800 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded shadow">${serialIdx + 1}</span>
                         </div>
 
@@ -1977,7 +1995,6 @@
                         </div>
                     </div>
 
-                    <!-- Equal-Sized Justified 8-Button Action Grid -->
                     <div id="cardMenu-${originalIdx}" class="hidden mt-3 pt-2.5 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl fade-in">
                         <button onclick="openIdCardModal(${originalIdx})" class="w-full theme-maroon text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">🪪 ID Card</button>
                         <button onclick="openProfileModal(${originalIdx})" class="w-full bg-purple-700 hover:bg-purple-600 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">👤 Profile</button>
@@ -1998,15 +2015,12 @@
             if(el) el.classList.toggle('hidden');
         }
 
-        // 7. Triple Confirmation Delete Protection
         function deleteStudentRecord(index) {
             const s = students[index];
             const step1 = confirm(`⚠️ सावधान (Step 1/3):\nक्या आप वाकई छात्र "${s.fullName} (ID: ${s.uniId})" को डिलीट करना चाहते हैं?`);
             if(!step1) return;
-
             const step2 = confirm(`🛑 अंतिम चेतावनी (Step 2/3):\nडिलीट करने पर "${s.fullName}" का सारा पेमेंट लेजर और रिकॉर्ड हमेशा के लिए मिट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`);
             if(!step2) return;
-
             const step3 = prompt(`🔐 सुरक्षा पुष्टि (Step 3/3):\nपरमानेंट डिलीट करने के लिए इस छात्र का ID नंबर (${s.uniId}) नीचे टाइप करें:`);
             if(step3 !== null && String(step3).trim() === String(s.uniId)) {
                 students.splice(index, 1);
@@ -2017,7 +2031,7 @@
                 alert("❌ ID नंबर मैच नहीं हुआ! आपका डेटा सुरक्षित है (डिलीट रद्द किया गया)।");
             }
         }
-        // --- NEW FEATURE: SUPER DUES TRACKER MODAL (With Filters & Photos) ---
+
         let currentPromiseFilter = 'All';
 
         function filterPromiseList(filterType) {
@@ -2027,7 +2041,7 @@
             if (filterType === 'Girls') label = "केवल लड़कियां";
             if (filterType === 'Defaulters') label = "केवल 3+ महीने वाले डिफॉल्टर";
             document.getElementById('trackFilterLabel').innerText = "फ़िल्टर: " + label;
-            openPromiseDefaulterModal(); // रिफ्रेश
+            openPromiseDefaulterModal();
         }
 
         function openPromiseDefaulterModal() {
@@ -2035,7 +2049,6 @@
             const todayStr = new Date().toISOString().split('T')[0];
 
             let allDueMembers = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0);
-            
             let bCount = 0, bDue = 0, gCount = 0, gDue = 0, defCount = 0;
 
             allDueMembers.forEach(s => {
@@ -2044,10 +2057,10 @@
                 if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
                 if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
                 if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
-                
+
                 if (s.gender === 'Female') { gCount++; gDue += dueAmt; }
                 else { bCount++; bDue += dueAmt; }
-                
+
                 if (s.isOut || dueAmt >= (rate * 3)) defCount++;
             });
 
@@ -2059,7 +2072,6 @@
             document.getElementById('trackTotalDue').innerText = bDue + gDue;
             document.getElementById('trackDefaulterCount').innerText = defCount + " Students";
 
-            // Apply Clicked Filter
             let filteredMembers = allDueMembers;
             if (currentPromiseFilter === 'Boys') {
                 filteredMembers = allDueMembers.filter(s => s.gender !== 'Female');
@@ -2075,7 +2087,6 @@
                 });
             }
 
-            // Sorting: सबसे ज्यादा बार वादा फेल करने वाले सबसे ऊपर
             filteredMembers.sort((a, b) => {
                 const failsA = a.promiseHistory ? a.promiseHistory.length : 0;
                 const failsB = b.promiseHistory ? b.promiseHistory.length : 0;
@@ -2091,31 +2102,27 @@
                     const fails = s.promiseHistory ? s.promiseHistory.length : 0;
                     const isUrgent = s.promiseDate && s.promiseDate <= todayStr;
                     const isGirl = s.gender === 'Female';
-                    
+
                     let rate = 300;
                     if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
                     if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
                     if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
-                    
+
                     const is3MonthsDue = s.isOut || (parseFloat(s.remainingDue) >= (rate * 3));
                     const outTag = is3MonthsDue ? '<div class="bg-slate-800 text-white text-center text-[10px] font-extrabold py-1 animate-pulse tracking-widest">🚨 3+ महीने का डिफॉल्टर (OUT घोषित)</div>' : '';
-                    
                     const failAlert = fails > 0 ? `<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded ml-2 border border-rose-300 text-[9px] shadow-sm">⚠️ ${fails} बार वादा तोड़ा</span>` : '';
-                    
                     const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
 
                     return `
                         <div class="bg-white rounded-xl border-2 ${is3MonthsDue ? 'border-slate-800' : (isUrgent ? 'border-red-400' : (isGirl ? 'border-pink-300' : 'border-blue-300'))} shadow-sm overflow-hidden flex flex-col">
                             ${outTag}
                             <div class="p-3 sm:p-4 flex gap-3">
-                                <!-- Photo Area -->
                                 <div class="shrink-0">
                                     <img src="${avatar}" class="w-16 h-16 rounded-xl face-focus-thumb shadow-md bg-slate-100 border">
                                 </div>
-                                <!-- Info Area -->
                                 <div class="flex-1 pr-2 border-r border-slate-100">
                                     <h4 class="font-extrabold text-sm ${isGirl ? 'text-pink-800' : 'text-blue-900'} uppercase flex flex-wrap gap-1 items-center">
-                                        ${isGirl ? '👧' : '👦'} ${s.fullName} 
+                                        ${isGirl ? '👧' : '👦'} ${s.fullName}
                                         <span class="text-[10px] text-slate-500 font-bold bg-slate-100 px-1 rounded">(ID: ${s.uniId})</span>
                                     </h4>
                                     <p class="text-xs font-bold mt-1 text-slate-700">
@@ -2127,7 +2134,6 @@
                                         | <a href="tel:${s.mobile}" class="text-blue-700 underline hover:text-blue-900">📞 ${s.mobile}</a>
                                     </p>
                                 </div>
-                                <!-- Action Buttons Area -->
                                 <div class="flex flex-col gap-1.5 w-24 shrink-0 pl-1">
                                     <button onclick="document.getElementById('promiseDefaulterModal').classList.add('hidden'); openPromiseUpdatePrompt(${originalIdx});" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg shadow-md transition">💰 वसूली / Date</button>
                                     <button onclick="document.getElementById('promiseDefaulterModal').classList.add('hidden'); openReminderModal(${originalIdx});" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg shadow-md transition">🔔 रिमाइंडर</button>
@@ -2155,7 +2161,6 @@
             }
         }
 
-        // 8. Promise Date Update & Due Cleared
         function openPromiseUpdatePrompt(index) {
             let s = students[index];
             const today = new Date().toISOString().split('T')[0];
@@ -2205,7 +2210,6 @@
             renderStudentList();
         }
 
-        // 8B. Collection Breakdown Modal for Today, This Month, Last Month, This Year
         function openCollectionBreakdownModal(periodType) {
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
@@ -2276,7 +2280,6 @@
             document.getElementById('collectionBreakdownModal').classList.remove('hidden');
         }
 
-        // 9. Vacant Seat (250), Chair (250), Locker (90) Finder
         function openVacantModal() {
             document.getElementById('vacantModal').classList.remove('hidden');
             renderVacantGrid('seat');
@@ -2322,7 +2325,6 @@
             }
         }
 
-        // 10. Royal Compact HD ID Card Modal
         function openIdCardModal(index) {
             const s = students[index];
             const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
@@ -2406,7 +2408,6 @@
             }
         }
 
-        // 11. Full Plan Renewal Modal (Fixed Locker Tick/Untick Logic)
         function onRenewLockerChanged() {
             const lVal = cleanResNum(document.getElementById('renewLockerNo').value);
             document.getElementById('renewLockerMonthCheck').checked = (lVal !== "");
@@ -2468,7 +2469,7 @@
         function recalcRenewalBill() {
             const shiftSel = document.getElementById('renewShiftSelect');
             const opt = shiftSel.options[shiftSel.selectedIndex];
-            const rate = parseFloat(opt.getAttribute('data-rate')) || 299;
+            const rate = parseFloat(opt.getAttribute('data-rate')) || 300;
             const months = parseInt(document.getElementById('renewMonths').value) || 1;
 
             let shiftSub = rate * months;
@@ -2476,7 +2477,6 @@
             else if(months === 6) shiftSub = Math.round(shiftSub * 0.90);
             else if(months === 12) shiftSub = Math.round(shiftSub * 0.85);
 
-            // Uses checkbox state directly so unticking removes locker fee
             const hasLocker = document.getElementById('renewLockerMonthCheck').checked;
             const lockerRent = hasLocker ? (LOCKER_MONTHLY_FEE * months) : 0;
             const secDeposit = document.getElementById('renewLockerSecCheck').checked ? LOCKER_SECURITY_DEPOSIT : 0;
@@ -2563,7 +2563,6 @@
             showInvoiceDetails(studentIdx, s.paymentHistory.length - 1);
         }
 
-        // 12. Single-Page A4 GST / Non-GST PDF Tax Invoice
         function showInvoiceDetails(studentIdx, payIdx) {
             const s = students[studentIdx];
             const p = s.paymentHistory[payIdx];
@@ -2584,7 +2583,6 @@
             const logoHtml = libraryLogo ? `<img src="${libraryLogo}" class="w-12 h-12 rounded-full object-contain bg-transparent mx-auto">` : `<div class="w-12 h-12 rounded-full theme-maroon text-white flex items-center justify-center text-xl mx-auto">🏛️</div>`;
 
             document.getElementById('invoiceBodyContent').innerHTML = `
-                <!-- Clean Unclipped Invoice Header -->
                 <div class="flex justify-between items-center border-b-2 border-red-900 pb-2.5 mb-3 gap-2">
                     <div class="flex items-center gap-3">
                         <div class="text-center flex-shrink-0">
@@ -2601,11 +2599,10 @@
                     <div class="text-right whitespace-nowrap">
                         <p class="text-xs font-black text-red-900 uppercase tracking-wider leading-none">${isGst ? 'GST TAX INVOICE' : 'FEE RECEIPT'}</p>
                         <p class="text-[10.5px] font-bold text-slate-800 mt-1">Invoice No: <b>${p.invNo || 'BL-001'}</b></p>
-                        <p class="text-[10.5px] text-purple-900 font-extrabold mt-0.5">Bill Date: ${p.date}</p>
+                        <p class="text-[10px] text-purple-900 font-extrabold mt-0.5">Bill Date: ${p.date}</p>
                     </div>
                 </div>
 
-                <!-- Strictly Aligned 2-Column Student Info Grid -->
                 <div class="grid grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-300 mb-2.5 text-[11px]">
                     <div class="space-y-1">
                         <div class="flex justify-between"><span class="text-slate-500 font-bold">Student Name:</span> <b class="official-name-color uppercase font-extrabold">${s.fullName} (${s.gender || 'Male'})</b></div>
@@ -2619,13 +2616,11 @@
                     </div>
                 </div>
 
-            <!-- Single-Line Validity Banner -->
                 <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 mb-2.5 flex justify-between items-center text-[11px] font-extrabold text-blue-900 whitespace-nowrap">
                     <span>🗓️ Plan: ${p.type || 'Fee'} (${(p.months || 1) * 28}-Day Cycle)</span>
                     <span>▶️ Start: ${pStart} &nbsp;➔&nbsp; ⏳ Valid Upto: ${pEnd}</span>
                 </div>
 
-                <!-- Invoice Particulars Table -->
                 <table class="w-full border-collapse border border-slate-300 text-[11px] mb-2.5">
                     <thead class="bg-slate-800 text-white">
                         <tr>
@@ -2714,7 +2709,6 @@
             });
         }
 
-        // 13. My Collection Modal (ID-Wise Student Payment Summary)
         function openMyCollectionModal() {
             let sorted = [...students].sort((a, b) => (parseInt(a.uniId) || 99999) - (parseInt(b.uniId) || 99999));
             let grandCash = 0, grandOnline = 0, grandTotal = 0, grandDue = 0;
@@ -2761,7 +2755,6 @@
             document.getElementById('myCollectionModal').classList.remove('hidden');
         }
 
-        // 14. Complete Profile Modal
         function calculateStudentTenure(admDateStr) {
             if(!admDateStr) return "0 Months, 0 Days";
             const start = new Date(admDateStr);
@@ -2871,7 +2864,7 @@
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border mb-4 text-xs">
-                    <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (Full Photo)', ${index}, 'photo')" class="w-24 h-24 rounded-xl face-focus-thumb shadow-md cursor-pointer" title="Click for Full Uncropped HD Photo">
+                    <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (Full Photo)')" class="w-24 h-24 rounded-xl face-focus-thumb shadow-md cursor-pointer" title="Click for Full Uncropped HD Photo">
                     <div class="space-y-1 w-full">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="theme-maroon-solid text-white px-2.5 py-0.5 rounded font-extrabold">ID: ${s.uniId}</span>
@@ -2889,11 +2882,11 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div class="border-2 border-slate-200 p-2.5 rounded-xl bg-slate-50 text-center">
                         <p class="text-xs font-extrabold text-slate-700 mb-1.5">📄 Document Front (HD)</p>
-                        ${s.aadhaarFront ? `<img src="${s.aadhaarFront}" onclick="zoomHdImage('${s.aadhaarFront}', 'Document Front - ${s.fullName}', ${index}, 'front')" class="h-44 w-full object-contain rounded-lg cursor-pointer border bg-white shadow-sm">` : `<p class="text-xs text-slate-400 py-12">No Front Document Uploaded</p>`}
+                        ${s.aadhaarFront ? `<img src="${s.aadhaarFront}" onclick="zoomHdImage('${s.aadhaarFront}', 'Document Front - ${s.fullName}')" class="h-44 w-full object-contain rounded-lg cursor-pointer border bg-white shadow-sm">` : `<p class="text-xs text-slate-400 py-12">No Front Document Uploaded</p>`}
                     </div>
                     <div class="border-2 border-slate-200 p-2.5 rounded-xl bg-slate-50 text-center">
                         <p class="text-xs font-extrabold text-slate-700 mb-1.5">📄 Document Back (HD)</p>
-                        ${s.aadhaarBack ? `<img src="${s.aadhaarBack}" onclick="zoomHdImage('${s.aadhaarBack}', 'Document Back - ${s.fullName}', ${index}, 'back')" class="h-44 w-full object-contain rounded-lg cursor-pointer border bg-white shadow-sm">` : `<p class="text-xs text-slate-400 py-12">No Back Document Uploaded</p>`}
+                        ${s.aadhaarBack ? `<img src="${s.aadhaarBack}" onclick="zoomHdImage('${s.aadhaarBack}', 'Document Back - ${s.fullName}')" class="h-44 w-full object-contain rounded-lg cursor-pointer border bg-white shadow-sm">` : `<p class="text-xs text-slate-400 py-12">No Back Document Uploaded</p>`}
                     </div>
                 </div>
 
@@ -2917,7 +2910,6 @@
 
         function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
 
-        // 15. Multi-Channel Reminder with Automatic Hindi Name, Sent Counter & Guardian Call Link
         async function openReminderModal(index) {
             const s = students[index];
             if(!s.reminderStats) s.reminderStats = { wa: 0, sms: 0, mail: 0 };
@@ -2979,7 +2971,6 @@
             document.getElementById('reminderStatsBadge').innerText = `📊 अब तक कुल भेजे गए रिमाइंडर: ${tot} (💬 WA: ${r.wa||0} | ✉️ SMS: ${r.sms||0} | 📧 Mail: ${r.mail||0})`;
         }
 
-        // 16. Today's Birthdays Modal
         async function openBirthdayModal() {
             const todayIso = new Date().toISOString().split('T')[0];
             const currentYear = todayIso.slice(0, 4);
@@ -3104,9 +3095,7 @@
             document.getElementById('admissionFormBox').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        }
 
-        // Dashboard Analytics
         function updateDashboardStats() {
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
@@ -3222,7 +3211,6 @@
 
         function closeZoomModal() { document.getElementById('zoomModal').classList.add('hidden'); }
 
-        // Upload Library Logo -> Automatically crops into 100% Transparent Circular PNG
         function openLogoModal() { document.getElementById('logoModal').classList.remove('hidden'); }
         function uploadLibraryLogo(input) {
             if (input.files && input.files[0]) {
@@ -3248,7 +3236,6 @@
             if(appIc) appIc.href = src;
         }
 
-        // Upload Founder HD Photo (Pintu Kumar Singh)
         function openFounderModal() { document.getElementById('founderModal').classList.remove('hidden'); }
         function applyFounderPhotoToUi(src) {
             const img = document.getElementById('headerFounderImg');
@@ -3310,7 +3297,7 @@
                 if(data && Array.isArray(data)) {
                     students = data;
                     normalizeStudentDates();
-                    localStorage.setItem('buddha_library_students', JSON.stringify(students));
+                    saveStudentsToBigDB(students);
                     renderStudentList();
                     updateDashboardStats();
                 }
