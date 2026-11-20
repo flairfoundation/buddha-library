@@ -1024,7 +1024,41 @@
         if (window.pdfjsLib) {
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
+// 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी
+        function openBuddhaBigDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open('BuddhaLibraryBigDB', 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('store')) db.createObjectStore('store');
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = (e) => reject(e);
+            });
+        }
 
+        async function saveStudentsToBigDB(dataArray) {
+            try {
+                const db = await openBuddhaBigDB();
+                const tx = db.transaction('store', 'readwrite');
+                tx.objectStore('store').put(dataArray, 'students_list');
+            } catch (e) {}
+            try {
+                localStorage.setItem('buddha_library_students', JSON.stringify(dataArray));
+            } catch (err) {}
+        }
+
+        async function loadStudentsFromBigDB() {
+            try {
+                const db = await openBuddhaBigDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction('store', 'readonly');
+                    const req = tx.objectStore('store').get('students_list');
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch (e) { return null; }
+        }
         function toTitleCaseWords(str) {
             if(!str) return '';
             return String(str).replace(/\b\w/g, c => c.toUpperCase());
@@ -1221,7 +1255,11 @@
             });
         }
 
-        function initSystem() {
+       async function initSystem() {
+            const bigData = await loadStudentsFromBigDB();
+            if (bigData && Array.isArray(bigData) && bigData.length > 0) {
+                students = bigData;
+            }
             normalizeStudentDates();
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('admissionDateInput').value = today;
@@ -1669,7 +1707,10 @@
                 st.validUpto = validUpto; st.totalBill = totalBill;
                 st.remainingDue = remainingDue; st.promiseDate = promiseDate;
                 if(hasLockerSec) st.lockerSecurityPaid = LOCKER_SECURITY_DEPOSIT;
-                if(tempUploads.photoThumb) { st.photo = tempUploads.photoThumb; st.photoFull = tempUploads.photoFull; }
+                if(tempUploads.photoThumb) {
+                    st.photo = tempUploads.photoThumb;
+                    st.photoFull = tempUploads.photoFull || tempUploads.photoThumb;
+                }
                 if(tempUploads.frontBase64) st.aadhaarFront = tempUploads.frontBase64;
                 if(tempUploads.backBase64) st.aadhaarBack = tempUploads.backBase64;
             } else {
@@ -3056,8 +3097,13 @@
                 document.getElementById('previewWrap-back').classList.add('hidden');
             }
 
+            document.getElementById('studentPhotoInput').value = '';
+            document.getElementById('docFrontInput').value = '';
+            document.getElementById('docBackInput').value = '';
+
             document.getElementById('admissionFormBox').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         }
 
         // Dashboard Analytics
@@ -3249,7 +3295,7 @@
         }
 
         function syncAndSaveData() {
-            localStorage.setItem('buddha_library_students', JSON.stringify(students));
+            saveStudentsToBigDB(students);
             updateDashboardStats();
             if(firebaseDbUrl) {
                 const url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
