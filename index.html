@@ -1984,7 +1984,7 @@
                             ${(dueAmt > 0 || totalRem > 0) ? `
                                 <div class="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 text-[11px] flex flex-wrap items-center justify-between gap-1">
                                     <span class="font-extrabold text-red-800">
-                                        ${dueAmt > 0 ? `📅 Promise: ${s.promiseDate || 'Not Set'}` : ''}
+                                        ${dueAmt > 0 ? `📅 Promise: ${formatDisplayDate(s.promiseDate) || 'Not Set'}` : ''}
                                         ${lastFail ? `<span class="line-through text-slate-400 ml-1">(${lastFail})</span> <span class="bg-red-600 text-white px-1.5 py-0.2 rounded text-[10px] ml-1">❌ ${failList.length} बार वादा फेल</span>` : ''}
                                     </span>
                                     <span class="text-[10px] font-extrabold text-indigo-900 bg-white px-2 py-0.5 rounded border">
@@ -2130,7 +2130,7 @@
                                         ${failAlert}
                                     </p>
                                     <p class="text-[11px] font-bold text-slate-600 mt-1">
-                                        प्रॉमिस डेट: <u class="${isUrgent ? 'text-red-600' : 'text-emerald-700'}">${s.promiseDate || 'तय नहीं'}</u>
+                                        ${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${formatDisplayDate(s.promiseDate)} थी` : ''}
                                         | <a href="tel:${s.mobile}" class="text-blue-700 underline hover:text-blue-900">📞 ${s.mobile}</a>
                                     </p>
                                 </div>
@@ -2268,7 +2268,7 @@
                         <td class="p-2.5 font-extrabold text-red-900">ID: ${r.s.uniId}</td>
                         <td class="p-2.5 font-bold official-name-color">${r.s.fullName}</td>
                         <td class="p-2.5 font-bold"><a href="tel:${r.s.mobile}" class="text-blue-700 hover:underline">📞 ${r.s.mobile}</a></td>
-                        <td class="p-2.5 font-bold text-purple-900">${r.p.date}</td>
+                        <td class="p-2.5 font-bold text-purple-900">${formatDisplayDate(r.p.date)}</td>
                         <td class="p-2.5 text-slate-600">${r.p.type || 'Fee'}</td>
                         <td class="p-2.5 font-semibold">${r.p.mode || 'Cash'}</td>
                         <td class="p-2.5 text-right font-extrabold text-emerald-700 bg-emerald-50">₹${r.amt}</td>
@@ -2599,7 +2599,7 @@
                     <div class="text-right whitespace-nowrap">
                         <p class="text-xs font-black text-red-900 uppercase tracking-wider leading-none">${isGst ? 'GST TAX INVOICE' : 'FEE RECEIPT'}</p>
                         <p class="text-[10.5px] font-bold text-slate-800 mt-1">Invoice No: <b>${p.invNo || 'BL-001'}</b></p>
-                        <p class="text-[10px] text-purple-900 font-extrabold mt-0.5">Bill Date: ${p.date}</p>
+                        <p class="text-[10px] text-purple-900 font-extrabold mt-0.5">Bill Date: ${formatDisplayDate(p.date)}</p>
                     </div>
                 </div>
 
@@ -2674,7 +2674,7 @@
                         </tr>
                         <tr class="bg-emerald-50 text-emerald-900 font-extrabold">
                             <td colspan="2" class="border p-1.5 text-right">Amount Paid (${p.mode} on ${p.date})</td>
-                            <td class="border p-1.5 text-right">₹${parseFloat(p.amount).toFixed(2)}</td>
+                            <td colspan="2" class="border p-1.5 text-right">Amount Paid (${p.mode} on ${formatDisplayDate(p.date)})</td>
                         </tr>
                         <tr class="bg-red-50 text-red-700 font-extrabold">
                             <td colspan="2" class="border p-1.5 text-right">Remaining Balance Due</td>
@@ -2741,7 +2741,7 @@
                         <td class="p-2.5 text-right font-bold text-indigo-700">₹${oPaid}</td>
                         <td class="p-2.5 text-right font-extrabold text-emerald-700 bg-emerald-50">₹${tot}</td>
                         <td class="p-2.5 text-right font-extrabold ${due > 0 ? 'text-red-600 bg-red-50' : 'text-slate-400'}">₹${due}</td>
-                        <td class="p-2.5 text-center font-semibold text-purple-900">${lastD}</td>
+                        <td class="p-2.5 text-center font-semibold text-purple-900">${formatDisplayDate(lastD)}</td>
                     </tr>
                 `;
             });
@@ -2806,7 +2806,7 @@
             const ledgerRows = history.map((p, i) => `
                 <tr class="border-b hover:bg-slate-50">
                     <td class="p-2 font-bold">${i+1}</td>
-                    <td class="p-2 font-bold text-purple-900">${p.date}</td>
+                    <td class="p-2 font-bold text-purple-900">${formatDisplayDate(p.date)}</td>
                     <td class="p-2 font-extrabold text-emerald-700">₹${p.amount}</td>
                     <td class="p-2 font-semibold">${p.mode}</td>
                     <td class="p-2 text-slate-600">${p.period || p.type}</td>
@@ -2819,7 +2819,7 @@
                     <div class="bg-purple-50 border border-purple-200 p-3 rounded-xl">
                         <p class="text-[11px] font-bold text-purple-800">⏳ Student Tenure (कितना पुराना)</p>
                         <h4 class="text-sm font-extrabold text-purple-900 mt-0.5">${tenureStr}</h4>
-                        <p class="text-[10px] text-slate-600">Joined: <b>${s.admissionDate || '-'}</b></p>
+                        <p class="text-[10px] text-slate-600">Joined: <b>${formatDisplayDate(s.admissionDate)}</b></p>
                     </div>
                     <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
                         <p class="text-[11px] font-bold text-emerald-800">💰 Total Lifetime Paid</p>
@@ -2933,7 +2933,7 @@
             if(due > 0) {
                 msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी लाइब्रेरी फीस का ₹${due} बकाया है${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${s.promiseDate} थी` : ''}${failCount > 0 ? ` (आप ${failCount} बार तारीख बढ़ा चुके हैं)` : ''}। कृपया यथाशीघ्र बकाया राशि जमा करने का कष्ट करें।\nसंपर्क: 7050668855`;
             } else {
-                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी मेंबरशिप की वैधता ${s.validUpto} को समाप्त हो रही है। कृपया समय पर अपना प्लान रिन्यू करा लें।\nसंपर्क: 7050668855`;
+                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता हैै कि आपकी मेंबरशिप की वैधता ${formatDisplayDate(s.validUpto)} को समाप्त हो रही है। कृपया समय पर अपना प्लान रिन्यू करा लें।\nसंपर्क: 7050668855`;
             }
             document.getElementById('reminderTextBox').value = msg;
 
