@@ -2106,8 +2106,7 @@
                                 <div class="flex items-center gap-1.5 flex-shrink-0">
                                     ${s.isOut
                                         ? `<button onclick="toggleStudentOutStatus(${originalIdx}, false)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm transition" title="वापस एक्टिव तगादा लिस्ट में लाएं">✅ IN</button>`
-                                        : (!isActive ? `<button onclick="toggleStudentOutStatus(${originalIdx}, true)" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm transition" title="OUT फोल्डर में भेजें">🚫 OUT</button>` : '')
-                                    }
+                                        : (!isActive ? `<button onclick="toggleStudentOutStatus(${originalIdx}, true)" class="bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 px-2 py-1 rounded-lg text-[11px] font-bold transition" title="OUT फोल्डर में भेजें">🚫 OUT</button>` : '')
                                     <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition">⚙️ Options</button>
                                 </div>
                             </div>
@@ -2124,13 +2123,13 @@
                                 <span class="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">💺 ${resDualHtml}</span>
                             </div>
 
-                            <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] mt-2 pt-1.5 border-t border-slate-100">
-                                <span class="text-slate-700 font-bold">▶️ Start: <b class="text-blue-800">${formatDisplayDate(startShow)}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-rose-600'}">${formatDisplayDate(s.validUpto)}</b></span>
+                           <div class="flex flex-wrap items-center justify-between gap-2 text-[11.5px] mt-2 pt-1.5 border-t border-slate-200">
+                                <span class="text-slate-800 font-extrabold">▶️ Start: <b class="text-blue-800">${formatDisplayDate(startShow)}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-red-700 underline'}">${formatDisplayDate(s.validUpto)}</b></span>
                                 ${s.isOut
-                                    ? `<span class="bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-extrabold">🚪 OUT पर बकाया: ₹${outDisplayDue}</span>`
+                                    ? `<span class="bg-slate-800 text-amber-300 px-2.5 py-1 rounded-lg font-extrabold shadow-sm">🚪 OUT पर बकाया: ₹${outDisplayDue}</span>`
                                     : (!isActive
-                                        ? `<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded font-extrabold">⏳ ${expInfo.expiredDays}d Exp ${expInfo.isCapped ? '(Max 84d)' : ''} | बकाया: ₹${expInfo.totalEstimatedDue}</span>`
-                                        : (dueAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-extrabold">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`))
+                                        ? `<span class="bg-red-600 text-white border border-red-800 px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm">⏳ ${expInfo.expiredDays}d Exp ${expInfo.isCapped ? '(Max 84d)' : ''} | बकाया: ₹${expInfo.totalEstimatedDue}</span>`
+                                        : (dueAmt > 0 ? `<span class="bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`))
                                 }
                             </div>
 
