@@ -1081,7 +1081,7 @@
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
         }
 
-        // सभी तारीखों को DD-MM-YYYY में दिखाने का सुरक्षित फंक्शन
+        // सभी तारीखों को DD-MM-YYYY में दिखाने का फंक्शन
         function formatDisplayDate(dateStr) {
             if(!dateStr || dateStr === '-') return '-';
             const parts = String(dateStr).trim().split('-');
@@ -1089,6 +1089,36 @@
                 return `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
             return dateStr;
+        }
+
+        // एक्सपायरी के बाद प्रतिदिन (Rate / 28) के हिसाब से अधिकतम 3 महीने (84 दिन) तक का बकाया निकालना
+        function getExpiredDailyDuesInfo(s, todayStr) {
+            const oldDue = parseFloat(s.remainingDue) || 0;
+            if (!s.validUpto || s.validUpto >= todayStr) {
+                return { expiredDays: 0, cappedDays: 0, accruedFee: 0, totalEstimatedDue: oldDue, isCapped: false };
+            }
+            const dValid = new Date(s.validUpto + 'T00:00:00');
+            const dToday = new Date(todayStr + 'T00:00:00');
+            const expiredDays = Math.max(0, Math.round((dToday - dValid) / (1000 * 60 * 60 * 24)));
+            const cappedDays = Math.min(84, expiredDays); // अधिकतम 3 महीने (84 दिन) पर ऑटो-स्टॉप
+
+            let monthlyRate = 300;
+            const sh = s.shiftPlan || '';
+            if (sh.includes('800')) monthlyRate = 800;
+            else if (sh.includes('500')) monthlyRate = 500;
+            else if (sh.includes('400')) monthlyRate = 400;
+            else if (sh.includes('300')) monthlyRate = 300;
+
+            if (cleanResNum(s.lockerNo) !== '') monthlyRate += 50; // लॉकर चार्ज शामिल
+
+            const accruedFee = Math.round((monthlyRate / 28) * cappedDays);
+            return {
+                expiredDays,
+                cappedDays,
+                accruedFee,
+                totalEstimatedDue: oldDue + accruedFee,
+                isCapped: expiredDays > 84
+            };
         }
 
         function makeCircularTransparentPng(srcDataUrl, callback) {
@@ -1803,10 +1833,19 @@
             const bAll = document.getElementById('gBtn-All') || document.getElementById('gFilter-All');
             const bMale = document.getElementById('gBtn-Male') || document.getElementById('gFilter-Male');
             const bFemale = document.getElementById('gBtn-Female') || document.getElementById('gFilter-Female');
-            if (!bAll) return;
-            bAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
-            bMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-            bFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
+            if (bAll) {
+                bAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
+                bMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
+                bFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
+            }
+            const ebAll = document.getElementById('expCornerBtn-All');
+            const ebMale = document.getElementById('expCornerBtn-Male');
+            const ebFemale = document.getElementById('expCornerBtn-Female');
+            if (ebAll) {
+                ebAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
+                ebMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
+                ebFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
+            }
         }
 
         function setGenderFilter(g) { filterTotalByGender(g); }
@@ -1876,6 +1915,46 @@
             if (gEl) gEl.innerText = girlsTotal;
 
             const today = new Date().toISOString().split('T')[0];
+
+            // Expired टैब में कोने पर Boys/Girls संख्या और प्रतिदिन (Max 3M/84d) बकाया का ऑटो-बार
+            const anchorEl = document.getElementById('listSectionAnchor');
+            if (anchorEl) {
+                let expBar = document.getElementById('autoExpiredCornerBar');
+                if (!expBar) {
+                    expBar = document.createElement('div');
+                    expBar.id = 'autoExpiredCornerBar';
+                    anchorEl.parentNode.insertBefore(expBar, anchorEl.nextSibling);
+                }
+                if (currentTab === 'expired' && !rawQuery) {
+                    let eBoys = 0, eGirls = 0, eBoysDue = 0, eGirlsDue = 0;
+                    students.forEach(st => {
+                        if (st.validUpto && st.validUpto < today) {
+                            const info = getExpiredDailyDuesInfo(st, today);
+                            if ((st.gender || 'Male') === 'Female') {
+                                eGirls++;
+                                eGirlsDue += info.totalEstimatedDue;
+                            } else {
+                                eBoys++;
+                                eBoysDue += info.totalEstimatedDue;
+                            }
+                        }
+                    });
+                    expBar.className = "bg-rose-50 border border-rose-300 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
+                    expBar.innerHTML = `
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-rose-900">📊 Expired Dues (28d/M, Max 3M):</span>
+                            <button id="expCornerBtn-All" onclick="filterTotalByGender('All')" class="bg-slate-800 text-white px-2 py-0.5 rounded-md">All: ${eBoys + eGirls}</button>
+                            <button id="expCornerBtn-Male" onclick="filterTotalByGender('Male')" class="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md">👦 Boys: ${eBoys} (₹${eBoysDue})</button>
+                            <button id="expCornerBtn-Female" onclick="filterTotalByGender('Female')" class="bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md">👧 Girls: ${eGirls} (₹${eGirlsDue})</button>
+                        </div>
+                        <span class="text-rose-800 bg-white px-2.5 py-0.5 rounded border border-rose-200">💰 Total Due: ₹${eBoysDue + eGirlsDue}</span>
+                    `;
+                    updateCornerGenderBtns();
+                } else {
+                    expBar.className = "hidden";
+                }
+            }
+
             let workingList = students.map((item, idx) => ({ item, originalIdx: idx }));
 
             if(currentTab === 'promise') {
@@ -1950,6 +2029,7 @@
                 const daysLeft = getDaysRemaining(s.validUpto, today);
                 const isExpiringSoon = (daysLeft >= 0 && daysLeft <= 7);
                 const dueAmt = parseFloat(s.remainingDue) || 0;
+                const expInfo = !isActive ? getExpiredDailyDuesInfo(s, today) : null;
                 const thumbAvatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
                 const fullZoomAvatar = s.photoFull || thumbAvatar;
                 const shiftClean = cleanShiftName(s.shiftPlan);
@@ -1994,7 +2074,10 @@
 
                             <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] mt-2 pt-1.5 border-t border-slate-100">
                                 <span class="text-slate-700 font-bold">▶️ Start: <b class="text-blue-800">${formatDisplayDate(startShow)}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-rose-600'}">${formatDisplayDate(s.validUpto)}</b></span>
-                                ${dueAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-extrabold">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`}
+                                ${!isActive
+                                    ? `<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded font-extrabold">⏳ ${expInfo.expiredDays}d Exp ${expInfo.isCapped ? '(Max 84d)' : ''} | बकाया: ₹${expInfo.totalEstimatedDue}</span>`
+                                    : (dueAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-extrabold">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`)
+                                }
                             </div>
 
                             ${(dueAmt > 0 || totalRem > 0) ? `
@@ -2929,7 +3012,10 @@
         async function openReminderModal(index) {
             const s = students[index];
             if(!s.reminderStats) s.reminderStats = { wa: 0, sms: 0, mail: 0 };
-            const due = parseFloat(s.remainingDue) || 0;
+            const today = new Date().toISOString().split('T')[0];
+            const isExpired = s.validUpto && s.validUpto < today;
+            const expInfo = isExpired ? getExpiredDailyDuesInfo(s, today) : null;
+            const due = isExpired ? expInfo.totalEstimatedDue : (parseFloat(s.remainingDue) || 0);
             const failCount = s.promiseHistory ? s.promiseHistory.length : 0;
 
             document.getElementById('reminderStudentLabel').innerHTML = `ID: ${s.uniId} — ${s.fullName} (<a href="tel:${s.mobile}" class="text-blue-700 underline">📞 ${s.mobile}</a>)`;
@@ -2947,7 +3033,7 @@
             const hindiName = await toHindiName(s.fullName);
             let msg = '';
             if(due > 0) {
-                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी लाइब्रेरी फीस का ₹${due} बकाया है${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${formatDisplayDate(s.promiseDate)} थी` : ''}${failCount > 0 ? ` (आप ${failCount} बार तारीख बढ़ा चुके हैं)` : ''}। कृपया यथाशीघ्र बकाया राशि जमा करने का कष्ट करें।\nसंपर्क: 7050668855`;
+                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी लाइब्रेरी फीस का ₹${due} बकाया है${isExpired ? ` (वैधता ${formatDisplayDate(s.validUpto)} को समाप्त हुई, ${expInfo.expiredDays} दिन हो चुके हैं)` : ''}${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${formatDisplayDate(s.promiseDate)} थी` : ''}${failCount > 0 ? ` (आप ${failCount} बार तारीख बढ़ा चुके हैं)` : ''}। कृपया यथाशीघ्र बकाया राशि जमा करने का कष्ट करें।\nसंपर्क: 7050668855`;
             } else {
                 msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी मेंबरशिप की वैधता ${formatDisplayDate(s.validUpto)} को समाप्त हो रही है। कृपया समय पर अपना प्लान रिन्यू करा लें।\nसंपर्क: 7050668855`;
             }
@@ -3188,9 +3274,16 @@
 
         function setTab(tab, shouldScroll) {
             currentTab = tab;
+            selectedGenderCorner = 'All';
+            updateCornerGenderBtns();
             displayLimit = 50;
             document.getElementById('searchInput').value = '';
             document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
+
+            const listWrap = document.getElementById('memberListMainWrapper');
+            if (listWrap && tab !== 'all') {
+                listWrap.classList.remove('hidden');
+            }
 
             ['all', 'active', 'expired', 'expiring7', 'promise'].forEach(t => {
                 const card = document.getElementById(`cardTab-${t}`);
