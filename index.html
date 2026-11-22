@@ -979,7 +979,7 @@
         </div>
     </div>
 
- <!-- ================= APPLICATION JAVASCRIPT ================= -->
+<!-- ================= APPLICATION JAVASCRIPT ================= -->
     <script>
         const TOTAL_SEATS = 250;
         const TOTAL_CHAIRS = 250;
@@ -2107,6 +2107,7 @@
                                     ${s.isOut
                                         ? `<button onclick="toggleStudentOutStatus(${originalIdx}, false)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm transition" title="वापस एक्टिव तगादा लिस्ट में लाएं">✅ IN</button>`
                                         : (!isActive ? `<button onclick="toggleStudentOutStatus(${originalIdx}, true)" class="bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 px-2 py-1 rounded-lg text-[11px] font-bold transition" title="OUT फोल्डर में भेजें">🚫 OUT</button>` : '')
+                                    }
                                     <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition">⚙️ Options</button>
                                 </div>
                             </div>
@@ -2123,7 +2124,7 @@
                                 <span class="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">💺 ${resDualHtml}</span>
                             </div>
 
-                           <div class="flex flex-wrap items-center justify-between gap-2 text-[11.5px] mt-2 pt-1.5 border-t border-slate-200">
+                            <div class="flex flex-wrap items-center justify-between gap-2 text-[11.5px] mt-2 pt-1.5 border-t border-slate-200">
                                 <span class="text-slate-800 font-extrabold">▶️ Start: <b class="text-blue-800">${formatDisplayDate(startShow)}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-red-700 underline'}">${formatDisplayDate(s.validUpto)}</b></span>
                                 ${s.isOut
                                     ? `<span class="bg-slate-800 text-amber-300 px-2.5 py-1 rounded-lg font-extrabold shadow-sm">🚪 OUT पर बकाया: ₹${outDisplayDue}</span>`
