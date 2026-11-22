@@ -979,7 +979,7 @@
         </div>
     </div>
 
-   <!-- ================= APPLICATION JAVASCRIPT ================= -->
+ <!-- ================= APPLICATION JAVASCRIPT ================= -->
     <script>
         const TOTAL_SEATS = 250;
         const TOTAL_CHAIRS = 250;
@@ -1091,7 +1091,7 @@
             return dateStr;
         }
 
-        // एक्सपायरी के बाद बच्चे के सिलेक्टेड प्लान (Rate ÷ 28 × Expired Days, Max 84 Days) के हिसाब से बकाया निकालना
+        // बच्चे के सिलेक्टेड शिफ्ट प्लान (Rate ÷ 28 × Expired Days, अधिकतम 84 दिन) के अनुसार बकाया निकालना
         function getExpiredDailyDuesInfo(s, todayStr) {
             const oldDue = parseFloat(s.remainingDue) || 0;
             if (!s.validUpto || s.validUpto >= todayStr) {
@@ -1843,9 +1843,17 @@
             const ebMale = document.getElementById('expCornerBtn-Male');
             const ebFemale = document.getElementById('expCornerBtn-Female');
             if (ebAll) {
-                ebAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
-                ebMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-                ebFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
+                ebAll.className = (selectedGenderCorner === 'All' && currentTab === 'expired') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
+                ebMale.className = (selectedGenderCorner === 'Male' && currentTab === 'expired') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
+                ebFemale.className = (selectedGenderCorner === 'Female' && currentTab === 'expired') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
+            }
+            const obAll = document.getElementById('outCornerBtn-All');
+            const obMale = document.getElementById('outCornerBtn-Male');
+            const obFemale = document.getElementById('outCornerBtn-Female');
+            if (obAll) {
+                obAll.className = (selectedGenderCorner === 'All') ? "bg-slate-900 text-yellow-300 px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-800 px-2 py-0.5 rounded-md";
+                obMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
+                obFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
             }
         }
 
@@ -1917,7 +1925,7 @@
 
             const today = new Date().toISOString().split('T')[0];
 
-            // Expired टैब में कोने पर Boys/Girls संख्या और प्रतिदिन (Max 3M/84d) बकाया का ऑटो-बार
+            // Expired और OUT Folder में कोने पर Boys/Girls की पूरी संख्या और बकाया का ऑटो-बार
             const anchorEl = document.getElementById('listSectionAnchor');
             if (anchorEl) {
                 let expBar = document.getElementById('autoExpiredCornerBar');
@@ -1926,11 +1934,22 @@
                     expBar.id = 'autoExpiredCornerBar';
                     anchorEl.parentNode.insertBefore(expBar, anchorEl.nextSibling);
                 }
-                if (currentTab === 'expired' && !rawQuery) {
+                if ((currentTab === 'expired' || currentTab === 'out_members') && !rawQuery) {
                     let eBoys = 0, eGirls = 0, eBoysDue = 0, eGirlsDue = 0;
+                    let oBoys = 0, oGirls = 0, oBoysDue = 0, oGirlsDue = 0;
+
                     students.forEach(st => {
-                        if (st.validUpto && st.validUpto < today) {
-                            const info = getExpiredDailyDuesInfo(st, today);
+                        const info = getExpiredDailyDuesInfo(st, today);
+                        const lockedOrCalcDue = (st.outDueAmount !== undefined && st.outDueAmount !== null) ? parseFloat(st.outDueAmount) : info.totalEstimatedDue;
+                        if (st.isOut) {
+                            if ((st.gender || 'Male') === 'Female') {
+                                oGirls++;
+                                oGirlsDue += lockedOrCalcDue;
+                            } else {
+                                oBoys++;
+                                oBoysDue += lockedOrCalcDue;
+                            }
+                        } else if (st.validUpto && st.validUpto < today) {
                             if ((st.gender || 'Male') === 'Female') {
                                 eGirls++;
                                 eGirlsDue += info.totalEstimatedDue;
@@ -1940,16 +1959,32 @@
                             }
                         }
                     });
-                    expBar.className = "bg-rose-50 border border-rose-300 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
-                    expBar.innerHTML = `
-                        <div class="flex flex-wrap items-center gap-1.5">
-                            <span class="text-rose-900">📊 Expired Dues (28d/M, Max 3M):</span>
-                            <button id="expCornerBtn-All" onclick="filterTotalByGender('All')" class="bg-slate-800 text-white px-2 py-0.5 rounded-md">All: ${eBoys + eGirls}</button>
-                            <button id="expCornerBtn-Male" onclick="filterTotalByGender('Male')" class="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md">👦 Boys: ${eBoys} (₹${eBoysDue})</button>
-                            <button id="expCornerBtn-Female" onclick="filterTotalByGender('Female')" class="bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md">👧 Girls: ${eGirls} (₹${eGirlsDue})</button>
-                        </div>
-                        <span class="text-rose-800 bg-white px-2.5 py-0.5 rounded border border-rose-200">💰 Total Due: ₹${eBoysDue + eGirlsDue}</span>
-                    `;
+
+                    if (currentTab === 'expired') {
+                        expBar.className = "bg-rose-50 border border-rose-300 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
+                        expBar.innerHTML = `
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-rose-900">📊 Active Expired (Max 3M):</span>
+                                <button id="expCornerBtn-All" onclick="setTab('expired', false)" class="bg-slate-800 text-white px-2 py-0.5 rounded-md">Total: ${eBoys + eGirls}</button>
+                                <button id="expCornerBtn-Male" onclick="filterTotalByGender('Male')" class="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md">👦 Boys: ${eBoys} (₹${eBoysDue})</button>
+                                <button id="expCornerBtn-Female" onclick="filterTotalByGender('Female')" class="bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md">👧 Girls: ${eGirls} (₹${eGirlsDue})</button>
+                                <button onclick="setTab('out_members', false)" class="bg-slate-200 hover:bg-slate-800 hover:text-white text-slate-900 border border-slate-400 px-2.5 py-0.5 rounded-md transition">🚪 OUT Folder: ${oBoys + oGirls}</button>
+                            </div>
+                            <span class="text-rose-800 bg-white px-2.5 py-0.5 rounded border border-rose-200">💰 Active Exp Due: ₹${eBoysDue + eGirlsDue}</span>
+                        `;
+                    } else {
+                        expBar.className = "bg-slate-800 text-white border border-slate-700 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
+                        expBar.innerHTML = `
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-yellow-300">🚪 OUT Summary:</span>
+                                <button id="outCornerBtn-All" onclick="filterTotalByGender('All')" class="bg-slate-900 text-yellow-300 px-2 py-0.5 rounded-md">Total OUT: ${oBoys + oGirls}</button>
+                                <button id="outCornerBtn-Male" onclick="filterTotalByGender('Male')" class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded-md">👦 Boys OUT: ${oBoys} (₹${oBoysDue})</button>
+                                <button id="outCornerBtn-Female" onclick="filterTotalByGender('Female')" class="bg-pink-100 text-pink-900 px-2 py-0.5 rounded-md">👧 Girls OUT: ${oGirls} (₹${oGirlsDue})</button>
+                                <button onclick="setTab('expired', false)" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-0.5 rounded-md transition">⬅️ Back to Active Expired (${eBoys + eGirls})</button>
+                            </div>
+                            <span class="text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded border border-slate-600">💰 Total OUT Dues: ₹${oBoysDue + oGirlsDue}</span>
+                        `;
+                    }
                     updateCornerGenderBtns();
                 } else {
                     expBar.className = "hidden";
@@ -1973,6 +2008,13 @@
                 const daysLeft = getDaysRemaining(s.validUpto, today);
 
                 if(!rawQuery) {
+                    if(currentTab === 'out_members') {
+                        if(!s.isOut) return false;
+                        if(selectedGenderCorner === 'Male' && (s.gender || 'Male') === 'Female') return false;
+                        if(selectedGenderCorner === 'Female' && s.gender !== 'Female') return false;
+                        return true;
+                    }
+                    if(s.isOut && currentTab !== 'all') return false;
                     if(selectedGenderCorner === 'Male' && (s.gender || 'Male') === 'Female') return false;
                     if(selectedGenderCorner === 'Female' && s.gender !== 'Female') return false;
                     if(currentTab === 'active' && !isActive) return false;
@@ -1995,7 +2037,8 @@
             const tabNames = {
                 all: '👥 All Members',
                 active: '🟢 Live Active Members',
-                expired: '🔴 Expired Members',
+                expired: '🔴 Expired Members (तगादा लिस्ट)',
+                out_members: '🚪 OUT Members Folder (छोड़ चुके छात्र)',
                 expiring7: '⏳ Expiring in 1 to 7 Days',
                 promise: '📅 Promise Date / Pending Dues List'
             };
@@ -2031,6 +2074,7 @@
                 const isExpiringSoon = (daysLeft >= 0 && daysLeft <= 7);
                 const dueAmt = parseFloat(s.remainingDue) || 0;
                 const expInfo = !isActive ? getExpiredDailyDuesInfo(s, today) : null;
+                const outDisplayDue = (s.outDueAmount !== undefined && s.outDueAmount !== null) ? parseFloat(s.outDueAmount) : (expInfo ? expInfo.totalEstimatedDue : dueAmt);
                 const thumbAvatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
                 const fullZoomAvatar = s.photoFull || thumbAvatar;
                 const shiftClean = cleanShiftName(s.shiftPlan);
@@ -2042,7 +2086,7 @@
                 const startShow = s.cycleStartDate || s.admissionDate || '-';
 
                 let card = document.createElement('div');
-                card.className = `bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition border-l-4 ${isActive ? (isExpiringSoon ? 'border-amber-500' : 'border-emerald-600') : 'border-rose-600'} flex flex-col justify-between`;
+                card.className = `bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition border-l-4 ${s.isOut ? 'border-slate-800 bg-slate-50/70' : (isActive ? (isExpiringSoon ? 'border-amber-500' : 'border-emerald-600') : 'border-rose-600')} flex flex-col justify-between`;
 
                 card.innerHTML = `
                     <div class="flex items-start gap-3">
@@ -2056,9 +2100,16 @@
                                 <div class="flex flex-wrap items-center gap-1.5">
                                     <span class="theme-maroon-solid text-white text-xs px-2.5 py-0.5 rounded-md font-extrabold">ID: ${s.uniId}</span>
                                     <h3 onclick="openProfileModal(${originalIdx})" class="font-extrabold official-name-color text-sm sm:text-base cursor-pointer hover:underline">${toTitleCaseWords(s.fullName)}</h3>
-                                    ${isExpiringSoon ? `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full">⏳ ${daysLeft === 0 ? 'आज एक्सपायर' : daysLeft + ' दिन शेष'}</span>` : ''}
+                                    ${s.isOut ? `<span class="bg-slate-800 text-yellow-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full">🚪 OUT</span>` : ''}
+                                    ${!s.isOut && isExpiringSoon ? `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full">⏳ ${daysLeft === 0 ? 'आज एक्सपायर' : daysLeft + ' दिन शेष'}</span>` : ''}
                                 </div>
-                                <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition flex-shrink-0">⚙️ Options</button>
+                                <div class="flex items-center gap-1.5 flex-shrink-0">
+                                    ${s.isOut
+                                        ? `<button onclick="toggleStudentOutStatus(${originalIdx}, false)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm transition" title="वापस एक्टिव तगादा लिस्ट में लाएं">✅ IN</button>`
+                                        : (!isActive ? `<button onclick="toggleStudentOutStatus(${originalIdx}, true)" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm transition" title="OUT फोल्डर में भेजें">🚫 OUT</button>` : '')
+                                    }
+                                    <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition">⚙️ Options</button>
+                                </div>
                             </div>
 
                             <p class="text-xs text-slate-700 font-semibold mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -2075,13 +2126,22 @@
 
                             <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] mt-2 pt-1.5 border-t border-slate-100">
                                 <span class="text-slate-700 font-bold">▶️ Start: <b class="text-blue-800">${formatDisplayDate(startShow)}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-rose-600'}">${formatDisplayDate(s.validUpto)}</b></span>
-                                ${!isActive
-                                    ? `<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded font-extrabold">⏳ ${expInfo.expiredDays}d Exp ${expInfo.isCapped ? '(Max 84d)' : ''} | बकाया: ₹${expInfo.totalEstimatedDue}</span>`
-                                    : (dueAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-extrabold">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`)
+                                ${s.isOut
+                                    ? `<span class="bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-extrabold">🚪 OUT पर बकाया: ₹${outDisplayDue}</span>`
+                                    : (!isActive
+                                        ? `<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded font-extrabold">⏳ ${expInfo.expiredDays}d Exp ${expInfo.isCapped ? '(Max 84d)' : ''} | बकाया: ₹${expInfo.totalEstimatedDue}</span>`
+                                        : (dueAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-extrabold">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`))
                                 }
                             </div>
 
-                            ${(dueAmt > 0 || totalRem > 0) ? `
+                            ${(s.outDate || s.reInDate) ? `
+                                <div class="mt-1.5 bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1 text-[10.5px] font-extrabold text-slate-800 flex flex-wrap items-center justify-between gap-2">
+                                    ${s.outDate ? `<span class="text-rose-800">🚪 OUT Date: ${formatDisplayDate(s.outDate)} से नहीं आ रहा</span>` : ''}
+                                    ${s.reInDate ? `<span class="text-emerald-800">✅ Re-IN Date: ${formatDisplayDate(s.reInDate)} से वापस आ रहा है</span>` : ''}
+                                </div>
+                            ` : ''}
+
+                            ${(!s.isOut && (dueAmt > 0 || totalRem > 0)) ? `
                                 <div class="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 text-[11px] flex flex-wrap items-center justify-between gap-1">
                                     <span class="font-extrabold text-red-800">
                                         ${dueAmt > 0 ? `📅 Promise: ${s.promiseDate ? formatDisplayDate(s.promiseDate) : 'Not Set'}` : ''}
@@ -2113,6 +2173,30 @@
         function toggleCardMenu(idx) {
             const el = document.getElementById(`cardMenu-${idx}`);
             if(el) el.classList.toggle('hidden');
+        }
+
+        function toggleStudentOutStatus(index, makeOut) {
+            const s = students[index];
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (makeOut) {
+                const info = getExpiredDailyDuesInfo(s, todayStr);
+                const currentDueSnapshot = info.totalEstimatedDue;
+                if (!confirm(`🚫 क्या आप "${s.fullName} (ID: ${s.uniId})" को OUT फोल्डर में भेजना चाहते हैं?\n\n• OUT तारीख दर्ज होगी: ${formatDisplayDate(todayStr)}\n• बकाया राशि लॉक होगी: ₹${currentDueSnapshot}\n• सीट/लॉकर खाली हो जाएगी और डेटा सुरक्षित रहेगा।`)) return;
+                s.isOut = true;
+                s.outDate = todayStr;
+                s.outDueAmount = currentDueSnapshot;
+                s.seatNo = "";
+                s.chairNo = "";
+                s.lockerNo = "";
+                s.keyNo = "";
+            } else {
+                if (!confirm(`✅ क्या आप "${s.fullName} (ID: ${s.uniId})" को वापस IN (सक्रिय तगादा लिस्ट) में लाना चाहते हैं?\n\n• वापसी (Re-IN) तारीख दर्ज होगी: ${formatDisplayDate(todayStr)}\n• इनका बकाया फिर से सक्रिय लिस्ट में दिखने लगेगा।`)) return;
+                s.isOut = false;
+                s.reInDate = todayStr;
+                delete s.outDueAmount;
+            }
+            syncAndSaveData();
+            renderStudentList();
         }
 
         function deleteStudentRecord(index) {
@@ -2249,8 +2333,12 @@
 
         function markStudentOut(index) {
             const s = students[index];
-            if(confirm(`क्या आप सच में ${s.fullName} को '3 महीने का डिफॉल्टर (OUT)' घोषित करना चाहते हैं?\n\nइससे इसकी सीट खाली हो जाएगी, लेकिन यह लिस्ट में डिफॉल्टर के रूप में हमेशा लाल रंग से दिखेगा।`)){
+            const todayStr = new Date().toISOString().split('T')[0];
+            if(confirm(`क्या आप सच में ${s.fullName} को '3 महीने का डिफॉल्टर (OUT)' घोषित करना चाहते हैं?\n\nइससे इसकी सीट खाली हो जाएगी, और यह OUT फोल्डर में चला जाएगा।`)){
+                const info = getExpiredDailyDuesInfo(s, todayStr);
                 s.isOut = true;
+                s.outDate = todayStr;
+                s.outDueAmount = info.totalEstimatedDue;
                 s.seatNo = "";
                 s.chairNo = "";
                 s.lockerNo = "";
@@ -2618,6 +2706,8 @@
             const payMode = document.getElementById('renewPayMode').value;
             const promiseD = document.getElementById('renewPromiseDate').value;
 
+            s.isOut = false;
+            delete s.outDueAmount;
             s.shiftPlan = newShift;
             s.lockerNo = newLocker;
             s.keyNo = newKey;
@@ -2933,6 +3023,13 @@
                     </div>
                 </div>
 
+                ${(s.outDate || s.reInDate) ? `
+                <div class="bg-slate-100 border border-slate-300 p-3 rounded-xl mb-4 text-xs font-extrabold flex flex-wrap gap-4">
+                    ${s.outDate ? `<span class="text-rose-800">🚪 OUT Date: ${formatDisplayDate(s.outDate)} से नहीं आ रहा</span>` : ''}
+                    ${s.reInDate ? `<span class="text-emerald-800">✅ Re-IN Date: ${formatDisplayDate(s.reInDate)} से वापस आ रहा है</span>` : ''}
+                </div>
+                ` : ''}
+
                 <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 mb-4 text-xs">
                     <h4 class="font-extrabold text-blue-900 mb-2">📅 Direct Admission & Plan Date Editor</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
@@ -3215,7 +3312,7 @@
 
             students.forEach(s => {
                 if(s.validUpto >= todayStr) activeCount++;
-                else expiredCount++;
+                else if(!s.isOut) expiredCount++;
 
                 const daysLeft = getDaysRemaining(s.validUpto, todayStr);
                 if(daysLeft >= 0 && daysLeft <= 7) expiring7Count++;
@@ -3289,7 +3386,7 @@
             ['all', 'active', 'expired', 'expiring7', 'promise'].forEach(t => {
                 const card = document.getElementById(`cardTab-${t}`);
                 if(card) {
-                    if(t === tab || (tab === 'dues' && t === 'promise')) {
+                    if(t === tab || (tab === 'dues' && t === 'promise') || (tab === 'out_members' && t === 'expired')) {
                         card.classList.add('active-filter-ring');
                     } else {
                         card.classList.remove('active-filter-ring');
@@ -3442,10 +3539,10 @@
         }
 
         function exportExcelCsv() {
-            let csv = "Serial,Unique ID,Full Name,Gender,Mobile,Guardian Mobile,Address,Shift,Seat,Chair,Locker,Key,Locker Security Paid,Admission Date,Cycle Start Date,Valid Upto,Remaining Due,Promise Date,Reminders Sent\n";
+            let csv = "Serial,Unique ID,Full Name,Gender,Mobile,Guardian Mobile,Address,Shift,Seat,Chair,Locker,Key,Locker Security Paid,Admission Date,Cycle Start Date,Valid Upto,Remaining Due,Promise Date,Status,OUT Date,Re-IN Date,Reminders Sent\n";
             students.forEach((s, idx) => {
                 const r = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
-                csv += `${idx + 1},${s.uniId},"${s.fullName}",${s.gender || 'Male'},${s.mobile},${s.guardianMobile || ''},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.lockerSecurityPaid || 0},${formatDisplayDate(s.admissionDate || '')},${formatDisplayDate(s.cycleStartDate || '')},${formatDisplayDate(s.validUpto)},${s.remainingDue || 0},${formatDisplayDate(s.promiseDate || '')},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
+                csv += `${idx + 1},${s.uniId},"${s.fullName}",${s.gender || 'Male'},${s.mobile},${s.guardianMobile || ''},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.lockerSecurityPaid || 0},${formatDisplayDate(s.admissionDate || '')},${formatDisplayDate(s.cycleStartDate || '')},${formatDisplayDate(s.validUpto)},${s.remainingDue || 0},${formatDisplayDate(s.promiseDate || '')},${s.isOut ? 'OUT' : 'Active'},${formatDisplayDate(s.outDate || '')},${formatDisplayDate(s.reInDate || '')},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
