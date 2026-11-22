@@ -979,7 +979,7 @@
         </div>
     </div>
 
-    <!-- ================= APPLICATION JAVASCRIPT ================= -->
+   <!-- ================= APPLICATION JAVASCRIPT ================= -->
     <script>
         const TOTAL_SEATS = 250;
         const TOTAL_CHAIRS = 250;
@@ -1021,7 +1021,7 @@
         try { students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]'); } catch(e) { students = []; }
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
 
-        // 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी (Non-Blocking)
+        // 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी
         function openBuddhaBigDB() {
             return new Promise((resolve, reject) => {
                 if (!window.indexedDB) { reject('No IDB'); return; }
@@ -1079,6 +1079,16 @@
         function cleanResNum(val) {
             if(!val) return '';
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
+        }
+
+        // सभी तारीखों को DD-MM-YYYY में दिखाने का सुरक्षित फंक्शन
+        function formatDisplayDate(dateStr) {
+            if(!dateStr || dateStr === '-') return '-';
+            const parts = String(dateStr).trim().split('-');
+            if(parts.length === 3 && parts[0].length === 4) {
+                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            return dateStr;
         }
 
         function makeCircularTransparentPng(srcDataUrl, callback) {
@@ -1730,7 +1740,7 @@
                         months: durationMonths,
                         shiftAtTime: shiftPlan,
                         mode: paymentMode,
-                        period: `${cycleStartDate} to ${validUpto} (${durationMonths}M)`,
+                        period: `${formatDisplayDate(cycleStartDate)} to ${formatDisplayDate(validUpto)} (${durationMonths}M)`,
                         type: 'Admission'
                     }]
                 };
@@ -1790,24 +1800,28 @@
         }
 
         function updateCornerGenderBtns() {
-            const bAll = document.getElementById('gBtn-All');
-            const bMale = document.getElementById('gBtn-Male');
-            const bFemale = document.getElementById('gBtn-Female');
+            const bAll = document.getElementById('gBtn-All') || document.getElementById('gFilter-All');
+            const bMale = document.getElementById('gBtn-Male') || document.getElementById('gFilter-Male');
+            const bFemale = document.getElementById('gBtn-Female') || document.getElementById('gFilter-Female');
             if (!bAll) return;
             bAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
             bMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
             bFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
         }
 
+        function setGenderFilter(g) { filterTotalByGender(g); }
+        function openMemberListSection(tab) { openTotalMembersOnly(); }
+        function closeMemberListSection() { closeTotalMembersOnly(); }
+
         function onSearchInputChanged() {
             const rawQuery = document.getElementById('searchInput').value.trim();
             const dashWrap = document.getElementById('dashboardCardsWrapper');
             const listWrap = document.getElementById('memberListMainWrapper');
             if(rawQuery.length > 0) {
-                dashWrap.classList.add('hidden');
+                if(dashWrap) dashWrap.classList.add('hidden');
                 if(listWrap) listWrap.classList.remove('hidden');
             } else {
-                dashWrap.classList.remove('hidden');
+                if(dashWrap) dashWrap.classList.remove('hidden');
             }
             displayLimit = 50;
             renderStudentList();
@@ -1815,7 +1829,8 @@
 
         function clearSearchBox() {
             document.getElementById('searchInput').value = '';
-            document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
+            const dashWrap = document.getElementById('dashboardCardsWrapper');
+            if(dashWrap) dashWrap.classList.remove('hidden');
             displayLimit = 50;
             renderStudentList();
         }
@@ -1845,6 +1860,7 @@
 
         function renderStudentList() {
             const container = document.getElementById('studentListContainer');
+            if(!container) return;
             const rawQuery = document.getElementById('searchInput').value.trim();
             const qLower = rawQuery.toLowerCase();
             container.innerHTML = '';
@@ -1854,8 +1870,8 @@
                 if ((s.gender || 'Male') === 'Female') girlsTotal++;
                 else boysTotal++;
             });
-            const bEl = document.getElementById('cornerBoysCount');
-            const gEl = document.getElementById('cornerGirlsCount');
+            const bEl = document.getElementById('cornerBoysCount') || document.getElementById('listBoysCount');
+            const gEl = document.getElementById('cornerGirlsCount') || document.getElementById('listGirlsCount');
             if (bEl) bEl.innerText = boysTotal;
             if (gEl) gEl.innerText = girlsTotal;
 
@@ -1977,15 +1993,15 @@
                             </div>
 
                             <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] mt-2 pt-1.5 border-t border-slate-100">
-                                <span class="text-slate-700 font-bold">▶️ Start: <b class="text-blue-800">${startShow}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-rose-600'}">${s.validUpto}</b></span>
+                                <span class="text-slate-700 font-bold">▶️ Start: <b class="text-blue-800">${formatDisplayDate(startShow)}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-rose-600'}">${formatDisplayDate(s.validUpto)}</b></span>
                                 ${dueAmt > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-extrabold">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`}
                             </div>
 
                             ${(dueAmt > 0 || totalRem > 0) ? `
                                 <div class="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 text-[11px] flex flex-wrap items-center justify-between gap-1">
                                     <span class="font-extrabold text-red-800">
-                                        ${dueAmt > 0 ? `📅 Promise: ${formatDisplayDate(s.promiseDate) || 'Not Set'}` : ''}
-                                        ${lastFail ? `<span class="line-through text-slate-400 ml-1">(${lastFail})</span> <span class="bg-red-600 text-white px-1.5 py-0.2 rounded text-[10px] ml-1">❌ ${failList.length} बार वादा फेल</span>` : ''}
+                                        ${dueAmt > 0 ? `📅 Promise: ${s.promiseDate ? formatDisplayDate(s.promiseDate) : 'Not Set'}` : ''}
+                                        ${lastFail ? `<span class="line-through text-slate-400 ml-1">(${formatDisplayDate(lastFail)})</span> <span class="bg-red-600 text-white px-1.5 py-0.2 rounded text-[10px] ml-1">❌ ${failList.length} बार वादा फेल</span>` : ''}
                                     </span>
                                     <span class="text-[10px] font-extrabold text-indigo-900 bg-white px-2 py-0.5 rounded border">
                                         🔔 Sent: ${totalRem} (WA:${rem.wa||0} | SMS:${rem.sms||0} | Mail:${rem.mail||0})
@@ -2130,7 +2146,7 @@
                                         ${failAlert}
                                     </p>
                                     <p class="text-[11px] font-bold text-slate-600 mt-1">
-                                        ${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${formatDisplayDate(s.promiseDate)} थी` : ''}
+                                        प्रॉमिस डेट: <u class="${isUrgent ? 'text-red-600' : 'text-emerald-700'}">${s.promiseDate ? formatDisplayDate(s.promiseDate) : 'तय नहीं'}</u>
                                         | <a href="tel:${s.mobile}" class="text-blue-700 underline hover:text-blue-900">📞 ${s.mobile}</a>
                                     </p>
                                 </div>
@@ -2165,7 +2181,7 @@
             let s = students[index];
             const today = new Date().toISOString().split('T')[0];
             const fails = s.promiseHistory ? s.promiseHistory.length : 0;
-            const input = prompt(`⚠️ ${s.fullName} (बकाया: ₹${s.remainingDue || 0})\nपिछली प्रॉमिस डेट: ${s.promiseDate || 'None'} (वादा तोड़ा: ${fails} बार)\n\nनई प्रॉमिस तारीख (YYYY-MM-DD) दर्ज करें, या यदि पूरा बकाया पैसा मिल गया है तो '0' लिखें:`, s.promiseDate || today);
+            const input = prompt(`⚠️ ${s.fullName} (बकाया: ₹${s.remainingDue || 0})\nपिछली प्रॉमिस डेट: ${formatDisplayDate(s.promiseDate) || 'None'} (वादा तोड़ा: ${fails} बार)\n\nनई प्रॉमिस तारीख (YYYY-MM-DD) दर्ज करें, या यदि पूरा बकाया पैसा मिल गया है तो '0' लिखें:`, s.promiseDate || today);
             if(input === null) return;
 
             if(input.trim() === '0') {
@@ -2188,7 +2204,7 @@
                     months: 0,
                     shiftAtTime: s.shiftPlan,
                     mode: mode,
-                    period: `${s.cycleStartDate || s.admissionDate} to ${s.validUpto} (Due Cleared)`,
+                    period: `${formatDisplayDate(s.cycleStartDate || s.admissionDate)} to ${formatDisplayDate(s.validUpto)} (Due Cleared)`,
                     type: 'Due Cleared'
                 });
                 s.remainingDue = 0;
@@ -2219,7 +2235,7 @@
             const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
             const titles = {
-                today: `💵 Today's Collection List (${todayStr})`,
+                today: `💵 Today's Collection List (${formatDisplayDate(todayStr)})`,
                 thisMonth: `📅 This Month's Collection List (${thisMonthPrefix})`,
                 lastMonth: `⏮️ Last Month's Collection List (${lastMonthPrefix})`,
                 thisYear: `🏦 This Year's Collection List (${thisYearPrefix})`
@@ -2316,7 +2332,7 @@
                 if(holder) {
                     box.className = "bg-rose-100 border border-rose-400 text-rose-900 p-1.5 rounded-lg text-center cursor-pointer hover:bg-rose-200 transition";
                     box.innerHTML = `<div class="text-xs font-extrabold"><span class="text-red-800">${prefix}</span><span class="text-blue-900">${i}</span></div><div class="text-[9px] truncate font-bold">ID:${holder.uniId}</div>`;
-                    box.onclick = () => alert(`🔴 ${prefix}${i} आवंटित है:\n• ID: ${holder.uniId}\n• नाम: ${holder.fullName}\n• शिफ्ट: ${cleanShiftName(holder.shiftPlan)}\n• वैधता: ${holder.validUpto}`);
+                    box.onclick = () => alert(`🔴 ${prefix}${i} आवंटित है:\n• ID: ${holder.uniId}\n• नाम: ${holder.fullName}\n• शिफ्ट: ${cleanShiftName(holder.shiftPlan)}\n• वैधता: ${formatDisplayDate(holder.validUpto)}`);
                 } else {
                     box.className = "bg-emerald-50 border border-emerald-300 text-emerald-800 p-1.5 rounded-lg text-center font-extrabold text-xs";
                     box.innerHTML = `<div>${prefix}${i}</div><div class="text-[9px] font-semibold">Vacant</div>`;
@@ -2345,8 +2361,8 @@
             document.getElementById('idCardAddress').innerText = `📍 ${toTitleCaseWords(s.address || 'Kachchhi Dargah, Patna')}`;
             document.getElementById('idCardShift').innerText = cleanShiftName(s.shiftPlan);
             document.getElementById('idCardResources').innerHTML = formatResDualColorHtml(s);
-            document.getElementById('idCardStart').innerText = s.cycleStartDate || s.admissionDate || '-';
-            document.getElementById('idCardEnd').innerText = s.validUpto;
+            document.getElementById('idCardStart').innerText = formatDisplayDate(s.cycleStartDate || s.admissionDate || '-');
+            document.getElementById('idCardEnd').innerText = formatDisplayDate(s.validUpto);
 
             const due = parseFloat(s.remainingDue) || 0;
             const dueEl = document.getElementById('idCardDueStatus');
@@ -2426,7 +2442,7 @@
             const s = students[index];
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('renewStudentIdx').value = index;
-            document.getElementById('renewStudentInfo').innerHTML = `<b>ID: ${s.uniId} — ${s.fullName}</b> (${s.gender || 'Male'})<br>Current Shift: <span class="text-indigo-800">${cleanShiftName(s.shiftPlan)}</span> | Previous Expiry: <span class="text-red-600">${s.validUpto}</span>`;
+            document.getElementById('renewStudentInfo').innerHTML = `<b>ID: ${s.uniId} — ${s.fullName}</b> (${s.gender || 'Male'})<br>Current Shift: <span class="text-indigo-800">${cleanShiftName(s.shiftPlan)}</span> | Previous Expiry: <span class="text-red-600">${formatDisplayDate(s.validUpto)}</span>`;
 
             const shiftDropdown = document.getElementById('renewShiftSelect');
             let matched = false;
@@ -2544,7 +2560,7 @@
                 months: months,
                 shiftAtTime: newShift,
                 mode: payMode,
-                period: `${startD} to ${newValid} (${months}M / ${months * 28} Days)`,
+                period: `${formatDisplayDate(startD)} to ${formatDisplayDate(newValid)} (${months}M / ${months * 28} Days)`,
                 type: `Renewal (${months}M)`
             });
 
@@ -2618,7 +2634,7 @@
 
                 <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 mb-2.5 flex justify-between items-center text-[11px] font-extrabold text-blue-900 whitespace-nowrap">
                     <span>🗓️ Plan: ${p.type || 'Fee'} (${(p.months || 1) * 28}-Day Cycle)</span>
-                    <span>▶️ Start: ${pStart} &nbsp;➔&nbsp; ⏳ Valid Upto: ${pEnd}</span>
+                    <span>▶️ Start: ${formatDisplayDate(pStart)} &nbsp;➔&nbsp; ⏳ Valid Upto: ${formatDisplayDate(pEnd)}</span>
                 </div>
 
                 <table class="w-full border-collapse border border-slate-300 text-[11px] mb-2.5">
@@ -2673,8 +2689,8 @@
                             <td class="border p-1.5 text-right">₹${totalBill.toFixed(2)}</td>
                         </tr>
                         <tr class="bg-emerald-50 text-emerald-900 font-extrabold">
-                            <td colspan="2" class="border p-1.5 text-right">Amount Paid (${p.mode} on ${p.date})</td>
                             <td colspan="2" class="border p-1.5 text-right">Amount Paid (${p.mode} on ${formatDisplayDate(p.date)})</td>
+                            <td class="border p-1.5 text-right">₹${parseFloat(p.amount).toFixed(2)}</td>
                         </tr>
                         <tr class="bg-red-50 text-red-700 font-extrabold">
                             <td colspan="2" class="border p-1.5 text-right">Remaining Balance Due</td>
@@ -2800,7 +2816,7 @@
             const rem = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
 
             const failHtml = (s.promiseHistory || []).map((f, i) => `
-                <li class="text-xs text-red-700 font-semibold">❌ <b>वादा #${i+1} फेल:</b> ${f.failedDate} को नहीं दिया ➔ नई तारीख <b>${f.newDate}</b> ली (अपडेट: ${f.updatedOn})</li>
+                <li class="text-xs text-red-700 font-semibold">❌ <b>वादा #${i+1} फेल:</b> ${formatDisplayDate(f.failedDate)} को नहीं दिया ➔ नई तारीख <b>${formatDisplayDate(f.newDate)}</b> ली (अपडेट: ${formatDisplayDate(f.updatedOn)})</li>
             `).join('');
 
             const ledgerRows = history.map((p, i) => `
@@ -2873,7 +2889,7 @@
                         </div>
                         <p>📞 Student Mobile: <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold hover:underline">📞 ${s.mobile}</a> | 🏠 Guardian: ${s.guardianMobile ? `<a href="tel:${s.guardianMobile}" class="text-indigo-700 font-extrabold hover:underline">📞 ${s.guardianMobile}</a>` : '<b>N/A</b>'}</p>
                         <p>📍 Full Address: <b class="text-slate-800">${s.address}</b></p>
-                        <p>🎂 DOB: <b>${s.dob || 'N/A'}</b> | 📧 Email: <b>${s.emailId || 'N/A'}</b> | 📚 Course: <b>${s.studyCourse}</b></p>
+                        <p>🎂 DOB: <b>${formatDisplayDate(s.dob || 'N/A')}</b> | 📧 Email: <b>${s.emailId || 'N/A'}</b> | 📚 Course: <b>${s.studyCourse}</b></p>
                         <p>⏱️ Shift: <b>${cleanShiftName(s.shiftPlan)}</b> | 💺 Allocation: ${formatResDualColorHtml(s)}</p>
                     </div>
                 </div>
@@ -2931,9 +2947,9 @@
             const hindiName = await toHindiName(s.fullName);
             let msg = '';
             if(due > 0) {
-                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी लाइब्रेरी फीस का ₹${due} बकाया है${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${s.promiseDate} थी` : ''}${failCount > 0 ? ` (आप ${failCount} बार तारीख बढ़ा चुके हैं)` : ''}। कृपया यथाशीघ्र बकाया राशि जमा करने का कष्ट करें।\nसंपर्क: 7050668855`;
+                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी लाइब्रेरी फीस का ₹${due} बकाया है${s.promiseDate ? ` जिसकी प्रॉमिस तारीख ${formatDisplayDate(s.promiseDate)} थी` : ''}${failCount > 0 ? ` (आप ${failCount} बार तारीख बढ़ा चुके हैं)` : ''}। कृपया यथाशीघ्र बकाया राशि जमा करने का कष्ट करें।\nसंपर्क: 7050668855`;
             } else {
-                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता हैै कि आपकी मेंबरशिप की वैधता ${formatDisplayDate(s.validUpto)} को समाप्त हो रही है। कृपया समय पर अपना प्लान रिन्यू करा लें।\nसंपर्क: 7050668855`;
+                msg = `प्रिय ${hindiName} (आईडी: ${s.uniId}), नमस्ते! 🙏\nबुद्धा लाइब्रेरी (कच्ची दरगाह, पटना) से सूचित किया जाता है कि आपकी मेंबरशिप की वैधता ${formatDisplayDate(s.validUpto)} को समाप्त हो रही है। कृपया समय पर अपना प्लान रिन्यू करा लें।\nसंपर्क: 7050668855`;
             }
             document.getElementById('reminderTextBox').value = msg;
 
@@ -3261,7 +3277,7 @@
             const box = document.getElementById('expenseListBox');
             box.innerHTML = expenses.length ? '' : '<p class="text-center text-slate-400 py-3">कोई खर्च दर्ज नहीं है।</p>';
             expenses.forEach((ex, i) => {
-                box.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border"><div><b>${ex.title}</b> — <span class="text-rose-600 font-bold">₹${ex.amount}</span> (${ex.mode})</div><div>${ex.date} <button onclick="expenses.splice(${i},1);localStorage.setItem('buddha_library_expenses',JSON.stringify(expenses));renderExpenseList();" class="text-red-600 ml-2 font-bold">✖</button></div></div>`;
+                box.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border"><div><b>${ex.title}</b> — <span class="text-rose-600 font-bold">₹${ex.amount}</span> (${ex.mode})</div><div>${formatDisplayDate(ex.date)} <button onclick="expenses.splice(${i},1);localStorage.setItem('buddha_library_expenses',JSON.stringify(expenses));renderExpenseList();" class="text-red-600 ml-2 font-bold">✖</button></div></div>`;
             });
         }
 
@@ -3335,7 +3351,7 @@
             let csv = "Serial,Unique ID,Full Name,Gender,Mobile,Guardian Mobile,Address,Shift,Seat,Chair,Locker,Key,Locker Security Paid,Admission Date,Cycle Start Date,Valid Upto,Remaining Due,Promise Date,Reminders Sent\n";
             students.forEach((s, idx) => {
                 const r = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
-                csv += `${idx + 1},${s.uniId},"${s.fullName}",${s.gender || 'Male'},${s.mobile},${s.guardianMobile || ''},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.lockerSecurityPaid || 0},${s.admissionDate || ''},${s.cycleStartDate || ''},${s.validUpto},${s.remainingDue || 0},${s.promiseDate || ''},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
+                csv += `${idx + 1},${s.uniId},"${s.fullName}",${s.gender || 'Male'},${s.mobile},${s.guardianMobile || ''},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.lockerSecurityPaid || 0},${formatDisplayDate(s.admissionDate || '')},${formatDisplayDate(s.cycleStartDate || '')},${formatDisplayDate(s.validUpto)},${s.remainingDue || 0},${formatDisplayDate(s.promiseDate || '')},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
