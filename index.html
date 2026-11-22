@@ -1091,23 +1091,23 @@
             return dateStr;
         }
 
-        // एक्सपायरी के बाद प्रतिदिन (Rate / 28) के हिसाब से अधिकतम 3 महीने (84 दिन) तक का बकाया निकालना
+        // एक्सपायरी के बाद बच्चे के सिलेक्टेड प्लान (Rate ÷ 28 × Expired Days, Max 84 Days) के हिसाब से बकाया निकालना
         function getExpiredDailyDuesInfo(s, todayStr) {
             const oldDue = parseFloat(s.remainingDue) || 0;
             if (!s.validUpto || s.validUpto >= todayStr) {
-                return { expiredDays: 0, cappedDays: 0, accruedFee: 0, totalEstimatedDue: oldDue, isCapped: false };
+                return { expiredDays: 0, cappedDays: 0, accruedFee: 0, totalEstimatedDue: oldDue, isCapped: false, monthlyRate: 0 };
             }
             const dValid = new Date(s.validUpto + 'T00:00:00');
             const dToday = new Date(todayStr + 'T00:00:00');
             const expiredDays = Math.max(0, Math.round((dToday - dValid) / (1000 * 60 * 60 * 24)));
             const cappedDays = Math.min(84, expiredDays); // अधिकतम 3 महीने (84 दिन) पर ऑटो-स्टॉप
 
+            const sh = (s.shiftPlan || '').toLowerCase();
             let monthlyRate = 300;
-            const sh = s.shiftPlan || '';
-            if (sh.includes('800')) monthlyRate = 800;
-            else if (sh.includes('500')) monthlyRate = 500;
-            else if (sh.includes('400')) monthlyRate = 400;
-            else if (sh.includes('300')) monthlyRate = 300;
+            if (sh.includes('24 hour') || sh.includes('800') || sh.includes('799')) monthlyRate = 800;
+            else if (sh.includes('full day') || sh.includes('500') || sh.includes('499')) monthlyRate = 500;
+            else if (sh.includes('afternoon') || sh.includes('night') || sh.includes('400') || sh.includes('399')) monthlyRate = 400;
+            else if (sh.includes('morning') || sh.includes('300') || sh.includes('299')) monthlyRate = 300;
 
             if (cleanResNum(s.lockerNo) !== '') monthlyRate += 50; // लॉकर चार्ज शामिल
 
@@ -1117,7 +1117,8 @@
                 cappedDays,
                 accruedFee,
                 totalEstimatedDue: oldDue + accruedFee,
-                isCapped: expiredDays > 84
+                isCapped: expiredDays > 84,
+                monthlyRate
             };
         }
 
