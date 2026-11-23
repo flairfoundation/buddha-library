@@ -1048,13 +1048,15 @@
             try {
                 localStorage.setItem('buddha_library_students', JSON.stringify(dataArray));
             } catch (err) {
+                // मोबाइल पर localStorage 5MB भरने पर केवल बैकअप के लिए हल्की कॉपी रखें (IndexedDB व Firebase में पूरे फोटो रहेंगे)
                 try {
-                    const liteCopy = dataArray.map(s => ({ ...s, photo: '', photoFull: '', aadhaarFront: '', aadhaarBack: '' }));
+                    const liteCopy = dataArray.map(s => ({ ...s, photo: s.photo || '', photoFull: '', aadhaarFront: '', aadhaarBack: '' }));
                     localStorage.setItem('buddha_library_students', JSON.stringify(liteCopy));
                 } catch(e2) {}
             }
         }
 
+        // दोनों स्रोतों (IndexedDB और Firebase) के फोटो व दस्तावेज़ को सुरक्षित मर्ज करना (खाली फोटो से पुरानी फोटो कभी नहीं मिटेगी)
         function mergeStudentArrays(localArr, remoteArr) {
             if (!Array.isArray(remoteArr) || remoteArr.length === 0) return localArr;
             if (!Array.isArray(localArr) || localArr.length === 0) return remoteArr;
@@ -1069,10 +1071,10 @@
                     map.set(key, {
                         ...existing,
                         ...s,
-                        photo: s.photo || existing.photo || '',
-                        photoFull: s.photoFull || existing.photoFull || '',
-                        aadhaarFront: s.aadhaarFront || existing.aadhaarFront || '',
-                        aadhaarBack: s.aadhaarBack || existing.aadhaarBack || ''
+                        photo: (s.photo && s.photo.length > 30) ? s.photo : (existing.photo || ''),
+                        photoFull: (s.photoFull && s.photoFull.length > 30) ? s.photoFull : (existing.photoFull || existing.photo || ''),
+                        aadhaarFront: (s.aadhaarFront && s.aadhaarFront.length > 30) ? s.aadhaarFront : (existing.aadhaarFront || ''),
+                        aadhaarBack: (s.aadhaarBack && s.aadhaarBack.length > 30) ? s.aadhaarBack : (existing.aadhaarBack || '')
                     });
                 }
             });
@@ -1086,7 +1088,7 @@
                     const req = tx.objectStore('store').get('students_list');
                     req.onsuccess = () => {
                         if (req.result && Array.isArray(req.result) && req.result.length > 0) {
-                            students = mergeStudentArrays(students, req.result);
+                            students = mergeStudentArrays(req.result, students);
                         }
                         normalizeStudentDates();
                         updateDashboardStats();
@@ -1393,7 +1395,7 @@
             });
         }
 
-        // डैशबोर्ड कार्ड को बाकी कार्ड्स के बिल्कुल समान रंग और साइज में व्यवस्थित करना
+        // मोबाइल और कंप्यूटर दोनों पर सभी बटनों/कार्ड्स को एक बराबर साइज और सलीकेदार ग्रिड में सजाना
         function arrangeCleanDashboardLayout() {
             // 1. डायरेक्टर की फोटो और उसके पूरे बॉक्स से क्लिक पूरी तरह लॉक करें
             const fImg = document.getElementById('headerFounderImg');
@@ -1407,7 +1409,7 @@
                 }
             });
 
-            // 2. Total Members के बगल में बिल्कुल उसी रंग व साइज का सादा Personal Income कार्ड लगाएं ताकि किसी का ध्यान न जाए
+            // 2. डैशबोर्ड के सभी ऊपर वाले और नीचे वाले कार्ड्स को बराबर ऊँचाई और साइज दें
             const cardAll = document.getElementById('cardTab-all');
             const cardExp = document.getElementById('cardTab-expired');
             const cardProm = document.getElementById('cardTab-promise');
@@ -1416,14 +1418,14 @@
 
             if (cardAll && cardAll.parentElement) {
                 const gridParent = cardAll.parentElement;
-                gridParent.classList.add('items-stretch');
+                gridParent.className = "grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3 items-stretch mb-3";
 
                 let secretCard = document.getElementById('cardTab-secretIncome');
                 if (!secretCard) {
                     secretCard = document.createElement('div');
                     secretCard.id = 'cardTab-secretIncome';
                     secretCard.onclick = openSecretIncomeLedgerModal;
-                    secretCard.className = "bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-slate-400 flex flex-col justify-between h-full";
+                    secretCard.className = "bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-slate-400 flex flex-col justify-between min-h-[86px] h-full";
                     secretCard.innerHTML = `
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-slate-500">Personal Income</span>
@@ -1435,12 +1437,29 @@
                     `;
                 }
 
+                // यदि ग्रिड में कोई अन्य कार्ड (जैसे Vacant या Birthday) पहले से है तो उसे भी बराबर साइज दें
+                Array.from(gridParent.children).forEach(ch => {
+                    ch.classList.add('min-h-[86px]', 'h-full', 'flex', 'flex-col', 'justify-between');
+                });
+
                 [cardAll, secretCard, cardExp, cardProm, cardAct, cardExp7].forEach(c => {
                     if (c) {
-                        c.classList.add('h-full');
+                        c.classList.add('min-h-[86px]', 'h-full', 'flex', 'flex-col', 'justify-between');
                         gridParent.appendChild(c);
                     }
                 });
+            }
+
+            // कलेक्शन वाले कार्ड्स को भी मोबाइल पर 2-2 और लैपटॉप पर बराबर साइज में सेट करें
+            const colTodayEl = document.getElementById('colToday');
+            if (colTodayEl) {
+                const colCard = colTodayEl.closest('div[onclick]');
+                if (colCard && colCard.parentElement) {
+                    const colGrid = colCard.parentElement;
+                    Array.from(colGrid.children).forEach(ch => {
+                        ch.classList.add('min-h-[82px]', 'h-full', 'flex', 'flex-col', 'justify-between');
+                    });
+                }
             }
 
             // 3. डबल फ़िल्टर और फालतू सॉर्ट बटन हटाएं तथा डिफ़ॉल्ट रूप से नीचे की लिस्ट छिपा दें
@@ -1986,11 +2005,17 @@
             setTab('all', true);
         }
 
+        // ✖ Close बटन का पक्का समाधान: लिस्ट और स्मार्ट बार दोनों तुरंत बंद होंगे
         function closeTotalMembersOnly() {
             const wrap = document.getElementById('memberListMainWrapper');
             if (wrap) wrap.classList.add('hidden');
-            document.getElementById('searchInput').value = '';
-            document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
+            const smartBar = document.getElementById('autoExpiredCornerBar');
+            if (smartBar) smartBar.classList.add('hidden');
+            const sInp = document.getElementById('searchInput');
+            if (sInp) sInp.value = '';
+            const dashWrap = document.getElementById('dashboardCardsWrapper');
+            if (dashWrap) dashWrap.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function filterTotalByGender(g) {
@@ -2026,12 +2051,7 @@
         }
 
         function clearSearchBox() {
-            document.getElementById('searchInput').value = '';
-            const dashWrap = document.getElementById('dashboardCardsWrapper');
-            const listWrap = document.getElementById('memberListMainWrapper');
-            if(dashWrap) dashWrap.classList.remove('hidden');
-            if(listWrap) listWrap.classList.add('hidden');
-            displayLimit = 200;
+            closeTotalMembersOnly();
         }
 
         function loadMoreMembers() {
@@ -2110,9 +2130,9 @@
                     smartBar.innerHTML = `
                         <div class="flex flex-wrap items-center gap-1.5">
                             <span class="text-rose-900">${barTitle}:</span>
-                            <button onclick="filterTotalByGender('All')" class="${selectedGenderCorner === 'All' ? 'bg-slate-800 text-white ring-2 ring-amber-400' : 'bg-slate-200 text-slate-700'} px-2 py-0.5 rounded-md">All: ${countAll}</button>
-                            <button onclick="filterTotalByGender('Male')" class="${selectedGenderCorner === 'Male' ? 'bg-blue-700 text-white ring-2 ring-amber-400' : 'bg-blue-100 text-blue-900 border border-blue-300'} px-2 py-0.5 rounded-md">👦 Boys: ${bCount} (₹${bDue})</button>
-                            <button onclick="filterTotalByGender('Female')" class="${selectedGenderCorner === 'Female' ? 'bg-pink-700 text-white ring-2 ring-amber-400' : 'bg-pink-100 text-pink-900 border border-pink-300'} px-2 py-0.5 rounded-md">👧 Girls: ${gCount} (₹${gDue})</button>
+                            <button type="button" onclick="filterTotalByGender('All')" class="${selectedGenderCorner === 'All' ? 'bg-slate-800 text-white ring-2 ring-amber-400' : 'bg-slate-200 text-slate-700'} px-2 py-0.5 rounded-md">All: ${countAll}</button>
+                            <button type="button" onclick="filterTotalByGender('Male')" class="${selectedGenderCorner === 'Male' ? 'bg-blue-700 text-white ring-2 ring-amber-400' : 'bg-blue-100 text-blue-900 border border-blue-300'} px-2 py-0.5 rounded-md">👦 Boys: ${bCount} (₹${bDue})</button>
+                            <button type="button" onclick="filterTotalByGender('Female')" class="${selectedGenderCorner === 'Female' ? 'bg-pink-700 text-white ring-2 ring-amber-400' : 'bg-pink-100 text-pink-900 border border-pink-300'} px-2 py-0.5 rounded-md">👧 Girls: ${gCount} (₹${gDue})</button>
                             ${currentTab === 'all' ? `
                                 <select onchange="filterTotalByAddress(this.value)" class="bg-white border border-slate-400 text-slate-900 px-2 py-0.5 rounded-md font-extrabold text-[11px] max-w-[165px]">
                                     <option value="All" ${selectedAddressCorner === 'All' ? 'selected' : ''}>📍 सभी गाँव/पता (${countAll})</option>
@@ -2120,14 +2140,14 @@
                                 </select>
                             ` : ''}
                             ${(currentTab === 'expired' || currentTab === 'out_members') ? `
-                                <button onclick="setTab('${currentTab === 'out_members' ? 'expired' : 'out_members'}', false)" class="bg-slate-800 text-yellow-300 px-2.5 py-0.5 rounded-md">
+                                <button type="button" onclick="setTab('${currentTab === 'out_members' ? 'expired' : 'out_members'}', false)" class="bg-slate-800 text-yellow-300 px-2.5 py-0.5 rounded-md">
                                     ${currentTab === 'out_members' ? '⬅️ Active Expired' : `🚪 OUT Folder (${outCount})`}
                                 </button>
                             ` : ''}
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="text-rose-800 bg-white px-2 py-0.5 rounded border border-rose-200">💰 Total Due: ₹${bDue + gDue}</span>
-                            <button onclick="closeTotalMembersOnly()" class="bg-red-700 hover:bg-red-800 text-white px-2.5 py-0.5 rounded-md">✖ Close</button>
+                            <button type="button" onclick="closeTotalMembersOnly()" class="bg-red-700 hover:bg-red-800 text-white px-2.5 py-0.5 rounded-md cursor-pointer">✖ Close</button>
                         </div>
                     `;
                 } else {
@@ -2224,8 +2244,8 @@
                 const dueAmt = parseFloat(s.remainingDue) || 0;
                 const expInfo = !isActive ? getExpiredDailyDuesInfo(s, today) : null;
                 const outDisplayDue = (s.outDueAmount !== undefined && s.outDueAmount !== null) ? parseFloat(s.outDueAmount) : (expInfo ? expInfo.totalEstimatedDue : dueAmt);
-                const thumbAvatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
-                const fullZoomAvatar = s.photoFull || thumbAvatar;
+                const thumbAvatar = (s.photo && s.photo.length > 30) ? s.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+                const fullZoomAvatar = (s.photoFull && s.photoFull.length > 30) ? s.photoFull : thumbAvatar;
                 const shiftClean = cleanShiftName(s.customIdShift || s.shiftPlan);
                 const resDualHtml = formatResDualColorHtml(s);
                 const failList = s.promiseHistory || [];
@@ -2444,7 +2464,7 @@
                     const is3MonthsDue = s.isOut || (parseFloat(s.remainingDue) >= (rate * 3));
                     const outTag = is3MonthsDue ? '<div class="bg-slate-800 text-white text-center text-[10px] font-extrabold py-1 animate-pulse tracking-widest">🚨 3+ महीने का डिफॉल्टर (OUT घोषित)</div>' : '';
                     const failAlert = fails > 0 ? `<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded ml-2 border border-rose-300 text-[9px] shadow-sm">⚠️ ${fails} बार वादा तोड़ा</span>` : '';
-                    const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+                    const avatar = (s.photo && s.photo.length > 30) ? s.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
 
                     return `
                         <div class="bg-white rounded-xl border-2 ${is3MonthsDue ? 'border-slate-800' : (isUrgent ? 'border-red-400' : (isGirl ? 'border-pink-300' : 'border-blue-300'))} shadow-sm overflow-hidden flex flex-col">
@@ -2602,17 +2622,19 @@
             let bCount = 0, bAmt = 0, gCount = 0, gAmt = 0, cashSum = 0, onlineSum = 0;
 
             rows.forEach(r => {
+                const isCash = String(r.p.mode || '').toLowerCase().includes('cash');
                 if ((r.s.gender || 'Male') === 'Female') { gCount++; gAmt += r.amt; }
                 else { bCount++; bAmt += r.amt; }
-                if (r.p.mode === 'Cash') cashSum += r.amt;
+                if (isCash) cashSum += r.amt;
                 else onlineSum += r.amt;
             });
 
             const filteredRows = rows.filter(r => {
+                const isCash = String(r.p.mode || '').toLowerCase().includes('cash');
                 if (gender === 'Male' && (r.s.gender || 'Male') === 'Female') return false;
                 if (gender === 'Female' && r.s.gender !== 'Female') return false;
-                if (mode === 'Cash' && r.p.mode !== 'Cash') return false;
-                if (mode === 'Online' && r.p.mode === 'Cash') return false;
+                if (mode === 'Cash' && !isCash) return false;
+                if (mode === 'Online' && isCash) return false;
                 return true;
             });
 
@@ -2622,11 +2644,11 @@
             sumEl.className = "flex flex-wrap items-center justify-between gap-2 mb-3 text-xs font-extrabold";
             sumEl.innerHTML = `
                 <div class="flex flex-wrap items-center gap-1.5">
-                    <button onclick="setColBreakdownFilter('All','All')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${rows.length})</button>
-                    <button onclick="setColBreakdownFilter('Male',null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bAmt})</button>
-                    <button onclick="setColBreakdownFilter('Female',null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gAmt})</button>
-                    <button onclick="setColBreakdownFilter(null, mode==='Cash'?'All':'Cash')" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
-                    <button onclick="setColBreakdownFilter(null, mode==='Online'?'All':'Online')" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${onlineSum}</button>
+                    <button type="button" onclick="setColBreakdownFilter('All','All')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${rows.length})</button>
+                    <button type="button" onclick="setColBreakdownFilter('Male',null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bAmt})</button>
+                    <button type="button" onclick="setColBreakdownFilter('Female',null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gAmt})</button>
+                    <button type="button" onclick="setColBreakdownFilter(null, mode==='Cash'?'All':'Cash')" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
+                    <button type="button" onclick="setColBreakdownFilter(null, mode==='Online'?'All':'Online')" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${onlineSum}</button>
                 </div>
                 <div class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">🏦 Selected Total: ₹${shownTotal}</div>
             `;
@@ -2701,7 +2723,7 @@
             activeIdCardIndex = index;
             const s = students[index];
             const today = new Date().toISOString().split('T')[0];
-            const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+            const avatar = (s.photo && s.photo.length > 30) ? s.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
             if(libraryLogo) {
                 document.getElementById('idCardLogoImg').src = libraryLogo;
                 document.getElementById('idCardLogoImg').classList.remove('hidden');
@@ -3133,7 +3155,7 @@
             }
         }
 
-        // ID-Wise All Collection में भी एक जैसा Boys/Girls और Cash/Online फ़िल्टर
+        // ID-Wise All Collection में भी एक जैसा Boys/Girls और Cash/Online फ़िल्टर (जो क्लिक करने पर सही लिस्ट छाँटता है)
         function openMyCollectionModal() {
             closeAllOpenSections('myCollectionModal');
             activeAllColFilter = { gender: 'All', mode: 'All' };
@@ -3155,7 +3177,8 @@
                 let sCash = 0, sOnl = 0;
                 (s.paymentHistory || []).forEach(p => {
                     const amt = parseFloat(p.amount) || 0;
-                    if (p.mode === 'Cash') sCash += amt;
+                    const isCash = String(p.mode || '').toLowerCase().includes('cash');
+                    if (isCash) sCash += amt;
                     else sOnl += amt;
                 });
                 grandCash += sCash;
@@ -3167,25 +3190,28 @@
             const { gender, mode } = activeAllColFilter;
             const tbody = document.getElementById('myCollectionTableBody');
             tbody.innerHTML = '';
-            let shownCash = 0, shownOnline = 0, shownDue = 0;
+            let shownCash = 0, shownOnline = 0, shownDue = 0, shownMembers = 0;
 
             sorted.forEach(s => {
                 if (gender === 'Male' && (s.gender || 'Male') === 'Female') return;
                 if (gender === 'Female' && s.gender !== 'Female') return;
 
                 const hist = s.paymentHistory || [];
-                let cPaid = 0, oPaid = 0, lastD = '-';
+                let cPaid = 0, oPaid = 0, lastD = '-', cashTimes = 0, onlineTimes = 0;
                 hist.forEach(p => {
                     const amt = parseFloat(p.amount) || 0;
-                    if(p.mode === 'Cash') cPaid += amt;
-                    else oPaid += amt;
+                    const isCash = String(p.mode || '').toLowerCase().includes('cash');
+                    if(isCash) { cPaid += amt; if(amt > 0) cashTimes++; }
+                    else { oPaid += amt; if(amt > 0) onlineTimes++; }
                     if(p.date) lastD = p.date;
                 });
 
                 if (mode === 'Cash' && cPaid <= 0) return;
                 if (mode === 'Online' && oPaid <= 0) return;
 
+                shownMembers++;
                 const tot = (mode === 'Cash') ? cPaid : (mode === 'Online' ? oPaid : (cPaid + oPaid));
+                const timesShown = (mode === 'Cash') ? cashTimes : (mode === 'Online' ? onlineTimes : hist.length);
                 const due = parseFloat(s.remainingDue) || 0;
                 shownCash += cPaid;
                 shownOnline += oPaid;
@@ -3196,7 +3222,7 @@
                         <td class="p-2.5 font-extrabold text-red-900">ID: ${s.uniId}</td>
                         <td class="p-2.5 font-bold official-name-color">${s.fullName} <span class="text-[10px] text-slate-500">(${s.gender === 'Female' ? '👧' : '👦'})</span></td>
                         <td class="p-2.5 font-semibold text-blue-800"><a href="tel:${s.mobile}" class="hover:underline">📞 ${s.mobile}</a></td>
-                        <td class="p-2.5 text-center font-extrabold">${hist.length} बार</td>
+                        <td class="p-2.5 text-center font-extrabold">${timesShown} बार</td>
                         <td class="p-2.5 text-right font-bold text-slate-700">₹${cPaid}</td>
                         <td class="p-2.5 text-right font-bold text-indigo-700">₹${oPaid}</td>
                         <td class="p-2.5 text-right font-extrabold text-emerald-700 bg-emerald-50">₹${tot}</td>
@@ -3206,18 +3232,22 @@
                 `;
             });
 
+            if (shownMembers === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500 font-bold">📭 इस फ़िल्टर में कोई पेमेंट रिकॉर्ड नहीं मिला।</td></tr>`;
+            }
+
             const strip = document.getElementById('myCollectionSummaryStrip');
             strip.className = "flex flex-wrap items-center justify-between gap-2 mb-3 text-xs font-extrabold";
             strip.innerHTML = `
                 <div class="flex flex-wrap items-center gap-1.5">
-                    <button onclick="setAllColFilter('All','All')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${sorted.length})</button>
-                    <button onclick="setAllColFilter('Male',null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bPaid})</button>
-                    <button onclick="setAllColFilter('Female',null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gPaid})</button>
-                    <button onclick="setAllColFilter(null, mode==='Cash'?'All':'Cash')" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${grandCash}</button>
-                    <button onclick="setAllColFilter(null, mode==='Online'?'All':'Online')" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${grandOnline}</button>
+                    <button type="button" onclick="setAllColFilter('All','All')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${sorted.length})</button>
+                    <button type="button" onclick="setAllColFilter('Male',null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bPaid})</button>
+                    <button type="button" onclick="setAllColFilter('Female',null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gPaid})</button>
+                    <button type="button" onclick="setAllColFilter(null, mode==='Cash'?'All':'Cash')" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${grandCash}</button>
+                    <button type="button" onclick="setAllColFilter(null, mode==='Online'?'All':'Online')" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${grandOnline}</button>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg">🏦 Total: ₹${(mode==='Cash'?shownCash:(mode==='Online'?shownOnline:(shownCash+shownOnline)))}</span>
+                    <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg">🏦 Shown (${shownMembers}): ₹${(mode==='Cash'?shownCash:(mode==='Online'?shownOnline:(shownCash+shownOnline)))}</span>
                     <span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg border border-red-200">⚠️ Due: ₹${shownDue}</span>
                 </div>
             `;
@@ -3258,11 +3288,11 @@
 
         function openProfileModal(index) {
             const s = students[index];
-            const thumbAvatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
-            const fullZoomAvatar = s.photoFull || thumbAvatar;
+            const thumbAvatar = (s.photo && s.photo.length > 30) ? s.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+            const fullZoomAvatar = (s.photoFull && s.photoFull.length > 30) ? s.photoFull : thumbAvatar;
             const history = s.paymentHistory || [];
             const totalPaid = history.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
-            const cashCount = history.filter(r => r.mode === 'Cash').length;
+            const cashCount = history.filter(r => String(r.mode || '').toLowerCase().includes('cash')).length;
             const onlineCount = history.length - cashCount;
             const tenureStr = calculateStudentTenure(s.admissionDate);
             const rem = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
@@ -3357,11 +3387,11 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div class="border-2 border-slate-200 p-2.5 rounded-xl bg-slate-50 text-center">
                         <p class="text-xs font-extrabold text-slate-700 mb-1.5">📄 Document Front (HD)</p>
-                        ${s.aadhaarFront ? `<img src="${s.aadhaarFront}" onclick="zoomHdImage('${s.aadhaarFront}', 'Document Front - ${s.fullName}')" class="h-44 w-full object-contain rounded-lg cursor-pointer border bg-white shadow-sm">` : `<p class="text-xs text-slate-400 py-12">No Front Document Uploaded</p>`}
+                        ${(s.aadhaarFront && s.aadhaarFront.length > 30) ? `<img src="${s.aadhaarFront}" onclick="zoomHdImage('${s.aadhaarFront}', 'Document Front - ${s.fullName}')" class="h-44 w-full object-contain rounded-lg cursor-pointer border bg-white shadow-sm">` : `<p class="text-xs text-slate-400 py-12">No Front Document Uploaded</p>`}
                     </div>
                     <div class="border-2 border-slate-200 p-2.5 rounded-xl bg-slate-50 text-center">
                         <p class="text-xs font-extrabold text-slate-700 mb-1.5">📄 Document Back (HD)</p>
-                        ${s.aadhaarBack ? `<img src="${s.aadhaarBack}" onclick="zoomHdImage('${s.aadhaarBack}', 'Document Back - ${s.fullName}')" class="h-44 w-full object-contain rounded-lg cursor-pointer border bg-white shadow-sm">` : `<p class="text-xs text-slate-400 py-12">No Back Document Uploaded</p>`}
+                        ${(s.aadhaarBack && s.aadhaarBack.length > 30) ? `<img src="${s.aadhaarBack}" onclick="zoomHdImage('${s.aadhaarBack}', 'Document Back - ${s.fullName}')" class="h-44 w-full object-contain rounded-lg cursor-pointer border bg-white shadow-sm">` : `<p class="text-xs text-slate-400 py-12">No Back Document Uploaded</p>`}
                     </div>
                 </div>
 
@@ -3468,7 +3498,7 @@
             for(const { s, idx } of bdayStudents) {
                 const isWished = (s.lastBdayWishYear === currentYear);
                 const hiName = await toHindiName(s.fullName);
-                const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+                const avatar = (s.photo && s.photo.length > 30) ? s.photo : `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
 
                 const row = document.createElement('div');
                 row.className = `p-3 rounded-xl border flex items-center justify-between gap-2 ${isWished ? 'bg-emerald-50 border-emerald-300' : 'bg-pink-50 border-pink-200'}`;
@@ -3549,19 +3579,19 @@
                 rawBack: s.aadhaarBack || ''
             };
 
-            if(s.photo) {
+            if(s.photo && s.photo.length > 30) {
                 document.getElementById('previewImg-student').src = s.photo;
                 document.getElementById('previewWrap-student').classList.remove('hidden');
             } else {
                 document.getElementById('previewWrap-student').classList.add('hidden');
             }
-            if(s.aadhaarFront) {
+            if(s.aadhaarFront && s.aadhaarFront.length > 30) {
                 document.getElementById('previewImg-front').src = s.aadhaarFront;
                 document.getElementById('previewWrap-front').classList.remove('hidden');
             } else {
                 document.getElementById('previewWrap-front').classList.add('hidden');
             }
-            if(s.aadhaarBack) {
+            if(s.aadhaarBack && s.aadhaarBack.length > 30) {
                 document.getElementById('previewImg-back').src = s.aadhaarBack;
                 document.getElementById('previewWrap-back').classList.remove('hidden');
             } else {
@@ -3802,7 +3832,7 @@
             let monthTotals = {};
             listWithIdx.forEach(({ ex }) => {
                 const a = parseFloat(ex.amount) || 0;
-                if (ex.mode === 'Cash') totCash += a; else totOnline += a;
+                if (String(ex.mode || '').toLowerCase().includes('cash')) totCash += a; else totOnline += a;
                 const ym = (ex.date || '').slice(0, 7);
                 if (ym) monthTotals[ym] = (monthTotals[ym] || 0) + a;
             });
@@ -3834,9 +3864,11 @@
             box.innerHTML = html;
         }
 
-        // ================= Personal Income Ledger (PIN Protected) =================
+        // ================= Personal Income Ledger (Date-wise, 30-Day, Monthly, Annual) =================
         let secretIncomeYearFilter = 'All';
         let secretIncomeMonthFilter = 'All';
+        let secretIncomeDateFilter = 'All';
+        let secretIncomeLast30Only = false;
 
         function openSecretIncomeLedgerModal() {
             closeAllOpenSections('secretIncomeModal');
@@ -3849,6 +3881,8 @@
             }
             secretIncomeYearFilter = 'All';
             secretIncomeMonthFilter = 'All';
+            secretIncomeDateFilter = 'All';
+            secretIncomeLast30Only = false;
             buildAndShowSecretIncomeModal();
         }
 
@@ -3866,9 +3900,9 @@
                     <div class="theme-maroon text-white p-3.5 flex justify-between items-center">
                         <div>
                             <h3 class="text-base sm:text-lg font-extrabold text-white tracking-wide">Personal Income Ledger</h3>
-                            <p class="text-[11px] text-slate-200">महीना-वार व साल-दर-साल निजी आय का सुरक्षित लेजर</p>
+                            <p class="text-[11px] text-slate-200">तारीख-वार, पिछले 30 दिन, महीना-वार और हर साल का अलग-अलग हिसाब</p>
                         </div>
-                        <button onclick="document.getElementById('secretIncomeModal').classList.add('hidden')" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">✖ Close</button>
+                        <button type="button" onclick="document.getElementById('secretIncomeModal').classList.add('hidden')" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">✖ Close</button>
                     </div>
 
                     <div class="p-3.5 overflow-y-auto space-y-3">
@@ -3992,14 +4026,34 @@
             const tbody = document.getElementById('secretIncomeTableBody');
             if (!sumBar || !tbody) return;
 
-            const years = [...new Set(personalIncomes.map(x => (x.date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
-            const yearHtml = years.map(y =>
-                `<button onclick="secretIncomeYearFilter='${y}';secretIncomeMonthFilter='All';renderSecretIncomeLedger();" class="${secretIncomeYearFilter===y?'bg-slate-800 text-white':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded font-extrabold text-[11px]">${y}</button>`
+            const todayObj = new Date();
+            const todayStr = todayObj.toISOString().split('T')[0];
+            const d30Ago = new Date(todayObj);
+            d30Ago.setDate(d30Ago.getDate() - 30);
+            const str30Ago = d30Ago.toISOString().split('T')[0];
+
+            // 1. पिछले 30 दिन का अलग टोटल
+            let last30Total = 0;
+            // 2. हर साल का अलग टोटल
+            let yearTotals = {};
+            personalIncomes.forEach(x => {
+                const a = parseFloat(x.amount) || 0;
+                if (x.date && x.date >= str30Ago && x.date <= todayStr) last30Total += a;
+                const y = (x.date || '').slice(0, 4);
+                if (y) yearTotals[y] = (yearTotals[y] || 0) + a;
+            });
+
+            const yearHtml = Object.keys(yearTotals).sort().reverse().map(y =>
+                `<button type="button" onclick="secretIncomeYearFilter='${y}';secretIncomeMonthFilter='All';secretIncomeDateFilter='All';secretIncomeLast30Only=false;renderSecretIncomeLedger();" class="${(!secretIncomeLast30Only && secretIncomeYearFilter===y)?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded font-extrabold text-[11px]">🏦 ${y}: ₹${yearTotals[y]}</button>`
             ).join('');
 
             const yearFiltered = personalIncomes.map((item, idx) => ({ item, idx }))
-                .filter(o => secretIncomeYearFilter === 'All' || (o.item.date || '').startsWith(secretIncomeYearFilter));
+                .filter(o => {
+                    if (secretIncomeLast30Only) return o.item.date && o.item.date >= str30Ago && o.item.date <= todayStr;
+                    return secretIncomeYearFilter === 'All' || (o.item.date || '').startsWith(secretIncomeYearFilter);
+                });
 
+            // 3. हर महीने का अलग टोटल
             let monthTotals = {};
             yearFiltered.forEach(({ item }) => {
                 const ym = (item.date || '').slice(0, 7);
@@ -4007,37 +4061,50 @@
             });
 
             const monthBtns = Object.keys(monthTotals).sort().reverse().map(m =>
-                `<button onclick="secretIncomeMonthFilter='${secretIncomeMonthFilter===m?'All':m}';renderSecretIncomeLedger();" class="${secretIncomeMonthFilter===m?'bg-emerald-700 text-white':'bg-slate-100 text-slate-900 border border-slate-300'} px-2 py-0.5 rounded font-extrabold text-[10.5px]">${getShortMonthYearLabel(m)}: ₹${monthTotals[m]}</button>`
+                `<button type="button" onclick="secretIncomeMonthFilter='${secretIncomeMonthFilter===m?'All':m}';secretIncomeDateFilter='All';renderSecretIncomeLedger();" class="${secretIncomeMonthFilter===m?'bg-emerald-700 text-white ring-2 ring-amber-400':'bg-slate-100 text-slate-900 border border-slate-300'} px-2 py-0.5 rounded font-extrabold text-[10.5px]">🗓️ ${getShortMonthYearLabel(m)}: ₹${monthTotals[m]}</button>`
             ).join(' ');
 
-            const finalRows = yearFiltered
-                .filter(o => secretIncomeMonthFilter === 'All' || (o.item.date || '').startsWith(secretIncomeMonthFilter))
+            const monthFiltered = yearFiltered.filter(o => secretIncomeMonthFilter === 'All' || (o.item.date || '').startsWith(secretIncomeMonthFilter));
+
+            // 4. हर तारीख (Date-wise) का अलग टोटल
+            let dateTotals = {};
+            monthFiltered.forEach(({ item }) => {
+                if (item.date) dateTotals[item.date] = (dateTotals[item.date] || 0) + (parseFloat(item.amount) || 0);
+            });
+
+            const dateBtns = Object.keys(dateTotals).sort().reverse().map(d =>
+                `<button type="button" onclick="secretIncomeDateFilter='${secretIncomeDateFilter===d?'All':d}';renderSecretIncomeLedger();" class="${secretIncomeDateFilter===d?'bg-purple-800 text-white ring-2 ring-amber-400':'bg-purple-50 text-purple-950 border border-purple-200'} px-2 py-0.5 rounded font-extrabold text-[10.5px]">📅 ${formatDisplayDate(d)}: ₹${dateTotals[d]}</button>`
+            ).join(' ');
+
+            const finalRows = monthFiltered
+                .filter(o => secretIncomeDateFilter === 'All' || o.item.date === secretIncomeDateFilter)
                 .sort((a, b) => (b.item.date || '').localeCompare(a.item.date || ''));
 
             let cSum = 0, oSum = 0;
             finalRows.forEach(({ item }) => {
                 const a = parseFloat(item.amount) || 0;
-                if (item.mode === 'Cash') cSum += a; else oSum += a;
+                if (String(item.mode || '').toLowerCase().includes('cash')) cSum += a; else oSum += a;
             });
 
             sumBar.innerHTML = `
                 <div class="bg-slate-100 p-2.5 rounded-xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-extrabold">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <span>📅 Year:</span>
-                        <button onclick="secretIncomeYearFilter='All';secretIncomeMonthFilter='All';renderSecretIncomeLedger();" class="${secretIncomeYearFilter==='All'?'bg-slate-800 text-white':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded text-[11px]">All Years</button>
+                        <button type="button" onclick="secretIncomeYearFilter='All';secretIncomeMonthFilter='All';secretIncomeDateFilter='All';secretIncomeLast30Only=false;renderSecretIncomeLedger();" class="${(!secretIncomeLast30Only && secretIncomeYearFilter==='All')?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded text-[11px]">All Years</button>
+                        <button type="button" onclick="secretIncomeLast30Only=!secretIncomeLast30Only;secretIncomeMonthFilter='All';secretIncomeDateFilter='All';renderSecretIncomeLedger();" class="${secretIncomeLast30Only?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-0.5 rounded text-[11px]">⏳ Last 30 Days: ₹${last30Total}</button>
                         ${yearHtml}
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="bg-white px-2 py-0.5 rounded border">💵 Cash: ₹${cSum}</span>
                         <span class="bg-white px-2 py-0.5 rounded border text-indigo-800">📱 Online: ₹${oSum}</span>
-                        <span class="bg-emerald-700 text-white px-2.5 py-0.5 rounded">💰 Total Income: ₹${cSum + oSum}</span>
+                        <span class="bg-emerald-700 text-white px-2.5 py-0.5 rounded">💰 Shown Total: ₹${cSum + oSum}</span>
                     </div>
                 </div>
-                ${monthBtns ? `<div class="flex flex-wrap items-center gap-1.5 mt-2"><span class="text-[11px] font-extrabold text-slate-600">🗓️ महीना-वार जोड़:</span> ${monthBtns}</div>` : ''}
+                ${monthBtns ? `<div class="flex flex-wrap items-center gap-1.5 mt-2"><span class="text-[11px] font-extrabold text-slate-600">महीना-वार टोटल:</span> ${monthBtns}</div>` : ''}
+                ${dateBtns ? `<div class="flex flex-wrap items-center gap-1.5 mt-1.5"><span class="text-[11px] font-extrabold text-purple-900">तारीख-वार टोटल:</span> ${dateBtns}</div>` : ''}
             `;
 
             if (finalRows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 font-bold">📭 अभी तक इस अवधि में कोई आय दर्ज नहीं है।</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 font-bold">📭 इस फ़िल्टर में कोई आय दर्ज नहीं है।</td></tr>`;
             } else {
                 tbody.innerHTML = finalRows.map(({ item, idx }, sNo) => `
                     <tr class="border-b hover:bg-slate-50">
@@ -4048,8 +4115,8 @@
                         <td class="p-2 font-bold">${item.mode}</td>
                         <td class="p-2 text-right font-extrabold text-emerald-700 bg-emerald-50/60">₹${item.amount}</td>
                         <td class="p-2 text-center whitespace-nowrap">
-                            <button onclick="editSecretIncomeEntry(${idx})" class="bg-amber-400 text-black px-2 py-0.5 rounded text-[10px] font-extrabold mr-1">✏️ Edit</button>
-                            <button onclick="deleteSecretIncomeEntry(${idx})" class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-extrabold">🗑️</button>
+                            <button type="button" onclick="editSecretIncomeEntry(${idx})" class="bg-amber-400 text-black px-2 py-0.5 rounded text-[10px] font-extrabold mr-1">✏️ Edit</button>
+                            <button type="button" onclick="deleteSecretIncomeEntry(${idx})" class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-extrabold">🗑️</button>
                         </td>
                     </tr>
                 `).join('');
@@ -4087,10 +4154,15 @@
             const url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
             fetch(url).then(r => r.json()).then(data => {
                 if(data && Array.isArray(data) && data.length > 0) {
+                    const beforeJson = JSON.stringify(students.map(x => ({ id: x.uniId, hasP: !!(x.photo && x.photo.length > 30) })));
                     students = mergeStudentArrays(students, data);
                     normalizeStudentDates();
                     saveStudentsToBigDB(students);
                     updateDashboardStats();
+                    const afterJson = JSON.stringify(students.map(x => ({ id: x.uniId, hasP: !!(x.photo && x.photo.length > 30) })));
+                    if (beforeJson !== afterJson) {
+                        fetch(url, { method: 'PUT', body: JSON.stringify(students) }).catch(() => {});
+                    }
                     const listWrap = document.getElementById('memberListMainWrapper');
                     if (listWrap && !listWrap.classList.contains('hidden')) {
                         renderStudentList();
@@ -4142,4 +4214,5 @@
     </script>
 </body>
 </html>
+
 
