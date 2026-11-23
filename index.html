@@ -996,7 +996,7 @@
         let currentTab = 'all';
         let selectedGenderCorner = 'All';
         let selectedAddressCorner = 'All';
-        let displayLimit = 60;
+        let displayLimit = 200;
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
         let founderPhoto = localStorage.getItem('buddha_library_founder_photo') || '';
@@ -1047,23 +1047,70 @@
             }).catch(() => {});
             try {
                 localStorage.setItem('buddha_library_students', JSON.stringify(dataArray));
-            } catch (err) {}
+            } catch (err) {
+                try {
+                    const liteCopy = dataArray.map(s => ({ ...s, photo: '', photoFull: '', aadhaarFront: '', aadhaarBack: '' }));
+                    localStorage.setItem('buddha_library_students', JSON.stringify(liteCopy));
+                } catch(e2) {}
+            }
         }
 
-        function loadStudentsFromBigDBInBackground() {
-            openBuddhaBigDB().then(db => {
-                const tx = db.transaction('store', 'readonly');
-                const req = tx.objectStore('store').get('students_list');
-                req.onsuccess = () => {
-                    if (req.result && Array.isArray(req.result) && req.result.length > 0) {
-                        students = req.result;
-                        normalizeStudentDates();
-                        renderStudentList();
-                        updateDashboardStats();
-                    }
-                };
-            }).catch(() => {});
+        function mergeStudentArrays(localArr, remoteArr) {
+            if (!Array.isArray(remoteArr) || remoteArr.length === 0) return localArr;
+            if (!Array.isArray(localArr) || localArr.length === 0) return remoteArr;
+            const map = new Map();
+            localArr.forEach(s => map.set(String(s.uniId), s));
+            remoteArr.forEach(s => {
+                const key = String(s.uniId);
+                const existing = map.get(key);
+                if (!existing) {
+                    map.set(key, s);
+                } else {
+                    map.set(key, {
+                        ...existing,
+                        ...s,
+                        photo: s.photo || existing.photo || '',
+                        photoFull: s.photoFull || existing.photoFull || '',
+                        aadhaarFront: s.aadhaarFront || existing.aadhaarFront || '',
+                        aadhaarBack: s.aadhaarBack || existing.aadhaarBack || ''
+                    });
+                }
+            });
+            return Array.from(map.values()).sort((a, b) => (parseInt(a.uniId) || 99999) - (parseInt(b.uniId) || 99999));
         }
+
+        function loadAllDataFromBigDB() {
+            return openBuddhaBigDB().then(db => {
+                return new Promise((resolve) => {
+                    const tx = db.transaction('store', 'readonly');
+                    const req = tx.objectStore('store').get('students_list');
+                    req.onsuccess = () => {
+                        if (req.result && Array.isArray(req.result) && req.result.length > 0) {
+                            students = mergeStudentArrays(students, req.result);
+                        }
+                        normalizeStudentDates();
+                        updateDashboardStats();
+                        const listWrap = document.getElementById('memberListMainWrapper');
+                        if (listWrap && !listWrap.classList.contains('hidden')) {
+                            renderStudentList();
+                        }
+                        resolve(students);
+                    };
+                    req.onerror = () => resolve(students);
+                });
+            }).catch(() => students);
+        }
+
+        // बैकग्राउंड में दूसरा ऐप खोलने या स्क्रीन बंद होने पर भी सारा डेटा सुरक्षित रखना
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                saveStudentsToBigDB(students);
+                try {
+                    localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
+                    localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+                } catch(e) {}
+            }
+        });
 
         if (window.pdfjsLib) {
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1223,6 +1270,32 @@
             }
         });
 
+        // सभी खुले हुए पैनल/मॉडल को एक साथ बंद करने का हेल्पर
+        function closeAllOpenSections(exceptId) {
+            const ids = [
+                'admissionFormBox',
+                'memberListMainWrapper',
+                'collectionBreakdownModal',
+                'myCollectionModal',
+                'promiseDefaulterModal',
+                'vacantModal',
+                'expenseModal',
+                'secretIncomeModal',
+                'birthdayModal',
+                'cloudModal',
+                'logoModal',
+                'founderModal',
+                'headerDropdown'
+            ];
+            ids.forEach(id => {
+                if (id !== exceptId) {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                }
+            });
+            document.querySelectorAll('.student-card-options-menu').forEach(el => el.classList.add('hidden'));
+        }
+
         window.onload = function() {
             if(libraryLogo) {
                 makeCircularTransparentPng(libraryLogo, (cleanPng) => {
@@ -1320,15 +1393,21 @@
             });
         }
 
-        // डैशबोर्ड कार्ड और लेआउट को बिना HTML छेड़े आपके बताए क्रम में व्यवस्थित करना
+        // डैशबोर्ड कार्ड को बाकी कार्ड्स के बिल्कुल समान रंग और साइज में व्यवस्थित करना
         function arrangeCleanDashboardLayout() {
-            // 1. आपकी फोटो को लॉक करें ताकि क्लिक करने पर अपलोड बॉक्स न खुले
+            // 1. डायरेक्टर की फोटो और उसके पूरे बॉक्स से क्लिक पूरी तरह लॉक करें
             const fImg = document.getElementById('headerFounderImg');
             const fEmo = document.getElementById('headerFounderEmoji');
-            if (fImg) { fImg.removeAttribute('onclick'); fImg.classList.remove('cursor-pointer'); fImg.title = "Founder & Director (Locked)"; }
-            if (fEmo) { fEmo.removeAttribute('onclick'); fEmo.classList.remove('cursor-pointer'); }
+            [fImg, fEmo, fImg ? fImg.parentElement : null, fEmo ? fEmo.parentElement : null].forEach(el => {
+                if (el) {
+                    el.removeAttribute('onclick');
+                    el.onclick = function(ev) { ev.stopPropagation(); };
+                    el.classList.remove('cursor-pointer');
+                    el.title = "Founder & Director";
+                }
+            });
 
-            // 2. Total Members के बगल में Personal Income (गुप्त आय) और नीचे Expired + Promise Date सेट करें
+            // 2. Total Members के बगल में बिल्कुल उसी रंग व साइज का सादा Personal Income कार्ड लगाएं ताकि किसी का ध्यान न जाए
             const cardAll = document.getElementById('cardTab-all');
             const cardExp = document.getElementById('cardTab-expired');
             const cardProm = document.getElementById('cardTab-promise');
@@ -1337,30 +1416,31 @@
 
             if (cardAll && cardAll.parentElement) {
                 const gridParent = cardAll.parentElement;
+                gridParent.classList.add('items-stretch');
+
                 let secretCard = document.getElementById('cardTab-secretIncome');
                 if (!secretCard) {
                     secretCard = document.createElement('div');
                     secretCard.id = 'cardTab-secretIncome';
                     secretCard.onclick = openSecretIncomeLedgerModal;
-                    secretCard.className = "bg-gradient-to-br from-slate-900 via-red-950 to-slate-900 text-white p-3.5 rounded-2xl shadow-md cursor-pointer border-2 border-amber-400/70 hover:shadow-lg transition flex flex-col justify-between";
+                    secretCard.className = "bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-slate-400 flex flex-col justify-between h-full";
                     secretCard.innerHTML = `
                         <div class="flex items-center justify-between">
-                            <span class="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider">🔒 Personal Income</span>
-                            <span class="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">🔑 PIN Lock</span>
+                            <span class="text-xs font-bold text-slate-500">Personal Income</span>
                         </div>
-                        <div class="mt-1.5 flex items-baseline justify-between">
-                            <h3 class="text-lg sm:text-xl font-black text-white">गुप्त आय बही</h3>
-                            <span class="text-[11px] font-bold text-amber-200 underline">खोलें ➔</span>
+                        <div class="mt-2 flex items-baseline justify-between">
+                            <h3 class="text-lg sm:text-xl font-extrabold text-slate-800">Income</h3>
+                            <span class="text-[11px] font-semibold text-slate-400">Ledger ➔</span>
                         </div>
                     `;
                 }
-                // क्रम: 1. Total Members, 2. Personal Income, 3. Expired Members, 4. Promise Date, 5. Live Active, 6. Expiring 1-7 Days
-                gridParent.appendChild(cardAll);
-                gridParent.appendChild(secretCard);
-                if (cardExp) gridParent.appendChild(cardExp);
-                if (cardProm) gridParent.appendChild(cardProm);
-                if (cardAct) gridParent.appendChild(cardAct);
-                if (cardExp7) gridParent.appendChild(cardExp7);
+
+                [cardAll, secretCard, cardExp, cardProm, cardAct, cardExp7].forEach(c => {
+                    if (c) {
+                        c.classList.add('h-full');
+                        gridParent.appendChild(c);
+                    }
+                });
             }
 
             // 3. डबल फ़िल्टर और फालतू सॉर्ट बटन हटाएं तथा डिफ़ॉल्ट रूप से नीचे की लिस्ट छिपा दें
@@ -1391,12 +1471,13 @@
             if(founderPhoto) applyFounderPhotoToUi(founderPhoto);
             update28DayValidity();
             updateDashboardStats();
-            loadStudentsFromBigDBInBackground();
-            if(firebaseDbUrl) {
-                const syncTxt = document.getElementById('menuSyncText');
-                if(syncTxt) { syncTxt.innerText = "(Connected 🟢)"; syncTxt.className = "text-[10px] text-emerald-600 ml-auto font-extrabold"; }
-                fetchFromFirebase();
-            }
+            loadAllDataFromBigDB().then(() => {
+                if(firebaseDbUrl) {
+                    const syncTxt = document.getElementById('menuSyncText');
+                    if(syncTxt) { syncTxt.innerText = "(Connected 🟢)"; syncTxt.className = "text-[10px] text-emerald-600 ml-auto font-extrabold"; }
+                    fetchFromFirebase();
+                }
+            });
         }
 
         function onLockerInputChanged() {
@@ -1479,8 +1560,10 @@
 
         function toggleAdmissionForm() {
             const box = document.getElementById('admissionFormBox');
-            box.classList.toggle('hidden');
-            if(!box.classList.contains('hidden')) {
+            const willOpen = box.classList.contains('hidden');
+            closeAllOpenSections('admissionFormBox');
+            if(willOpen) {
+                box.classList.remove('hidden');
                 document.getElementById('studentForm').reset();
                 document.getElementById('editIndex').value = '';
                 document.getElementById('formHeading').innerText = "📝 New Student Admission Form (28-Day Cycle)";
@@ -1498,6 +1581,8 @@
                 tempUploads = { photoThumb: '', photoFull: '', frontBase64: '', backBase64: '', rawStudent: '', rawFront: '', rawBack: '' };
                 update28DayValidity();
                 window.scrollTo({ top: box.offsetTop - 20, behavior: 'smooth' });
+            } else {
+                box.classList.add('hidden');
             }
         }
 
@@ -1892,8 +1977,10 @@
         }
 
         function openTotalMembersOnly() {
+            closeAllOpenSections('memberListMainWrapper');
             selectedGenderCorner = 'All';
             selectedAddressCorner = 'All';
+            displayLimit = 200;
             const wrap = document.getElementById('memberListMainWrapper');
             if (wrap) wrap.classList.remove('hidden');
             setTab('all', true);
@@ -1908,13 +1995,13 @@
 
         function filterTotalByGender(g) {
             selectedGenderCorner = g;
-            displayLimit = 60;
+            displayLimit = 200;
             renderStudentList();
         }
 
         function filterTotalByAddress(addrVal) {
             selectedAddressCorner = addrVal || 'All';
-            displayLimit = 60;
+            displayLimit = 200;
             renderStudentList();
         }
 
@@ -1927,13 +2014,14 @@
             const dashWrap = document.getElementById('dashboardCardsWrapper');
             const listWrap = document.getElementById('memberListMainWrapper');
             if(rawQuery.length > 0) {
+                closeAllOpenSections('memberListMainWrapper');
                 if(dashWrap) dashWrap.classList.add('hidden');
                 if(listWrap) listWrap.classList.remove('hidden');
             } else {
                 if(dashWrap) dashWrap.classList.remove('hidden');
                 if(listWrap) listWrap.classList.add('hidden');
             }
-            displayLimit = 60;
+            displayLimit = 200;
             renderStudentList();
         }
 
@@ -1943,11 +2031,11 @@
             const listWrap = document.getElementById('memberListMainWrapper');
             if(dashWrap) dashWrap.classList.remove('hidden');
             if(listWrap) listWrap.classList.add('hidden');
-            displayLimit = 60;
+            displayLimit = 200;
         }
 
         function loadMoreMembers() {
-            displayLimit += 60;
+            displayLimit += 200;
             renderStudentList();
         }
 
@@ -1967,7 +2055,7 @@
 
             const today = new Date().toISOString().split('T')[0];
 
-            // एक ही स्मार्ट कोने वाला बार: Total Members, Expired और OUT Folder सभी के लिए
+            // एक ही स्मार्ट कोने वाला बार: Total Members, Expired, Active और OUT Folder सभी के लिए
             const anchorEl = document.getElementById('listSectionAnchor');
             if (anchorEl) {
                 let smartBar = document.getElementById('autoExpiredCornerBar');
@@ -1977,13 +2065,14 @@
                     anchorEl.parentNode.insertBefore(smartBar, anchorEl.nextSibling);
                 }
 
-                if (!rawQuery && (currentTab === 'all' || currentTab === 'expired' || currentTab === 'out_members' || currentTab === 'active')) {
+                if (!rawQuery && (currentTab === 'all' || currentTab === 'expired' || currentTab === 'out_members' || currentTab === 'active' || currentTab === 'expiring7' || currentTab === 'promise' || currentTab === 'dues')) {
                     let countAll = 0, bCount = 0, gCount = 0, bDue = 0, gDue = 0, outCount = 0;
                     let addrCounts = {};
 
                     students.forEach(st => {
                         if (st.isOut) outCount++;
                         const isAct = st.validUpto >= today;
+                        const dLeft = getDaysRemaining(st.validUpto, today);
                         const info = getExpiredDailyDuesInfo(st, today);
                         const memberDue = st.isOut
                             ? ((st.outDueAmount !== undefined && st.outDueAmount !== null) ? parseFloat(st.outDueAmount) : info.totalEstimatedDue)
@@ -1994,6 +2083,8 @@
                         else if (currentTab === 'active' && isAct && !st.isOut) inScope = true;
                         else if (currentTab === 'expired' && !isAct && !st.isOut) inScope = true;
                         else if (currentTab === 'out_members' && st.isOut) inScope = true;
+                        else if (currentTab === 'expiring7' && !st.isOut && dLeft >= 0 && dLeft <= 7) inScope = true;
+                        else if ((currentTab === 'promise' || currentTab === 'dues') && !st.isOut && (parseFloat(st.remainingDue) || 0) > 0) inScope = true;
 
                         if (inScope) {
                             countAll++;
@@ -2009,7 +2100,11 @@
                         `<option value="${a}" ${selectedAddressCorner === a ? 'selected' : ''}>📍 ${a} (${addrCounts[a]})</option>`
                     ).join('');
 
-                    const barTitle = currentTab === 'all' ? '📊 Total Members' : (currentTab === 'expired' ? '📊 Expired (Max 3M)' : (currentTab === 'out_members' ? '🚪 OUT Folder' : '🟢 Active Members'));
+                    const barTitle = currentTab === 'all' ? '📊 Total Members'
+                        : (currentTab === 'expired' ? '📊 Expired (Max 3M)'
+                        : (currentTab === 'out_members' ? '🚪 OUT Folder'
+                        : (currentTab === 'active' ? '🟢 Active Members'
+                        : (currentTab === 'expiring7' ? '⏳ Expiring (1-7d)' : '📅 Promise / Dues'))));
 
                     smartBar.className = "bg-rose-50 border border-rose-300 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
                     smartBar.innerHTML = `
@@ -2282,6 +2377,7 @@
         }
 
         function openPromiseDefaulterModal() {
+            closeAllOpenSections('promiseDefaulterModal');
             const container = document.getElementById('promiseDefaulterListContainer');
             const todayStr = new Date().toISOString().split('T')[0];
 
@@ -2453,6 +2549,7 @@
 
         // एक ही जैसा स्मार्ट कलेक्शन ब्रेकडाउन (Today, This Month, Last Month, This Year)
         function openCollectionBreakdownModal(periodType) {
+            closeAllOpenSections('collectionBreakdownModal');
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
             const thisMonthPrefix = todayStr.slice(0, 7);
@@ -2487,7 +2584,6 @@
                 });
             });
 
-            // हमेशा ID नंबर के क्रम से दिखाएं
             rows.sort((a, b) => (parseInt(a.s.uniId) || 99999) - (parseInt(b.s.uniId) || 99999));
 
             activeBreakdownContext = { type: periodType, gender: 'All', mode: 'All', rows: rows };
@@ -2556,6 +2652,7 @@
         }
 
         function openVacantModal() {
+            closeAllOpenSections('vacantModal');
             document.getElementById('vacantModal').classList.remove('hidden');
             renderVacantGrid('seat');
         }
@@ -2625,7 +2722,6 @@
             document.getElementById('idCardStart').innerText = formatDisplayDate(s.cycleStartDate || s.admissionDate || '-');
             document.getElementById('idCardEnd').innerText = formatDisplayDate(s.validUpto);
 
-            // आज की तारीख तक का पूरा बकाया (पुराना Due + एक्सपायरी के बाद प्रतिदिन का बकाया)
             const isExpired = s.validUpto && s.validUpto < today;
             const expInfo = isExpired ? getExpiredDailyDuesInfo(s, today) : null;
             const totalDueToday = s.isOut
@@ -2641,7 +2737,6 @@
                 dueEl.innerText = `✅ Not Due (No Dues)`;
             }
 
-            // ID Card के ऊपर वाले बटन बार में कस्टम टाइम एडिट बटन जोड़ें (जो शेयर फोटो से बाहर रहेगा)
             const btnBar = document.getElementById('idCardBtnBar');
             if (btnBar && !document.getElementById('editIdShiftTimeBtn')) {
                 const tBtn = document.createElement('button');
@@ -3001,7 +3096,6 @@
 
         function closeInvoiceModal() { document.getElementById('invoiceModal').classList.add('hidden'); }
 
-        // WhatsApp बिल फोटो बाहर न भागे इसके लिए सुरक्षित फिक्स-चौड़ाई रेंडरिंग
         async function shareInvoiceAsImage() {
             const box = document.getElementById('invoiceCaptureBox');
             const origWidth = box.style.width;
@@ -3041,6 +3135,7 @@
 
         // ID-Wise All Collection में भी एक जैसा Boys/Girls और Cash/Online फ़िल्टर
         function openMyCollectionModal() {
+            closeAllOpenSections('myCollectionModal');
             activeAllColFilter = { gender: 'All', mode: 'All' };
             renderMyCollectionFiltered();
             document.getElementById('myCollectionModal').classList.remove('hidden');
@@ -3355,6 +3450,7 @@
         }
 
         async function openBirthdayModal() {
+            closeAllOpenSections('birthdayModal');
             const todayIso = new Date().toISOString().split('T')[0];
             const currentYear = todayIso.slice(0, 4);
             const mdToday = todayIso.slice(5);
@@ -3411,6 +3507,7 @@
         }
 
         function editStudentRecord(index) {
+            closeAllOpenSections('admissionFormBox');
             const s = students[index];
             document.getElementById('editIndex').value = index;
             document.getElementById('formHeading').innerText = `✏️ Edit Member: ${s.fullName} (ID: ${s.uniId})`;
@@ -3488,7 +3585,6 @@
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
-            // This Month और Last Month के कार्ड पर महीने का शॉर्ट नाम अपडेट करें
             const colThisEl = document.getElementById('colThisMonth');
             if (colThisEl && colThisEl.parentElement) {
                 const lbl = colThisEl.parentElement.querySelector('p');
@@ -3566,10 +3662,11 @@
         }
 
         function setTab(tab, shouldScroll) {
+            closeAllOpenSections('memberListMainWrapper');
             currentTab = tab;
             selectedGenderCorner = 'All';
             selectedAddressCorner = 'All';
-            displayLimit = 60;
+            displayLimit = 200;
             document.getElementById('searchInput').value = '';
             document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
 
@@ -3613,7 +3710,10 @@
 
         function closeZoomModal() { document.getElementById('zoomModal').classList.add('hidden'); }
 
-        function openLogoModal() { document.getElementById('logoModal').classList.remove('hidden'); }
+        function openLogoModal() {
+            closeAllOpenSections('logoModal');
+            document.getElementById('logoModal').classList.remove('hidden');
+        }
         function uploadLibraryLogo(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -3638,7 +3738,10 @@
             if(appIc) appIc.href = src;
         }
 
-        function openFounderModal() { document.getElementById('founderModal').classList.remove('hidden'); }
+        function openFounderModal() {
+            closeAllOpenSections('founderModal');
+            document.getElementById('founderModal').classList.remove('hidden');
+        }
         function applyFounderPhotoToUi(src) {
             const img = document.getElementById('headerFounderImg');
             img.src = src; img.classList.remove('hidden');
@@ -3648,6 +3751,7 @@
         // साल-दर-साल और महीना-वार Expense Tracker
         let selectedExpYearFilter = 'All';
         function openExpenseModal() {
+            closeAllOpenSections('expenseModal');
             selectedExpYearFilter = 'All';
             document.getElementById('expenseModal').classList.remove('hidden');
             renderExpenseList();
@@ -3730,16 +3834,17 @@
             box.innerHTML = html;
         }
 
-        // ================= गुप्त पर्सनल इनकम लेजर (PIN Protected Personal Income Ledger) =================
+        // ================= Personal Income Ledger (PIN Protected) =================
         let secretIncomeYearFilter = 'All';
         let secretIncomeMonthFilter = 'All';
 
         function openSecretIncomeLedgerModal() {
+            closeAllOpenSections('secretIncomeModal');
             const savedPin = localStorage.getItem('buddha_library_pin') || '7050';
-            const entered = prompt("🔐 गुप्त आय बही (Personal Income Ledger) खोलने के लिए अपना 4-डिजिट PIN दर्ज करें:");
+            const entered = prompt("🔐 Personal Income Ledger खोलने के लिए अपना 4-डिजिट PIN दर्ज करें:");
             if (entered === null) return;
             if (entered.trim() !== savedPin && entered.trim() !== '2026') {
-                alert("❌ गलत PIN! गुप्त आय बही लॉक है।");
+                alert("❌ गलत PIN!");
                 return;
             }
             secretIncomeYearFilter = 'All';
@@ -3757,17 +3862,17 @@
             }
             const today = new Date().toISOString().split('T')[0];
             modal.innerHTML = `
-                <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border-2 border-amber-500 overflow-hidden my-auto max-h-[92vh] flex flex-col">
-                    <div class="bg-gradient-to-r from-slate-900 via-red-950 to-slate-900 text-white p-3.5 flex justify-between items-center">
+                <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border-2 border-slate-300 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+                    <div class="theme-maroon text-white p-3.5 flex justify-between items-center">
                         <div>
-                            <h3 class="text-base sm:text-lg font-black text-amber-300 tracking-wide">🔒 Personal Income Ledger (गुप्त आय बही)</h3>
-                            <p class="text-[11px] text-slate-300">कहीं से भी आने वाली निजी आय का महीना-वार व साल-दर-साल सुरक्षित हिसाब</p>
+                            <h3 class="text-base sm:text-lg font-extrabold text-white tracking-wide">Personal Income Ledger</h3>
+                            <p class="text-[11px] text-slate-200">महीना-वार व साल-दर-साल निजी आय का सुरक्षित लेजर</p>
                         </div>
                         <button onclick="document.getElementById('secretIncomeModal').classList.add('hidden')" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">✖ Close</button>
                     </div>
 
                     <div class="p-3.5 overflow-y-auto space-y-3">
-                        <form onsubmit="savePersonalIncomeEntry(event)" class="bg-amber-50/70 border border-amber-300 p-3 rounded-xl grid grid-cols-1 sm:grid-cols-6 gap-2 text-xs">
+                        <form onsubmit="savePersonalIncomeEntry(event)" class="bg-slate-50 border border-slate-300 p-3 rounded-xl grid grid-cols-1 sm:grid-cols-6 gap-2 text-xs">
                             <input type="hidden" id="secIncEditIdx" value="">
                             <div class="sm:col-span-2">
                                 <label class="block font-extrabold text-slate-700 mb-0.5">किस व्यक्ति / जगह से आया *</label>
@@ -3795,7 +3900,7 @@
                             </div>
                             <div class="sm:col-span-4 flex items-end justify-end gap-2">
                                 <button type="button" id="secIncCancelEditBtn" onclick="resetSecretIncomeForm()" class="hidden bg-slate-300 text-slate-800 px-3 py-2 rounded-lg font-extrabold">Cancel Edit</button>
-                                <button type="submit" id="secIncSubmitBtn" class="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg font-extrabold shadow">💾 आय जोड़ें (Save Income)</button>
+                                <button type="submit" id="secIncSubmitBtn" class="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg font-extrabold shadow">💾 Save Income</button>
                             </div>
                         </form>
 
@@ -3803,7 +3908,7 @@
 
                         <div class="overflow-x-auto border rounded-xl">
                             <table class="w-full text-left text-xs">
-                                <thead class="bg-slate-900 text-amber-300 font-extrabold">
+                                <thead class="bg-slate-800 text-white font-extrabold">
                                     <tr>
                                         <th class="p-2">S.No</th>
                                         <th class="p-2">Date</th>
@@ -3850,7 +3955,7 @@
             document.getElementById('secIncDesc').value = '';
             document.getElementById('secIncAmount').value = '';
             document.getElementById('secIncDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('secIncSubmitBtn').innerText = "💾 आय जोड़ें (Save Income)";
+            document.getElementById('secIncSubmitBtn').innerText = "💾 Save Income";
             document.getElementById('secIncCancelEditBtn').classList.add('hidden');
         }
 
@@ -3863,7 +3968,7 @@
             document.getElementById('secIncAmount').value = item.amount || '';
             document.getElementById('secIncMode').value = item.mode || 'Cash';
             document.getElementById('secIncDate').value = item.date || '';
-            document.getElementById('secIncSubmitBtn').innerText = "✅ अपडेट सेव करें";
+            document.getElementById('secIncSubmitBtn').innerText = "✅ Update Income";
             document.getElementById('secIncCancelEditBtn').classList.remove('hidden');
         }
 
@@ -3871,7 +3976,7 @@
             const item = personalIncomes[origIdx];
             if (!item) return;
             if (!confirm(`⚠️ Step 1/3: क्या आप आय "${item.source} (₹${item.amount})" को डिलीट करना चाहते हैं?`)) return;
-            if (!confirm(`🛑 Step 2/3: यह निजी आय रिकॉर्ड हमेशा के लिए हट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`)) return;
+            if (!confirm(`🛑 Step 2/3: यह आय रिकॉर्ड हमेशा के लिए हट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`)) return;
             const code = prompt(`🔐 Step 3/3: डिलीट करने के लिए राशि (${item.amount}) नीचे टाइप करें:`);
             if (code !== null && String(code).trim() === String(item.amount)) {
                 personalIncomes.splice(origIdx, 1);
@@ -3889,7 +3994,7 @@
 
             const years = [...new Set(personalIncomes.map(x => (x.date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
             const yearHtml = years.map(y =>
-                `<button onclick="secretIncomeYearFilter='${y}';secretIncomeMonthFilter='All';renderSecretIncomeLedger();" class="${secretIncomeYearFilter===y?'bg-slate-900 text-amber-300':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded font-extrabold text-[11px]">${y}</button>`
+                `<button onclick="secretIncomeYearFilter='${y}';secretIncomeMonthFilter='All';renderSecretIncomeLedger();" class="${secretIncomeYearFilter===y?'bg-slate-800 text-white':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded font-extrabold text-[11px]">${y}</button>`
             ).join('');
 
             const yearFiltered = personalIncomes.map((item, idx) => ({ item, idx }))
@@ -3902,7 +4007,7 @@
             });
 
             const monthBtns = Object.keys(monthTotals).sort().reverse().map(m =>
-                `<button onclick="secretIncomeMonthFilter='${secretIncomeMonthFilter===m?'All':m}';renderSecretIncomeLedger();" class="${secretIncomeMonthFilter===m?'bg-emerald-700 text-white':'bg-amber-50 text-amber-950 border border-amber-300'} px-2 py-0.5 rounded font-extrabold text-[10.5px]">${getShortMonthYearLabel(m)}: ₹${monthTotals[m]}</button>`
+                `<button onclick="secretIncomeMonthFilter='${secretIncomeMonthFilter===m?'All':m}';renderSecretIncomeLedger();" class="${secretIncomeMonthFilter===m?'bg-emerald-700 text-white':'bg-slate-100 text-slate-900 border border-slate-300'} px-2 py-0.5 rounded font-extrabold text-[10.5px]">${getShortMonthYearLabel(m)}: ₹${monthTotals[m]}</button>`
             ).join(' ');
 
             const finalRows = yearFiltered
@@ -3919,23 +4024,23 @@
                 <div class="bg-slate-100 p-2.5 rounded-xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-extrabold">
                     <div class="flex flex-wrap items-center gap-1.5">
                         <span>📅 Year:</span>
-                        <button onclick="secretIncomeYearFilter='All';secretIncomeMonthFilter='All';renderSecretIncomeLedger();" class="${secretIncomeYearFilter==='All'?'bg-slate-900 text-amber-300':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded text-[11px]">All Years</button>
+                        <button onclick="secretIncomeYearFilter='All';secretIncomeMonthFilter='All';renderSecretIncomeLedger();" class="${secretIncomeYearFilter==='All'?'bg-slate-800 text-white':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded text-[11px]">All Years</button>
                         ${yearHtml}
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="bg-white px-2 py-0.5 rounded border">💵 Cash: ₹${cSum}</span>
                         <span class="bg-white px-2 py-0.5 rounded border text-indigo-800">📱 Online: ₹${oSum}</span>
-                        <span class="bg-emerald-700 text-white px-2.5 py-0.5 rounded">💰 कुल आय: ₹${cSum + oSum}</span>
+                        <span class="bg-emerald-700 text-white px-2.5 py-0.5 rounded">💰 Total Income: ₹${cSum + oSum}</span>
                     </div>
                 </div>
                 ${monthBtns ? `<div class="flex flex-wrap items-center gap-1.5 mt-2"><span class="text-[11px] font-extrabold text-slate-600">🗓️ महीना-वार जोड़:</span> ${monthBtns}</div>` : ''}
             `;
 
             if (finalRows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 font-bold">📭 अभी तक इस अवधि में कोई निजी आय दर्ज नहीं है।</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 font-bold">📭 अभी तक इस अवधि में कोई आय दर्ज नहीं है।</td></tr>`;
             } else {
                 tbody.innerHTML = finalRows.map(({ item, idx }, sNo) => `
-                    <tr class="border-b hover:bg-amber-50/40">
+                    <tr class="border-b hover:bg-slate-50">
                         <td class="p-2 font-extrabold">${sNo + 1}</td>
                         <td class="p-2 font-bold text-purple-900 whitespace-nowrap">${formatDisplayDate(item.date)}</td>
                         <td class="p-2 font-extrabold text-slate-900">${item.source}</td>
@@ -3952,6 +4057,7 @@
         }
 
         function openCloudSyncModal() {
+            closeAllOpenSections('cloudModal');
             document.getElementById('firebaseUrlInput').value = firebaseDbUrl;
             document.getElementById('cloudModal').classList.remove('hidden');
         }
@@ -3980,8 +4086,8 @@
             if(!firebaseDbUrl) return;
             const url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
             fetch(url).then(r => r.json()).then(data => {
-                if(data && Array.isArray(data)) {
-                    students = data;
+                if(data && Array.isArray(data) && data.length > 0) {
+                    students = mergeStudentArrays(students, data);
                     normalizeStudentDates();
                     saveStudentsToBigDB(students);
                     updateDashboardStats();
@@ -4009,7 +4115,8 @@
                 reader.readAsText(e.target.files[0], 'UTF-8');
                 reader.onload = ev => {
                     try {
-                        students = JSON.parse(ev.target.result);
+                        const imported = JSON.parse(ev.target.result);
+                        students = mergeStudentArrays(students, imported);
                         normalizeStudentDates();
                         syncAndSaveData();
                         renderStudentList();
@@ -4036,4 +4143,3 @@
 </body>
 </html>
 
-  
