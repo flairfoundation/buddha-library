@@ -997,7 +997,10 @@
         let selectedGenderCorner = 'All';
         let selectedAddressCorner = 'All';
         let sectionInnerSearch = '';
-        let displayLimit = 250;
+        let displayLimit = 60;
+        let searchDebounceTimer = null;
+        let innerSearchDebounceTimer = null;
+
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
         let founderPhoto = localStorage.getItem('buddha_library_founder_photo') || '';
@@ -1422,7 +1425,7 @@
             });
         }
 
-        // मोबाइल (Portrait/Landscape), लैपटॉप और TV पर सभी बटनों व कार्ड्स को बराबर साइज और सलीकेदार ग्रिड में सजाना
+        // मोबाइल (Portrait/Landscape), लैपटॉप और TV पर सभी बटनों व कार्ड्स को बराबर साइज और प्रीमियम ग्रिड में सजाना
         function arrangeCleanDashboardLayout() {
             // 1. डायरेक्टर की फोटो और उसके पूरे बॉक्स से क्लिक पूरी तरह लॉक करें
             const fImg = document.getElementById('headerFounderImg');
@@ -1436,14 +1439,25 @@
                 }
             });
 
-            // 2. "+ Admission" बटन को एक ही साफ़, एक-लाइन वाले आकर्षक "➕ New Admission" बटन में बदलें
+            // 2. नीचे का अलग Expense Tracker बटन/कार्ड छिपाएं क्योंकि अब वह Personal Income लेजर में ही एकीकृत है
+            document.querySelectorAll('[onclick*="openExpenseModal"]').forEach(el => {
+                if (!el.closest('#secretIncomeModal')) {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // 3. "+ New Admission" बटन को पूरी चौड़ाई (w-full) व प्रीमियम स्टाइल में सेंटर करें ताकि आधा कटा न दिखे
             const admBtn = document.querySelector('button[onclick*="toggleAdmissionForm"]');
             if (admBtn) {
-                admBtn.className = "theme-maroon text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold shadow-sm hover:opacity-95 transition flex items-center justify-center gap-1.5 whitespace-nowrap";
+                const parentRow = admBtn.parentElement;
+                if (parentRow && parentRow.classList.contains('grid')) {
+                    parentRow.className = "w-full my-2";
+                }
+                admBtn.className = "w-full theme-maroon text-white py-3 px-4 rounded-2xl text-sm sm:text-base font-extrabold shadow-md hover:opacity-95 active:scale-[0.99] transition flex items-center justify-center gap-2 tracking-wide";
                 admBtn.innerHTML = `<span>➕ New Admission</span>`;
             }
 
-            // 3. डैशबोर्ड के सभी ऊपर वाले और नीचे वाले कार्ड्स को बराबर ऊँचाई और साइज दें (Mobile 2-col, Tablet/Laptop/TV 3-col)
+            // 4. डैशबोर्ड के सभी ऊपर वाले कार्ड्स को मोबाइल पर 2-2 की बराबर जोड़ी और लैपटॉप पर 3-3 की बराबर पंक्ति में सेट करें
             const cardAll = document.getElementById('cardTab-all');
             const cardExp = document.getElementById('cardTab-expired');
             const cardProm = document.getElementById('cardTab-promise');
@@ -1452,50 +1466,56 @@
 
             if (cardAll && cardAll.parentElement) {
                 const gridParent = cardAll.parentElement;
-                gridParent.className = "grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 items-stretch mb-3";
+                gridParent.className = "grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3.5 items-stretch mb-3";
 
                 let secretCard = document.getElementById('cardTab-secretIncome');
                 if (!secretCard) {
                     secretCard = document.createElement('div');
                     secretCard.id = 'cardTab-secretIncome';
                     secretCard.onclick = openSecretIncomeLedgerModal;
-                    secretCard.className = "bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-slate-400 flex flex-col justify-between min-h-[86px] h-full";
+                    secretCard.className = "bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-slate-500 flex flex-col justify-between min-h-[90px] h-full";
                     secretCard.innerHTML = `
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-slate-500">Personal Income</span>
+                            <span class="text-xs font-bold text-slate-600">💼 Personal Income</span>
                         </div>
                         <div class="mt-2 flex items-baseline justify-between">
-                            <h3 class="text-lg sm:text-xl font-extrabold text-slate-800">Income</h3>
-                            <span class="text-[11px] font-semibold text-slate-400">Ledger ➔</span>
+                            <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">Income</h3>
+                            <span class="text-[11px] font-bold text-slate-500">Ledger ➔</span>
                         </div>
                     `;
                 }
 
-                Array.from(gridParent.children).forEach(ch => {
-                    ch.classList.add('min-h-[86px]', 'h-full', 'flex', 'flex-col', 'justify-between');
-                });
-
+                // Promise / Dues कार्ड से col-span-2 हटाएं ताकि Expired Members के ठीक बगल में बराबर साइज में बैठे
                 [cardAll, secretCard, cardExp, cardProm, cardAct, cardExp7].forEach(c => {
                     if (c) {
-                        c.classList.add('min-h-[86px]', 'h-full', 'flex', 'flex-col', 'justify-between');
+                        c.classList.remove('col-span-2', 'sm:col-span-2', 'md:col-span-2', 'lg:col-span-2');
+                        c.classList.add('min-h-[90px]', 'h-full', 'flex', 'flex-col', 'justify-between');
                         gridParent.appendChild(c);
                     }
                 });
+
+                // यदि ग्रिड में कोई अतिरिक्त कार्ड (जैसे Vacant या Birthday) है तो उसे भी बराबर साइज दें
+                Array.from(gridParent.children).forEach(ch => {
+                    ch.classList.remove('col-span-2', 'sm:col-span-2', 'md:col-span-2', 'lg:col-span-2');
+                    ch.classList.add('min-h-[90px]', 'h-full', 'flex', 'flex-col', 'justify-between');
+                });
             }
 
-            // कलेक्शन वाले कार्ड्स को भी बराबर ऊँचाई व ग्रिड में सेट करें
+            // 5. कलेक्शन वाले कार्ड्स को भी बराबर ऊँचाई व 2-कॉलम ग्रिड में सेट करें
             const colTodayEl = document.getElementById('colToday');
             if (colTodayEl) {
                 const colCard = colTodayEl.closest('div[onclick]');
                 if (colCard && colCard.parentElement) {
                     const colGrid = colCard.parentElement;
+                    colGrid.classList.add('items-stretch');
                     Array.from(colGrid.children).forEach(ch => {
-                        ch.classList.add('min-h-[82px]', 'h-full', 'flex', 'flex-col', 'justify-between');
+                        ch.classList.remove('col-span-2');
+                        ch.classList.add('min-h-[86px]', 'h-full', 'flex', 'flex-col', 'justify-between');
                     });
                 }
             }
 
-            // 4. डबल फ़िल्टर और फालतू सॉर्ट बटन हटाएं तथा डिफ़ॉल्ट रूप से नीचे की लिस्ट छिपा दें
+            // 6. डबल फ़िल्टर और फालतू सॉर्ट बटन हटाएं तथा डिफ़ॉल्ट रूप से नीचे की लिस्ट छिपा दें
             const sortIdBtn = document.getElementById('sortBtn-id');
             if (sortIdBtn && sortIdBtn.parentElement) {
                 sortIdBtn.parentElement.classList.add('hidden');
@@ -2032,7 +2052,7 @@
             selectedGenderCorner = 'All';
             selectedAddressCorner = 'All';
             sectionInnerSearch = '';
-            displayLimit = 250;
+            displayLimit = 60;
             const wrap = document.getElementById('memberListMainWrapper');
             if (wrap) wrap.classList.remove('hidden');
             setTab('all', true);
@@ -2053,20 +2073,23 @@
 
         function filterTotalByGender(g) {
             selectedGenderCorner = g;
-            displayLimit = 250;
+            displayLimit = 60;
             renderStudentList();
         }
 
         function filterTotalByAddress(addrVal) {
             selectedAddressCorner = addrVal || 'All';
-            displayLimit = 250;
+            displayLimit = 60;
             renderStudentList();
         }
 
         function onSectionInnerSearchInput(val) {
-            sectionInnerSearch = (val || '').trim();
-            displayLimit = 250;
-            renderStudentList();
+            clearTimeout(innerSearchDebounceTimer);
+            innerSearchDebounceTimer = setTimeout(() => {
+                sectionInnerSearch = (val || '').trim();
+                displayLimit = 60;
+                renderStudentList();
+            }, 140);
         }
 
         function setGenderFilter(g) { filterTotalByGender(g); }
@@ -2074,19 +2097,22 @@
         function closeMemberListSection() { closeTotalMembersOnly(); }
 
         function onSearchInputChanged() {
-            const rawQuery = document.getElementById('searchInput').value.trim();
-            const dashWrap = document.getElementById('dashboardCardsWrapper');
-            const listWrap = document.getElementById('memberListMainWrapper');
-            if(rawQuery.length > 0) {
-                closeAllOpenSections('memberListMainWrapper');
-                if(dashWrap) dashWrap.classList.add('hidden');
-                if(listWrap) listWrap.classList.remove('hidden');
-            } else {
-                if(dashWrap) dashWrap.classList.remove('hidden');
-                if(listWrap) listWrap.classList.add('hidden');
-            }
-            displayLimit = 250;
-            renderStudentList();
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                const rawQuery = document.getElementById('searchInput').value.trim();
+                const dashWrap = document.getElementById('dashboardCardsWrapper');
+                const listWrap = document.getElementById('memberListMainWrapper');
+                if(rawQuery.length > 0) {
+                    closeAllOpenSections('memberListMainWrapper');
+                    if(dashWrap) dashWrap.classList.add('hidden');
+                    if(listWrap) listWrap.classList.remove('hidden');
+                } else {
+                    if(dashWrap) dashWrap.classList.remove('hidden');
+                    if(listWrap) listWrap.classList.add('hidden');
+                }
+                displayLimit = 60;
+                renderStudentList();
+            }, 140);
         }
 
         function clearSearchBox() {
@@ -2094,7 +2120,7 @@
         }
 
         function loadMoreMembers() {
-            displayLimit += 250;
+            displayLimit += 80;
             renderStudentList();
         }
 
@@ -2112,7 +2138,6 @@
             const qLower = rawQuery.toLowerCase();
             const innerQ = sectionInnerSearch.trim();
             const innerQLower = innerQ.toLowerCase();
-            container.innerHTML = '';
 
             const today = new Date().toISOString().split('T')[0];
 
@@ -2235,7 +2260,6 @@
                         if(sAddr !== selectedAddressCorner) return false;
                     }
 
-                    // सेक्शन के अंदर वाले सर्च बॉक्स का फ़िल्टर
                     if(innerQ) {
                         if(/^\d+$/.test(innerQ)) {
                             if(innerQ.length <= 4 && parseInt(innerQ) >= 1 && parseInt(innerQ) <= 5000) {
@@ -2250,7 +2274,6 @@
                     return true;
                 }
 
-                // मास्टर सर्च नियम: अंक (ID या Mobile) व अक्षर (Name, ब्रैकेट उपनाम, या Address)
                 if(/^\d+$/.test(rawQuery)) {
                     if(rawQuery.length <= 4 && parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000) {
                         return parseInt(s.uniId) === parseInt(rawQuery);
@@ -2296,6 +2319,8 @@
                 container.className = "grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch";
             }
 
+            // DocumentFragment का उपयोग ताकि बिना किसी लैग/हैंग के सैकड़ों कार्ड एक झटके में रेंडर हों
+            const frag = document.createDocumentFragment();
             visibleItems.forEach(({ item: s, originalIdx }, serialIdx) => {
                 const isActive = s.validUpto >= today;
                 const daysLeft = getDaysRemaining(s.validUpto, today);
@@ -2319,7 +2344,7 @@
                 card.innerHTML = `
                     <div class="flex items-start gap-3">
                         <div class="relative flex-shrink-0">
-                            <img src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl face-focus-thumb shadow-md bg-slate-100 cursor-pointer" title="Click to View / Rotate Photo">
+                            <img loading="lazy" src="${thumbAvatar}" onclick="zoomHdImage('${fullZoomAvatar}', '${s.fullName} (ID: ${s.uniId})')" class="w-16 h-16 rounded-xl face-focus-thumb shadow-md bg-slate-100 cursor-pointer" title="Click to View / Rotate Photo">
                             <span class="absolute -top-1.5 -left-1.5 bg-slate-800 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded shadow">${serialIdx + 1}</span>
                         </div>
 
@@ -2388,8 +2413,10 @@
                         <button onclick="deleteStudentRecord(${originalIdx})" class="w-full bg-slate-200 hover:bg-red-600 text-red-700 hover:text-white py-2 px-2 rounded-lg text-xs font-extrabold border border-red-200 transition flex items-center justify-center gap-1">🗑️ Delete</button>
                     </div>
                 `;
-                container.appendChild(card);
+                frag.appendChild(card);
             });
+            container.innerHTML = '';
+            container.appendChild(frag);
         }
 
         function toggleCardMenu(idx) {
@@ -2625,7 +2652,7 @@
             renderStudentList();
         }
 
-        // एक ही जैसा स्मार्ट कलेक्शन ब्रेकडाउन + अंदर अपना सर्च बॉक्स
+        // एक ही जैसा स्मार्ट कलेक्शन ब्रेकडाउन + Cash/Online क्लिक फ़िल्टर और अंदर अपना सर्च बॉक्स
         function openCollectionBreakdownModal(periodType) {
             closeAllOpenSections('collectionBreakdownModal');
             const now = new Date();
@@ -2719,7 +2746,7 @@
                         <button type="button" onclick="setColBreakdownFilter(null, mode==='Cash'?'All':'Cash', null)" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
                         <button type="button" onclick="setColBreakdownFilter(null, mode==='Online'?'All':'Online', null)" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${onlineSum}</button>
                     </div>
-                    <div class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">🏦 Selected Total: ₹${shownTotal}</div>
+                    <div class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">🏦 Selected (${filteredRows.length}): ₹${shownTotal}</div>
                 </div>
                 <div>
                     <input type="text" value="${(query || '').replace(/"/g, '&quot;')}" oninput="setColBreakdownFilter(null,null,this.value)" placeholder="🔍 इस कलेक्शन में ID, नाम, मोबाइल, राशि या तारीख से खोजें..." class="w-full border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50">
@@ -3369,7 +3396,6 @@
             alert("✅ तारीखें सफलतापूर्वक अपडेट हो गईं!");
         }
 
-        // सटीक 28-दिन प्रति माह के अनुसार प्रोफ़ाइल में वैधता जोड़ना
         function autoCalcProfileValidDate() {
             const cyc = document.getElementById('profEditCycleStart').value;
             const m = parseInt(document.getElementById('profQuickMonths').value) || 1;
@@ -3788,7 +3814,7 @@
             selectedGenderCorner = 'All';
             selectedAddressCorner = 'All';
             sectionInnerSearch = '';
-            displayLimit = 250;
+            displayLimit = 60;
             document.getElementById('searchInput').value = '';
             document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
 
@@ -3870,198 +3896,12 @@
             document.getElementById('headerFounderEmoji').classList.add('hidden');
         }
 
-        // ================= Professional Expense Tracker (Financial Year Wise + Smart Search + Edit + CSV) =================
-        let expFyFilter = 'All';
-        let expModeFilter = 'All';
-        let expPeriodFilter = 'All'; // 'All', 'Today', 'Month'
-        let expSearchQuery = '';
-        let expEditIdx = '';
-
         function openExpenseModal() {
-            closeAllOpenSections('expenseModal');
-            expFyFilter = getCurrentFinancialYearLabel();
-            expModeFilter = 'All';
-            expPeriodFilter = 'All';
-            expSearchQuery = '';
-            expEditIdx = '';
-            const modal = document.getElementById('expenseModal');
-            if (modal) modal.classList.remove('hidden');
-            renderExpenseList();
+            openSecretIncomeLedgerModal('expense');
         }
 
-        function saveExpenseRecord(e) {
-            e.preventDefault();
-            const entry = {
-                title: toTitleCaseWords(document.getElementById('expTitle').value.trim()),
-                amount: parseFloat(document.getElementById('expAmount').value) || 0,
-                date: document.getElementById('expDate').value,
-                mode: document.getElementById('expMode').value
-            };
-            if (expEditIdx !== '') {
-                expenses[parseInt(expEditIdx, 10)] = entry;
-                expEditIdx = '';
-            } else {
-                expenses.push(entry);
-            }
-            localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
-            document.getElementById('expenseForm').reset();
-            document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
-            const subBtn = document.querySelector('#expenseForm button[type="submit"]');
-            if (subBtn) subBtn.innerText = "💾 Add Expense";
-            renderExpenseList();
-        }
-
-        function startEditExpense(origIdx) {
-            const ex = expenses[origIdx];
-            if (!ex) return;
-            expEditIdx = String(origIdx);
-            document.getElementById('expTitle').value = ex.title || '';
-            document.getElementById('expAmount').value = ex.amount || '';
-            document.getElementById('expDate').value = ex.date || '';
-            const modeSel = document.getElementById('expMode');
-            if (modeSel) {
-                for (let i = 0; i < modeSel.options.length; i++) {
-                    if (modeSel.options[i].value === ex.mode) { modeSel.selectedIndex = i; break; }
-                }
-            }
-            const subBtn = document.querySelector('#expenseForm button[type="submit"]');
-            if (subBtn) subBtn.innerText = "✅ Update Expense";
-        }
-
-        function deleteExpenseWith3Steps(origIdx) {
-            const ex = expenses[origIdx];
-            if (!ex) return;
-            if (!confirm(`⚠️ Step 1/3: क्या आप खर्च "${ex.title} (₹${ex.amount})" को डिलीट करना चाहते हैं?`)) return;
-            if (!confirm(`🛑 Step 2/3: यह रिकॉर्ड स्थायी रूप से हट जाएगा। क्या आप कंफर्म हैं?`)) return;
-            const code = prompt(`🔐 Step 3/3: डिलीट करने के लिए राशि (${ex.amount}) टाइप करें:`);
-            if (code !== null && String(code).trim() === String(ex.amount)) {
-                expenses.splice(origIdx, 1);
-                localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
-                renderExpenseList();
-            } else if (code !== null) {
-                alert("❌ राशि मैच नहीं हुई! रिकॉर्ड सुरक्षित है।");
-            }
-        }
-
-        function exportExpenseCsv() {
-            let csv = "Serial,Financial Year,Date,Expense Description,Payment Mode,Amount\n";
-            expenses.forEach((ex, i) => {
-                csv += `${i + 1},${getFinancialYearLabel(ex.date)},${formatDisplayDate(ex.date)},"${ex.title}",${ex.mode},${ex.amount}\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `Buddha_Library_Expenses_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-        }
-
-        function renderExpenseList() {
-            const box = document.getElementById('expenseListBox');
-            if (!box) return;
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            const thisMonthPrefix = todayStr.slice(0, 7);
-            const curFy = getCurrentFinancialYearLabel();
-
-            const fySet = new Set([curFy]);
-            expenses.forEach(x => { if (x.date) fySet.add(getFinancialYearLabel(x.date)); });
-            const fyList = Array.from(fySet).sort().reverse();
-
-            const fyScoped = expenses.map((ex, idx) => ({ ex, idx }))
-                .filter(o => expFyFilter === 'All' || getFinancialYearLabel(o.ex.date) === expFyFilter);
-
-            let todaySum = 0, monthSum = 0, fyTotalSum = 0, cashSum = 0, onlineSum = 0, bankSum = 0;
-            fyScoped.forEach(({ ex }) => {
-                const a = parseFloat(ex.amount) || 0;
-                fyTotalSum += a;
-                if (ex.date === todayStr) todaySum += a;
-                if (ex.date && ex.date.startsWith(thisMonthPrefix)) monthSum += a;
-                const mLow = String(ex.mode || '').toLowerCase();
-                if (mLow.includes('cash')) cashSum += a;
-                else if (mLow.includes('bank')) bankSum += a;
-                else onlineSum += a;
-            });
-
-            // उसी Financial Year की Personal Income से तुलना
-            const fyIncomeSum = personalIncomes
-                .filter(inc => expFyFilter === 'All' || getFinancialYearLabel(inc.date) === expFyFilter)
-                .reduce((acc, inc) => acc + (parseFloat(inc.amount) || 0), 0);
-            const netAfterExp = fyIncomeSum - fyTotalSum;
-
-            const qLow = expSearchQuery.trim().toLowerCase();
-            const finalList = fyScoped.filter(({ ex }) => {
-                if (expPeriodFilter === 'Today' && ex.date !== todayStr) return false;
-                if (expPeriodFilter === 'Month' && !(ex.date && ex.date.startsWith(thisMonthPrefix))) return false;
-                const mLow = String(ex.mode || '').toLowerCase();
-                if (expModeFilter === 'Cash' && !mLow.includes('cash')) return false;
-                if (expModeFilter === 'Online' && (mLow.includes('cash') || mLow.includes('bank'))) return false;
-                if (expModeFilter === 'Bank' && !mLow.includes('bank')) return false;
-                if (qLow) {
-                    const matchT = ex.title && ex.title.toLowerCase().includes(qLow);
-                    const matchD = formatDisplayDate(ex.date).includes(qLow);
-                    const matchA = String(ex.amount) === qLow;
-                    const matchM = mLow.includes(qLow);
-                    return matchT || matchD || matchA || matchM;
-                }
-                return true;
-            }).sort((a, b) => (b.ex.date || '').localeCompare(a.ex.date || ''));
-
-            const fyBtns = fyList.map(fy =>
-                `<button type="button" onclick="expFyFilter='${fy}';expPeriodFilter='All';renderExpenseList();" class="${expFyFilter===fy?'bg-red-900 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg text-[11px] font-extrabold">📆 ${fy}</button>`
-            ).join('');
-
-            let html = `
-                <div class="bg-slate-100 p-2.5 rounded-xl border border-slate-300 mb-2.5 space-y-2 text-[11px] font-extrabold">
-                    <div class="flex flex-wrap items-center justify-between gap-1.5">
-                        <div class="flex flex-wrap items-center gap-1">
-                            <button type="button" onclick="expFyFilter='All';expPeriodFilter='All';renderExpenseList();" class="${expFyFilter==='All'?'bg-red-900 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All FY</button>
-                            ${fyBtns}
-                        </div>
-                        <button type="button" onclick="exportExpenseCsv()" class="bg-teal-700 text-white px-2.5 py-1 rounded-lg text-[10.5px]">⬇️ CSV Export</button>
-                    </div>
-
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                        <button type="button" onclick="expPeriodFilter=expPeriodFilter==='Today'?'All':'Today';renderExpenseList();" class="${expPeriodFilter==='Today'?'bg-purple-800 text-white':'bg-white text-slate-800 border'} p-2 rounded-lg text-left">📅 Today<br><span class="text-xs text-rose-700 ${expPeriodFilter==='Today'?'!text-white':''}">₹${todaySum}</span></button>
-                        <button type="button" onclick="expPeriodFilter=expPeriodFilter==='Month'?'All':'Month';renderExpenseList();" class="${expPeriodFilter==='Month'?'bg-purple-800 text-white':'bg-white text-slate-800 border'} p-2 rounded-lg text-left">🗓️ This Month<br><span class="text-xs text-rose-700 ${expPeriodFilter==='Month'?'!text-white':''}">₹${monthSum}</span></button>
-                        <div class="bg-rose-600 text-white p-2 rounded-lg text-left">📉 FY Expense<br><span class="text-xs">₹${fyTotalSum}</span></div>
-                        <div class="bg-slate-800 text-amber-300 p-2 rounded-lg text-left">📊 Net Balance<br><span class="text-xs">₹${netAfterExp}</span></div>
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-1.5">
-                        <button type="button" onclick="expModeFilter='All';renderExpenseList();" class="${expModeFilter==='All'?'bg-slate-800 text-white':'bg-white border text-slate-700'} px-2.5 py-1 rounded-lg">All Modes</button>
-                        <button type="button" onclick="expModeFilter=expModeFilter==='Cash'?'All':'Cash';renderExpenseList();" class="${expModeFilter==='Cash'?'bg-amber-600 text-white':'bg-amber-50 border border-amber-300 text-amber-900'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
-                        <button type="button" onclick="expModeFilter=expModeFilter==='Online'?'All':'Online';renderExpenseList();" class="${expModeFilter==='Online'?'bg-indigo-700 text-white':'bg-indigo-50 border border-indigo-300 text-indigo-900'} px-2.5 py-1 rounded-lg">📱 Online/UPI: ₹${onlineSum}</button>
-                        <button type="button" onclick="expModeFilter=expModeFilter==='Bank'?'All':'Bank';renderExpenseList();" class="${expModeFilter==='Bank'?'bg-emerald-700 text-white':'bg-emerald-50 border border-emerald-300 text-emerald-900'} px-2.5 py-1 rounded-lg">🏦 Bank: ₹${bankSum}</button>
-                    </div>
-
-                    <input type="text" value="${expSearchQuery.replace(/"/g, '&quot;')}" oninput="expSearchQuery=this.value;renderExpenseList();" placeholder="🔍 खर्च का नाम, तारीख (DD-MM-YYYY), माध्यम या राशि से खोजें..." class="w-full bg-white border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold">
-                </div>
-            `;
-
-            if (finalList.length === 0) {
-                html += `<p class="text-center text-slate-400 py-4 font-bold">📭 इस फ़िल्टर में कोई खर्च रिकॉर्ड नहीं मिला।</p>`;
-            } else {
-                finalList.forEach(({ ex, idx }, sNo) => {
-                    html += `
-                        <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border mb-1.5 text-xs shadow-sm">
-                            <div>
-                                <span class="bg-slate-800 text-white text-[10px] px-1.5 py-0.2 rounded font-bold mr-1">#${sNo + 1}</span>
-                                <b class="text-slate-900">${ex.title}</b> — <span class="text-rose-700 font-extrabold">₹${ex.amount}</span>
-                                <span class="text-[10px] bg-slate-100 px-1.5 py-0.2 rounded border font-bold ml-1">${ex.mode}</span>
-                            </div>
-                            <div class="flex items-center gap-1.5 font-bold text-slate-700 whitespace-nowrap">
-                                <span>${formatDisplayDate(ex.date)}</span>
-                                <button type="button" onclick="startEditExpense(${idx})" class="bg-amber-400 text-black px-2 py-0.5 rounded text-[10px] font-extrabold">✏️</button>
-                                <button type="button" onclick="deleteExpenseWith3Steps(${idx})" class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-extrabold">🗑️</button>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            box.innerHTML = html;
-        }
-
-        // ================= Professional Personal Income Ledger (Persistent Login, FY-Wise, Net Balance, Smart Search) =================
+        // ================= Unified Personal Income & Expense Ledger (Single File, Persistent Login, FY-Wise, Smart Search) =================
+        let ledgerActiveTab = 'income'; // 'income' या 'expense'
         let secIncFyFilter = 'All';
         let secIncModeFilter = 'All';
         let secIncPeriodFilter = 'All'; // 'All', 'Today', 'Month'
@@ -4071,18 +3911,19 @@
             return localStorage.getItem('buddha_personal_income_logged_in') === 'true';
         }
 
-        function openSecretIncomeLedgerModal() {
+        function openSecretIncomeLedgerModal(defaultSubTab) {
             closeAllOpenSections('secretIncomeModal');
             if (!isSecretIncomeLoggedIn()) {
                 const savedPin = localStorage.getItem('buddha_library_pin') || '7050';
-                const entered = prompt("🔐 Personal Income Ledger खोलने के लिए अपना 4-डिजिट PIN दर्ज करें:\n(एक बार लॉगिन करने पर जब तक आप Logout नहीं करेंगे तब तक खुला रहेगा)");
+                const entered = prompt("🔐 Personal Income & Expense Ledger खोलने के लिए अपना 4-डिजिट PIN दर्ज करें:\n(एक बार लॉगिन करने पर जब तक आप Logout नहीं करेंगे तब तक खुला रहेगा)");
                 if (entered === null) return;
                 if (entered.trim() !== savedPin && entered.trim() !== '2026') {
-                    alert("❌ गलत PIN! सही PIN दर्ज करें या मुख्य स्क्रीन पर Forgot PIN से रिकवर करें।");
+                    alert("❌ गलत PIN! सही PIN दर्ज करें या Forgot PIN से रिकवर करें।");
                     return;
                 }
                 localStorage.setItem('buddha_personal_income_logged_in', 'true');
             }
+            ledgerActiveTab = (defaultSubTab === 'expense') ? 'expense' : 'income';
             secIncFyFilter = getCurrentFinancialYearLabel();
             secIncModeFilter = 'All';
             secIncPeriodFilter = 'All';
@@ -4094,19 +3935,32 @@
             localStorage.removeItem('buddha_personal_income_logged_in');
             const modal = document.getElementById('secretIncomeModal');
             if (modal) modal.classList.add('hidden');
-            alert("🔒 Personal Income Ledger सुरक्षित रूप से लॉक (Logout) कर दिया गया है।");
+            alert("🔒 Personal Income & Expense Ledger सुरक्षित रूप से लॉक (Logout) कर दिया गया है।");
         }
 
-        function exportPersonalIncomeCsv() {
-            let csv = "Serial,Financial Year,Date,Source / Person,Description,Payment Mode,Amount\n";
-            personalIncomes.forEach((item, i) => {
-                csv += `${i + 1},${getFinancialYearLabel(item.date)},${formatDisplayDate(item.date)},"${item.source}","${item.desc}",${item.mode},${item.amount}\n`;
+        function exportUnifiedLedgerCsv() {
+            let csv = "Serial,Type,Financial Year,Date,Party / Title,Description,Payment Mode,Amount\n";
+            let sn = 1;
+            personalIncomes.forEach(item => {
+                csv += `${sn++},INCOME,${getFinancialYearLabel(item.date)},${formatDisplayDate(item.date)},"${item.source}","${item.desc}",${item.mode},${item.amount}\n`;
+            });
+            expenses.forEach(ex => {
+                csv += `${sn++},EXPENSE,${getFinancialYearLabel(ex.date)},${formatDisplayDate(ex.date)},"${ex.title}","Library/Personal Expense",${ex.mode},${ex.amount}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `Personal_Income_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `Buddha_Income_Expense_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
+        }
+
+        function switchUnifiedLedgerTab(tabName) {
+            ledgerActiveTab = tabName;
+            secIncModeFilter = 'All';
+            secIncPeriodFilter = 'All';
+            secIncSearchQuery = '';
+            resetUnifiedLedgerForm();
+            renderSecretIncomeLedger();
         }
 
         function buildAndShowSecretIncomeModal() {
@@ -4122,8 +3976,8 @@
                 <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border-2 border-slate-300 overflow-hidden my-auto max-h-[94vh] flex flex-col">
                     <div class="theme-maroon text-white p-3.5 flex flex-wrap justify-between items-center gap-2">
                         <div>
-                            <h3 class="text-base sm:text-lg font-extrabold text-white tracking-wide">💼 Personal Income Ledger (Financial Year Account)</h3>
-                            <p class="text-[11px] text-slate-200">स्थायी लॉगिन • माध्यम-वार व वित्तीय वर्ष लेजर • कुल खर्च समायोजन (Net Balance)</p>
+                            <h3 class="text-base sm:text-lg font-extrabold text-white tracking-wide">💼 Personal Income & Expense Ledger</h3>
+                            <p class="text-[11px] text-slate-200">एक ही लेजर में आय, खर्च, माध्यम-वार हिसाब और वित्तीय वर्ष बचत (Net Balance)</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-1.5">
                             <button type="button" onclick="changeAppPin()" class="bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold border border-white/20">🔑 Change PIN</button>
@@ -4136,19 +3990,24 @@
                     <div class="p-3.5 overflow-y-auto space-y-3">
                         <div id="secretIncomeHeaderStats"></div>
 
-                        <form onsubmit="savePersonalIncomeEntry(event)" class="bg-slate-50 border border-slate-300 p-3 rounded-xl grid grid-cols-1 sm:grid-cols-6 gap-2 text-xs">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="uniTabBtn-income" onclick="switchUnifiedLedgerTab('income')" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition">💰 Income Entries (आय बही)</button>
+                            <button type="button" id="uniTabBtn-expense" onclick="switchUnifiedLedgerTab('expense')" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition">📉 Expense Entries (खर्च बही)</button>
+                        </div>
+
+                        <form onsubmit="saveUnifiedLedgerEntry(event)" id="unifiedLedgerForm" class="bg-slate-50 border border-slate-300 p-3 rounded-xl grid grid-cols-1 sm:grid-cols-6 gap-2 text-xs">
                             <input type="hidden" id="secIncEditIdx" value="">
                             <div class="sm:col-span-2">
-                                <label class="block font-extrabold text-slate-700 mb-0.5">किस व्यक्ति / जगह से आया *</label>
+                                <label id="uniSourceLabel" class="block font-extrabold text-slate-700 mb-0.5">किस व्यक्ति / जगह से आया *</label>
                                 <input type="text" id="secIncSource" required placeholder="जैसे: Ramesh Ji / Shop / Tuition" class="w-full border border-slate-300 p-2 rounded-lg font-bold bg-white">
                             </div>
-                            <div class="sm:col-span-2">
+                            <div id="uniDescWrap" class="sm:col-span-2">
                                 <label class="block font-extrabold text-slate-700 mb-0.5">किस काम के लिए (Description) *</label>
                                 <input type="text" id="secIncDesc" required placeholder="विवरण लिखें..." class="w-full border border-slate-300 p-2 rounded-lg font-semibold bg-white">
                             </div>
                             <div>
                                 <label class="block font-extrabold text-emerald-800 mb-0.5">राशि (₹) *</label>
-                                <input type="number" id="secIncAmount" required min="1" placeholder="5000" class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-emerald-700 bg-white">
+                                <input type="number" id="secIncAmount" required min="1" placeholder="5000" class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-slate-900 bg-white">
                             </div>
                             <div>
                                 <label class="block font-extrabold text-slate-700 mb-0.5">माध्यम (Mode)</label>
@@ -4163,8 +4022,8 @@
                                 <input type="date" id="secIncDate" required value="${today}" class="w-full border border-slate-300 p-2 rounded-lg font-bold bg-white">
                             </div>
                             <div class="sm:col-span-4 flex items-end justify-end gap-2">
-                                <button type="button" id="secIncCancelEditBtn" onclick="resetSecretIncomeForm()" class="hidden bg-slate-300 text-slate-800 px-3 py-2 rounded-lg font-extrabold">Cancel Edit</button>
-                                <button type="submit" id="secIncSubmitBtn" class="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg font-extrabold shadow">💾 Save Income</button>
+                                <button type="button" id="secIncCancelEditBtn" onclick="resetUnifiedLedgerForm()" class="hidden bg-slate-300 text-slate-800 px-3 py-2 rounded-lg font-extrabold">Cancel Edit</button>
+                                <button type="submit" id="secIncSubmitBtn" class="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg font-extrabold shadow">💾 Save Entry</button>
                             </div>
                         </form>
 
@@ -4175,8 +4034,8 @@
                                         <th class="p-2">S.No</th>
                                         <th class="p-2">Date</th>
                                         <th class="p-2">FY</th>
-                                        <th class="p-2">किससे / कहाँ से</th>
-                                        <th class="p-2">विवरण (Description)</th>
+                                        <th class="p-2" id="uniColPartyHeader">किससे / कहाँ से</th>
+                                        <th class="p-2">विवरण</th>
                                         <th class="p-2">माध्यम</th>
                                         <th class="p-2 text-right">राशि (₹)</th>
                                         <th class="p-2 text-center">Action</th>
@@ -4192,58 +4051,95 @@
             renderSecretIncomeLedger();
         }
 
-        function savePersonalIncomeEntry(e) {
+        function saveUnifiedLedgerEntry(e) {
             e.preventDefault();
             const editIdx = document.getElementById('secIncEditIdx').value;
-            const entry = {
-                source: toTitleCaseWords(document.getElementById('secIncSource').value.trim()),
-                desc: document.getElementById('secIncDesc').value.trim(),
-                amount: parseFloat(document.getElementById('secIncAmount').value) || 0,
-                mode: document.getElementById('secIncMode').value,
-                date: document.getElementById('secIncDate').value
-            };
-            if (editIdx !== '') {
-                personalIncomes[parseInt(editIdx, 10)] = entry;
+            const party = toTitleCaseWords(document.getElementById('secIncSource').value.trim());
+            const desc = document.getElementById('secIncDesc').value.trim();
+            const amount = parseFloat(document.getElementById('secIncAmount').value) || 0;
+            const mode = document.getElementById('secIncMode').value;
+            const date = document.getElementById('secIncDate').value;
+
+            if (ledgerActiveTab === 'income') {
+                const entry = { source: party, desc: desc, amount: amount, mode: mode, date: date };
+                if (editIdx !== '') personalIncomes[parseInt(editIdx, 10)] = entry;
+                else personalIncomes.push(entry);
+                localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
             } else {
-                personalIncomes.push(entry);
+                const exEntry = { title: party, desc: desc, amount: amount, mode: mode, date: date };
+                if (editIdx !== '') expenses[parseInt(editIdx, 10)] = exEntry;
+                else expenses.push(exEntry);
+                localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
             }
-            localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
-            resetSecretIncomeForm();
+            resetUnifiedLedgerForm();
             renderSecretIncomeLedger();
         }
 
-        function resetSecretIncomeForm() {
+        function resetUnifiedLedgerForm() {
+            const isExp = (ledgerActiveTab === 'expense');
             document.getElementById('secIncEditIdx').value = '';
             document.getElementById('secIncSource').value = '';
             document.getElementById('secIncDesc').value = '';
             document.getElementById('secIncAmount').value = '';
             document.getElementById('secIncDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('secIncSubmitBtn').innerText = "💾 Save Income";
+
+            const srcLbl = document.getElementById('uniSourceLabel');
+            const srcInp = document.getElementById('secIncSource');
+            const subBtn = document.getElementById('secIncSubmitBtn');
+            const colHdr = document.getElementById('uniColPartyHeader');
+
+            if (srcLbl) srcLbl.innerText = isExp ? "खर्च का नाम / मद (Expense Title) *" : "किस व्यक्ति / जगह से आया *";
+            if (srcInp) srcInp.placeholder = isExp ? "जैसे: Electricity Bill / Wi-Fi / Staff" : "जैसे: Ramesh Ji / Shop / Tuition";
+            if (colHdr) colHdr.innerText = isExp ? "खर्च मद" : "किससे / कहाँ से";
+            if (subBtn) {
+                subBtn.innerText = isExp ? "💾 Save Expense" : "💾 Save Income";
+                subBtn.className = isExp
+                    ? "w-full sm:w-auto bg-rose-700 hover:bg-rose-600 text-white px-5 py-2 rounded-lg font-extrabold shadow"
+                    : "w-full sm:w-auto bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg font-extrabold shadow";
+            }
             document.getElementById('secIncCancelEditBtn').classList.add('hidden');
         }
 
-        function editSecretIncomeEntry(origIdx) {
-            const item = personalIncomes[origIdx];
-            if (!item) return;
-            document.getElementById('secIncEditIdx').value = origIdx;
-            document.getElementById('secIncSource').value = item.source || '';
-            document.getElementById('secIncDesc').value = item.desc || '';
-            document.getElementById('secIncAmount').value = item.amount || '';
-            document.getElementById('secIncMode').value = item.mode || 'Cash';
-            document.getElementById('secIncDate').value = item.date || '';
-            document.getElementById('secIncSubmitBtn').innerText = "✅ Update Income";
+        function editUnifiedLedgerEntry(origIdx) {
+            if (ledgerActiveTab === 'income') {
+                const item = personalIncomes[origIdx];
+                if (!item) return;
+                document.getElementById('secIncEditIdx').value = origIdx;
+                document.getElementById('secIncSource').value = item.source || '';
+                document.getElementById('secIncDesc').value = item.desc || '';
+                document.getElementById('secIncAmount').value = item.amount || '';
+                document.getElementById('secIncMode').value = item.mode || 'Cash';
+                document.getElementById('secIncDate').value = item.date || '';
+            } else {
+                const ex = expenses[origIdx];
+                if (!ex) return;
+                document.getElementById('secIncEditIdx').value = origIdx;
+                document.getElementById('secIncSource').value = ex.title || '';
+                document.getElementById('secIncDesc').value = ex.desc || 'Expense';
+                document.getElementById('secIncAmount').value = ex.amount || '';
+                document.getElementById('secIncMode').value = ex.mode || 'Cash';
+                document.getElementById('secIncDate').value = ex.date || '';
+            }
+            document.getElementById('secIncSubmitBtn').innerText = "✅ Update Entry";
             document.getElementById('secIncCancelEditBtn').classList.remove('hidden');
         }
 
-        function deleteSecretIncomeEntry(origIdx) {
-            const item = personalIncomes[origIdx];
-            if (!item) return;
-            if (!confirm(`⚠️ Step 1/3: क्या आप आय "${item.source} (₹${item.amount})" को डिलीट करना चाहते हैं?`)) return;
-            if (!confirm(`🛑 Step 2/3: यह आय रिकॉर्ड हमेशा के लिए हट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`)) return;
-            const code = prompt(`🔐 Step 3/3: डिलीट करने के लिए राशि (${item.amount}) नीचे टाइप करें:`);
-            if (code !== null && String(code).trim() === String(item.amount)) {
-                personalIncomes.splice(origIdx, 1);
-                localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+        function deleteUnifiedLedgerEntry(origIdx) {
+            const isExp = (ledgerActiveTab === 'expense');
+            const target = isExp ? expenses[origIdx] : personalIncomes[origIdx];
+            if (!target) return;
+            const title = isExp ? target.title : target.source;
+            if (!confirm(`⚠️ Step 1/3: क्या आप "${title} (₹${target.amount})" को डिलीट करना चाहते हैं?`)) return;
+            if (!confirm(`🛑 Step 2/3: यह रिकॉर्ड हमेशा के लिए हट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`)) return;
+            const code = prompt(`🔐 Step 3/3: डिलीट करने के लिए राशि (${target.amount}) नीचे टाइप करें:`);
+            if (code !== null && String(code).trim() === String(target.amount)) {
+                if (isExp) {
+                    expenses.splice(origIdx, 1);
+                    localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
+                } else {
+                    personalIncomes.splice(origIdx, 1);
+                    localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+                }
                 renderSecretIncomeLedger();
             } else if (code !== null) {
                 alert("❌ राशि मैच नहीं हुई! आपका रिकॉर्ड सुरक्षित है।");
@@ -4255,6 +4151,18 @@
             const tbody = document.getElementById('secretIncomeTableBody');
             if (!headerBox || !tbody) return;
 
+            const isExp = (ledgerActiveTab === 'expense');
+            const tabIncBtn = document.getElementById('uniTabBtn-income');
+            const tabExpBtn = document.getElementById('uniTabBtn-expense');
+            if (tabIncBtn && tabExpBtn) {
+                tabIncBtn.className = !isExp
+                    ? "py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold bg-emerald-700 text-white shadow-md ring-2 ring-amber-400"
+                    : "py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold bg-slate-200 text-slate-700 hover:bg-slate-300";
+                tabExpBtn.className = isExp
+                    ? "py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold bg-rose-700 text-white shadow-md ring-2 ring-amber-400"
+                    : "py-2.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold bg-slate-200 text-slate-700 hover:bg-slate-300";
+            }
+
             const todayStr = new Date().toISOString().split('T')[0];
             const thisMonthPrefix = todayStr.slice(0, 7);
             const curFy = getCurrentFinancialYearLabel();
@@ -4264,13 +4172,24 @@
             expenses.forEach(x => { if (x.date) fySet.add(getFinancialYearLabel(x.date)); });
             const fyList = Array.from(fySet).sort().reverse();
 
-            const fyScoped = personalIncomes.map((item, idx) => ({ item, idx }))
+            const fyIncomeTotal = personalIncomes
+                .filter(inc => secIncFyFilter === 'All' || getFinancialYearLabel(inc.date) === secIncFyFilter)
+                .reduce((acc, inc) => acc + (parseFloat(inc.amount) || 0), 0);
+
+            const fyExpenseTotal = expenses
+                .filter(ex => secIncFyFilter === 'All' || getFinancialYearLabel(ex.date) === secIncFyFilter)
+                .reduce((acc, ex) => acc + (parseFloat(ex.amount) || 0), 0);
+
+            const netBalance = fyIncomeTotal - fyExpenseTotal;
+
+            // सक्रिय टैब (Income या Expense) का माध्यम-वार व अवधि-वार हिसाब
+            const activeSourceArr = isExp ? expenses : personalIncomes;
+            const fyScoped = activeSourceArr.map((item, idx) => ({ item, idx }))
                 .filter(o => secIncFyFilter === 'All' || getFinancialYearLabel(o.item.date) === secIncFyFilter);
 
-            let todaySum = 0, monthSum = 0, fyIncomeTotal = 0, cashSum = 0, onlineSum = 0, bankSum = 0;
+            let todaySum = 0, monthSum = 0, cashSum = 0, onlineSum = 0, bankSum = 0;
             fyScoped.forEach(({ item }) => {
                 const a = parseFloat(item.amount) || 0;
-                fyIncomeTotal += a;
                 if (item.date === todayStr) todaySum += a;
                 if (item.date && item.date.startsWith(thisMonthPrefix)) monthSum += a;
                 const mLow = String(item.mode || '').toLowerCase();
@@ -4278,12 +4197,6 @@
                 else if (mLow.includes('bank')) bankSum += a;
                 else onlineSum += a;
             });
-
-            // उसी Financial Year का कुल खर्च घटाकर शुद्ध बचत (Net Balance) निकालना
-            const fyExpenseTotal = expenses
-                .filter(ex => secIncFyFilter === 'All' || getFinancialYearLabel(ex.date) === secIncFyFilter)
-                .reduce((acc, ex) => acc + (parseFloat(ex.amount) || 0), 0);
-            const netBalance = fyIncomeTotal - fyExpenseTotal;
 
             const qLow = secIncSearchQuery.trim().toLowerCase();
             const finalRows = fyScoped.filter(({ item }) => {
@@ -4294,8 +4207,10 @@
                 if (secIncModeFilter === 'Online' && (mLow.includes('cash') || mLow.includes('bank'))) return false;
                 if (secIncModeFilter === 'Bank' && !mLow.includes('bank')) return false;
                 if (qLow) {
-                    const matchS = item.source && item.source.toLowerCase().includes(qLow);
-                    const matchDesc = item.desc && item.desc.toLowerCase().includes(qLow);
+                    const partyTxt = (isExp ? item.title : item.source) || '';
+                    const descTxt = item.desc || '';
+                    const matchS = partyTxt.toLowerCase().includes(qLow);
+                    const matchDesc = descTxt.toLowerCase().includes(qLow);
                     const matchDate = formatDisplayDate(item.date).includes(qLow);
                     const matchAmt = String(item.amount) === qLow;
                     const matchMode = mLow.includes(qLow);
@@ -4316,25 +4231,25 @@
                             <button type="button" onclick="secIncFyFilter='All';secIncPeriodFilter='All';renderSecretIncomeLedger();" class="${secIncFyFilter==='All'?'bg-red-900 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg text-[11px]">All FY</button>
                             ${fyBtns}
                         </div>
-                        <button type="button" onclick="exportPersonalIncomeCsv()" class="bg-teal-700 hover:bg-teal-600 text-white px-3 py-1 rounded-lg text-[11px]">⬇️ Export CSV</button>
+                        <button type="button" onclick="exportUnifiedLedgerCsv()" class="bg-teal-700 hover:bg-teal-600 text-white px-3 py-1 rounded-lg text-[11px]">⬇️ Export CSV</button>
                     </div>
 
                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                         <button type="button" onclick="secIncPeriodFilter=secIncPeriodFilter==='Today'?'All':'Today';renderSecretIncomeLedger();" class="${secIncPeriodFilter==='Today'?'bg-purple-800 text-white':'bg-white text-slate-800 border'} p-2.5 rounded-xl text-left shadow-sm">
-                            <span class="text-[10.5px] opacity-80">📅 Today Income</span><br>
-                            <span class="text-sm font-black text-emerald-700 ${secIncPeriodFilter==='Today'?'!text-white':''}">₹${todaySum}</span>
+                            <span class="text-[10.5px] opacity-80">📅 Today (${isExp ? 'Exp' : 'Inc'})</span><br>
+                            <span class="text-sm font-black ${isExp ? 'text-rose-700' : 'text-emerald-700'} ${secIncPeriodFilter==='Today'?'!text-white':''}">₹${todaySum}</span>
                         </button>
                         <button type="button" onclick="secIncPeriodFilter=secIncPeriodFilter==='Month'?'All':'Month';renderSecretIncomeLedger();" class="${secIncPeriodFilter==='Month'?'bg-purple-800 text-white':'bg-white text-slate-800 border'} p-2.5 rounded-xl text-left shadow-sm">
-                            <span class="text-[10.5px] opacity-80">🗓️ This Month</span><br>
-                            <span class="text-sm font-black text-emerald-700 ${secIncPeriodFilter==='Month'?'!text-white':''}">₹${monthSum}</span>
+                            <span class="text-[10.5px] opacity-80">🗓️ This Month (${isExp ? 'Exp' : 'Inc'})</span><br>
+                            <span class="text-sm font-black ${isExp ? 'text-rose-700' : 'text-emerald-700'} ${secIncPeriodFilter==='Month'?'!text-white':''}">₹${monthSum}</span>
                         </button>
-                        <div class="bg-emerald-700 text-white p-2.5 rounded-xl text-left shadow-sm">
+                        <div onclick="switchUnifiedLedgerTab('income')" class="bg-emerald-700 text-white p-2.5 rounded-xl text-left shadow-sm cursor-pointer">
                             <span class="text-[10.5px] opacity-90">💰 ${secIncFyFilter === 'All' ? 'All FY' : secIncFyFilter} Income</span><br>
                             <span class="text-sm font-black">₹${fyIncomeTotal}</span>
                         </div>
-                        <div onclick="openExpenseModal()" class="bg-rose-50 border border-rose-300 text-rose-900 p-2.5 rounded-xl text-left cursor-pointer hover:bg-rose-100" title="खर्च देखने के लिए क्लिक करें">
-                            <span class="text-[10.5px]">📉 Less: FY Expense</span><br>
-                            <span class="text-sm font-black text-rose-700">- ₹${fyExpenseTotal}</span>
+                        <div onclick="switchUnifiedLedgerTab('expense')" class="bg-rose-700 text-white p-2.5 rounded-xl text-left shadow-sm cursor-pointer">
+                            <span class="text-[10.5px] opacity-90">📉 Less: FY Expense</span><br>
+                            <span class="text-sm font-black">- ₹${fyExpenseTotal}</span>
                         </div>
                         <div class="col-span-2 sm:col-span-1 bg-slate-900 text-amber-300 p-2.5 rounded-xl text-left shadow-sm">
                             <span class="text-[10.5px] text-slate-300">📊 Net Balance (बचत)</span><br>
@@ -4354,23 +4269,27 @@
             `;
 
             if (finalRows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500 font-bold">📭 इस फ़िल्टर में कोई आय दर्ज नहीं है।</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500 font-bold">📭 इस फ़िल्टर में कोई एंट्री दर्ज नहीं है।</td></tr>`;
             } else {
-                tbody.innerHTML = finalRows.map(({ item, idx }, sNo) => `
-                    <tr class="border-b hover:bg-slate-50">
-                        <td class="p-2 font-extrabold">${sNo + 1}</td>
-                        <td class="p-2 font-bold text-purple-900 whitespace-nowrap">${formatDisplayDate(item.date)}</td>
-                        <td class="p-2 font-bold text-slate-500 whitespace-nowrap">${getFinancialYearLabel(item.date)}</td>
-                        <td class="p-2 font-extrabold text-slate-900">${item.source}</td>
-                        <td class="p-2 text-slate-700 font-semibold">${item.desc}</td>
-                        <td class="p-2 font-bold whitespace-nowrap">${item.mode}</td>
-                        <td class="p-2 text-right font-extrabold text-emerald-700 bg-emerald-50/60">₹${item.amount}</td>
-                        <td class="p-2 text-center whitespace-nowrap">
-                            <button type="button" onclick="editSecretIncomeEntry(${idx})" class="bg-amber-400 text-black px-2 py-0.5 rounded text-[10px] font-extrabold mr-1">✏️ Edit</button>
-                            <button type="button" onclick="deleteSecretIncomeEntry(${idx})" class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-extrabold">🗑️</button>
-                        </td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = finalRows.map(({ item, idx }, sNo) => {
+                    const partyName = isExp ? (item.title || '') : (item.source || '');
+                    const descText = item.desc || '-';
+                    return `
+                        <tr class="border-b hover:bg-slate-50">
+                            <td class="p-2 font-extrabold">${sNo + 1}</td>
+                            <td class="p-2 font-bold text-purple-900 whitespace-nowrap">${formatDisplayDate(item.date)}</td>
+                            <td class="p-2 font-bold text-slate-500 whitespace-nowrap">${getFinancialYearLabel(item.date)}</td>
+                            <td class="p-2 font-extrabold text-slate-900">${partyName}</td>
+                            <td class="p-2 text-slate-700 font-semibold">${descText}</td>
+                            <td class="p-2 font-bold whitespace-nowrap">${item.mode}</td>
+                            <td class="p-2 text-right font-extrabold ${isExp ? 'text-rose-700 bg-rose-50/60' : 'text-emerald-700 bg-emerald-50/60'}">₹${item.amount}</td>
+                            <td class="p-2 text-center whitespace-nowrap">
+                                <button type="button" onclick="editUnifiedLedgerEntry(${idx})" class="bg-amber-400 text-black px-2 py-0.5 rounded text-[10px] font-extrabold mr-1">✏️ Edit</button>
+                                <button type="button" onclick="deleteUnifiedLedgerEntry(${idx})" class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-extrabold">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
         }
 
@@ -4465,6 +4384,5 @@
     </script>
 </body>
 </html>
- 
 
 
