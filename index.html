@@ -1030,10 +1030,10 @@
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
         try { personalIncomes = JSON.parse(localStorage.getItem('buddha_library_personal_incomes') || '[]'); } catch(e) { personalIncomes = []; }
 
-        // सटीक 28-दिन प्रति माह जोड़ने वाला फंक्शन (चाहे महीना 28, 29, 30 या 31 दिन का हो)
+        // सटीक 28-दिन प्रति माह जोड़ने वाला फंक्शन (महीना 28, 29, 30 या 31 का हो, ठीक +28 दिन/माह)
         function addExact28DayMonths(startDateStr, monthsCount) {
             if (!startDateStr) return '';
-            const parts = String(startDateStr).split('-');
+            const parts = String(startDateStr).trim().split('-');
             if (parts.length !== 3) return startDateStr;
             const d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
             const totalDaysToAdd = (parseInt(monthsCount, 10) || 1) * 28;
@@ -1041,7 +1041,7 @@
             return d.toISOString().split('T')[0];
         }
 
-        // भारतीय वित्तीय वर्ष (1 अप्रैल से 31 मार्च) निकालने वाला फंक्शन
+        // भारतीय वित्तीय वर्ष (1 अप्रैल से 31 मार्च)
         function getFinancialYearLabel(dateStr) {
             if (!dateStr || dateStr.length < 7) return 'FY 2026-27';
             const parts = dateStr.split('-');
@@ -1058,7 +1058,6 @@
             return getFinancialYearLabel(todayStr);
         }
 
-        // 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी
         function openBuddhaBigDB() {
             return new Promise((resolve, reject) => {
                 if (!window.indexedDB) { reject('No IDB'); return; }
@@ -1108,7 +1107,7 @@
                     });
                 }
             });
-            return Array.from(map.values()).sort((a, b) => (parseInt(a.uniId) || 99999) - (parseInt(b.uniId) || 99999));
+            return Array.from(map.values()).sort((a, b) => (parseInt(a.uniId, 10) || 99999) - (parseInt(b.uniId, 10) || 99999));
         }
 
         function loadAllDataFromBigDB() {
@@ -1133,7 +1132,6 @@
             }).catch(() => students);
         }
 
-        // बैकग्राउंड में दूसरा ऐप खोलने या स्क्रीन बंद होने पर भी सारा डेटा सुरक्षित रखना
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
                 saveStudentsToBigDB(students);
@@ -1141,6 +1139,8 @@
                     localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
                     localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
                 } catch(e) {}
+            } else if (document.visibilityState === 'visible' && firebaseDbUrl) {
+                fetchFromFirebase(true);
             }
         });
 
@@ -1165,7 +1165,6 @@
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
         }
 
-        // सभी तारीखों को DD-MM-YYYY में दिखाने का फंक्शन
         function formatDisplayDate(dateStr) {
             if(!dateStr || dateStr === '-') return '-';
             const parts = String(dateStr).trim().split('-');
@@ -1183,7 +1182,6 @@
             return `${mNames[mIdx] || parts[1]} ${parts[0]}`;
         }
 
-        // बच्चे के सिलेक्टेड शिफ्ट प्लान (Rate ÷ 28 × Expired Days, अधिकतम 84 दिन) के अनुसार बकाया निकालना
         function getExpiredDailyDuesInfo(s, todayStr) {
             const oldDue = parseFloat(s.remainingDue) || 0;
             if (!s.validUpto || s.validUpto >= todayStr) {
@@ -1192,7 +1190,7 @@
             const dValid = new Date(s.validUpto + 'T00:00:00');
             const dToday = new Date(todayStr + 'T00:00:00');
             const expiredDays = Math.max(0, Math.round((dToday - dValid) / (1000 * 60 * 60 * 24)));
-            const cappedDays = Math.min(84, expiredDays); // अधिकतम 3 महीने (84 दिन) पर ऑटो-स्टॉप
+            const cappedDays = Math.min(84, expiredDays);
 
             const sh = (s.shiftPlan || '').toLowerCase();
             let monthlyRate = 300;
@@ -1201,7 +1199,7 @@
             else if (sh.includes('afternoon') || sh.includes('night') || sh.includes('400') || sh.includes('399')) monthlyRate = 400;
             else if (sh.includes('morning') || sh.includes('300') || sh.includes('299')) monthlyRate = 300;
 
-            if (cleanResNum(s.lockerNo) !== '') monthlyRate += 50; // लॉकर चार्ज शामिल
+            if (cleanResNum(s.lockerNo) !== '') monthlyRate += 50;
 
             const accruedFee = Math.round((monthlyRate / 28) * cappedDays);
             return {
@@ -1291,7 +1289,6 @@
             return conv;
         }
 
-        // बाहर क्लिक करने पर ऊपर का 3-Dot Menu अपने आप बंद होने का सिस्टम
         document.addEventListener('click', function(e) {
             const drop = document.getElementById('headerDropdown');
             if (drop && !drop.classList.contains('hidden')) {
@@ -1302,7 +1299,6 @@
             }
         });
 
-        // सभी खुले हुए पैनल/मॉडल को एक साथ बंद करने का हेल्पर
         function closeAllOpenSections(exceptId) {
             const ids = [
                 'admissionFormBox',
@@ -1425,9 +1421,8 @@
             });
         }
 
-        // मोबाइल (Portrait/Landscape), लैपटॉप और TV पर सभी बटनों व कार्ड्स को बराबर साइज और प्रीमियम ग्रिड में सजाना
+        // डैशबोर्ड के बटन/कार्ड्स दुरुस्त करना (एडमिशन फॉर्म में कोई छेड़-छाड़ नहीं)
         function arrangeCleanDashboardLayout() {
-            // 1. डायरेक्टर की फोटो और उसके पूरे बॉक्स से क्लिक पूरी तरह लॉक करें
             const fImg = document.getElementById('headerFounderImg');
             const fEmo = document.getElementById('headerFounderEmoji');
             [fImg, fEmo, fImg ? fImg.parentElement : null, fEmo ? fEmo.parentElement : null].forEach(el => {
@@ -1439,25 +1434,12 @@
                 }
             });
 
-            // 2. नीचे का अलग Expense Tracker बटन/कार्ड छिपाएं क्योंकि अब वह Personal Income लेजर में ही एकीकृत है
             document.querySelectorAll('[onclick*="openExpenseModal"]').forEach(el => {
                 if (!el.closest('#secretIncomeModal')) {
                     el.classList.add('hidden');
                 }
             });
 
-            // 3. "+ New Admission" बटन को पूरी चौड़ाई (w-full) व प्रीमियम स्टाइल में सेंटर करें ताकि आधा कटा न दिखे
-            const admBtn = document.querySelector('button[onclick*="toggleAdmissionForm"]');
-            if (admBtn) {
-                const parentRow = admBtn.parentElement;
-                if (parentRow && parentRow.classList.contains('grid')) {
-                    parentRow.className = "w-full my-2";
-                }
-                admBtn.className = "w-full theme-maroon text-white py-3 px-4 rounded-2xl text-sm sm:text-base font-extrabold shadow-md hover:opacity-95 active:scale-[0.99] transition flex items-center justify-center gap-2 tracking-wide";
-                admBtn.innerHTML = `<span>➕ New Admission</span>`;
-            }
-
-            // 4. डैशबोर्ड के सभी ऊपर वाले कार्ड्स को मोबाइल पर 2-2 की बराबर जोड़ी और लैपटॉप पर 3-3 की बराबर पंक्ति में सेट करें
             const cardAll = document.getElementById('cardTab-all');
             const cardExp = document.getElementById('cardTab-expired');
             const cardProm = document.getElementById('cardTab-promise');
@@ -1473,7 +1455,7 @@
                     secretCard = document.createElement('div');
                     secretCard.id = 'cardTab-secretIncome';
                     secretCard.onclick = openSecretIncomeLedgerModal;
-                    secretCard.className = "bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-slate-500 flex flex-col justify-between min-h-[90px] h-full";
+                    secretCard.className = "bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition cursor-pointer border-l-4 border-slate-500 flex flex-col justify-between min-h-[88px] h-full";
                     secretCard.innerHTML = `
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-slate-600">💼 Personal Income</span>
@@ -1485,37 +1467,38 @@
                     `;
                 }
 
-                // Promise / Dues कार्ड से col-span-2 हटाएं ताकि Expired Members के ठीक बगल में बराबर साइज में बैठे
                 [cardAll, secretCard, cardExp, cardProm, cardAct, cardExp7].forEach(c => {
                     if (c) {
                         c.classList.remove('col-span-2', 'sm:col-span-2', 'md:col-span-2', 'lg:col-span-2');
-                        c.classList.add('min-h-[90px]', 'h-full', 'flex', 'flex-col', 'justify-between');
+                        c.classList.add('min-h-[88px]', 'h-full', 'flex', 'flex-col', 'justify-between');
                         gridParent.appendChild(c);
                     }
                 });
 
-                // यदि ग्रिड में कोई अतिरिक्त कार्ड (जैसे Vacant या Birthday) है तो उसे भी बराबर साइज दें
                 Array.from(gridParent.children).forEach(ch => {
                     ch.classList.remove('col-span-2', 'sm:col-span-2', 'md:col-span-2', 'lg:col-span-2');
-                    ch.classList.add('min-h-[90px]', 'h-full', 'flex', 'flex-col', 'justify-between');
+                    ch.classList.add('min-h-[88px]', 'h-full', 'flex', 'flex-col', 'justify-between');
                 });
             }
 
-            // 5. कलेक्शन वाले कार्ड्स को भी बराबर ऊँचाई व 2-कॉलम ग्रिड में सेट करें
             const colTodayEl = document.getElementById('colToday');
             if (colTodayEl) {
                 const colCard = colTodayEl.closest('div[onclick]');
                 if (colCard && colCard.parentElement) {
                     const colGrid = colCard.parentElement;
-                    colGrid.classList.add('items-stretch');
+                    colGrid.className = "grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 items-stretch mb-3";
                     Array.from(colGrid.children).forEach(ch => {
-                        ch.classList.remove('col-span-2');
+                        ch.classList.remove('col-span-2', 'sm:col-span-2');
                         ch.classList.add('min-h-[86px]', 'h-full', 'flex', 'flex-col', 'justify-between');
                     });
                 }
             }
 
-            // 6. डबल फ़िल्टर और फालतू सॉर्ट बटन हटाएं तथा डिफ़ॉल्ट रूप से नीचे की लिस्ट छिपा दें
+            const cycInp = document.getElementById('cycleStartDate');
+            const durSel = document.getElementById('durationMonths');
+            if (cycInp) { cycInp.addEventListener('input', update28DayValidity); cycInp.addEventListener('change', update28DayValidity); }
+            if (durSel) { durSel.addEventListener('change', update28DayValidity); }
+
             const sortIdBtn = document.getElementById('sortBtn-id');
             if (sortIdBtn && sortIdBtn.parentElement) {
                 sortIdBtn.parentElement.classList.add('hidden');
@@ -1547,7 +1530,7 @@
                 if(firebaseDbUrl) {
                     const syncTxt = document.getElementById('menuSyncText');
                     if(syncTxt) { syncTxt.innerText = "(Connected 🟢)"; syncTxt.className = "text-[10px] text-emerald-600 ml-auto font-extrabold"; }
-                    fetchFromFirebase();
+                    fetchFromFirebase(true);
                 }
             });
         }
@@ -1570,11 +1553,10 @@
             recalcAdmissionBill();
         }
 
-        // सटीक 28-दिन प्रति माह के अनुसार नया एडमिशन वैधता अपडेट करना
         function update28DayValidity() {
             const startVal = document.getElementById('cycleStartDate').value;
             if(!startVal) return;
-            const months = parseInt(document.getElementById('durationMonths').value) || 1;
+            const months = parseInt(document.getElementById('durationMonths').value, 10) || 1;
             document.getElementById('validUpto').value = addExact28DayMonths(startVal, months);
             recalcAdmissionBill();
         }
@@ -1583,7 +1565,7 @@
             const shiftSel = document.getElementById('shiftPlan');
             const opt = shiftSel.options[shiftSel.selectedIndex];
             let rate = parseFloat(opt.getAttribute('data-rate')) || 300;
-            const months = parseInt(document.getElementById('durationMonths').value) || 1;
+            const months = parseInt(document.getElementById('durationMonths').value, 10) || 1;
             let shiftTotal = rate * months;
 
             if(months === 3) shiftTotal = Math.round(shiftTotal * 0.95);
@@ -1622,7 +1604,7 @@
         }
 
         function getNextAvailableId() {
-            let used = new Set(students.map(s => parseInt(s.uniId)));
+            let used = new Set(students.map(s => parseInt(s.uniId, 10)).filter(n => !isNaN(n)));
             for(let i = 1; i <= 5000; i++) {
                 if(!used.has(i)) return i;
             }
@@ -1890,10 +1872,11 @@
             closeMediaAdjuster();
         }
 
+        // फॉर्म सेव करने पर साफ नोटिफिकेशन (सेव होने + फोटो/आधार कार्ड अपलोड होने की जानकारी के साथ)
         function saveStudentRecord(e) {
-            e.preventDefault();
+            if (e) e.preventDefault();
             const editIdx = document.getElementById('editIndex').value;
-            const uniId = parseInt(document.getElementById('uniId').value);
+            const uniId = parseInt(document.getElementById('uniId').value, 10);
             const fullName = toTitleCaseWords(document.getElementById('fullName').value.trim());
             const gender = document.getElementById('gender').value;
             const mobile = document.getElementById('mobile').value.trim();
@@ -1911,7 +1894,7 @@
             if(studyCourse === 'Other') studyCourse = toTitleCaseWords(document.getElementById('otherCourseInput').value.trim()) || 'Other';
 
             const shiftPlan = document.getElementById('shiftPlan').value;
-            const durationMonths = parseInt(document.getElementById('durationMonths').value) || 1;
+            const durationMonths = parseInt(document.getElementById('durationMonths').value, 10) || 1;
             const admissionDate = document.getElementById('admissionDateInput').value;
             const cycleStartDate = document.getElementById('cycleStartDate').value;
             const validUpto = document.getElementById('validUpto').value || addExact28DayMonths(cycleStartDate, durationMonths);
@@ -1942,9 +1925,13 @@
             }
 
             for(let i = 0; i < students.length; i++) {
-                if(editIdx !== "" && parseInt(editIdx) === i) continue;
-                if(parseInt(students[i].uniId) === uniId) {
-                    alert(`❌ Duplicate ID! ID: ${uniId} पहले से "${students[i].fullName}" के नाम पर दर्ज है।`);
+                if(editIdx !== "" && parseInt(editIdx, 10) === i) continue;
+                if(parseInt(students[i].uniId, 10) === uniId) {
+                    const nextFree = getNextAvailableId();
+                    if (confirm(`⚠️ ID: ${uniId} पहले से "${students[i].fullName}" के नाम पर दर्ज है!\n\nक्या आप इसे अगली खाली ID (${nextFree}) पर सेव करना चाहते हैं?`)) {
+                        document.getElementById('uniId').value = nextFree;
+                        saveStudentRecord(null);
+                    }
                     return;
                 }
                 if(students[i].mobile === mobile) {
@@ -1954,9 +1941,12 @@
             }
 
             const todayStr = new Date().toISOString().split('T')[0];
+            let hasStudentPhoto = false;
+            let hasFrontDoc = false;
+            let hasBackDoc = false;
 
             if(editIdx !== "") {
-                let st = students[editIdx];
+                let st = students[parseInt(editIdx, 10)];
                 if(remainingDue > 0 && promiseDate && promiseDate !== st.promiseDate) {
                     if(!st.promiseHistory) st.promiseHistory = [];
                     if(st.promiseDate) {
@@ -1978,6 +1968,10 @@
                 }
                 if(tempUploads.frontBase64) st.aadhaarFront = tempUploads.frontBase64;
                 if(tempUploads.backBase64) st.aadhaarBack = tempUploads.backBase64;
+
+                hasStudentPhoto = !!(st.photo && st.photo.length > 30);
+                hasFrontDoc = !!(st.aadhaarFront && st.aadhaarFront.length > 30);
+                hasBackDoc = !!(st.aadhaarBack && st.aadhaarBack.length > 30);
             } else {
                 const invNo = "BL-" + Date.now().toString().slice(-6);
                 let newSt = {
@@ -2015,12 +2009,24 @@
                     }]
                 };
                 students.push(newSt);
+
+                hasStudentPhoto = !!(newSt.photo && newSt.photo.length > 30);
+                hasFrontDoc = !!(newSt.aadhaarFront && newSt.aadhaarFront.length > 30);
+                hasBackDoc = !!(newSt.aadhaarBack && newSt.aadhaarBack.length > 30);
             }
 
             syncAndSaveData();
             document.getElementById('admissionFormBox').classList.add('hidden');
-            renderStudentList();
-            alert("✅ रिकॉर्ड और फोटो सफलतापूर्वक सेव हो गए!");
+
+            let uploadStatusLines = [];
+            if (hasStudentPhoto) uploadStatusLines.push("• छात्र फोटो अपलोड और सेव कर लिया गया है।");
+            if (hasFrontDoc || hasBackDoc) {
+                const docSides = [hasFrontDoc ? "आगे (Front)" : "", hasBackDoc ? "पीछे (Back)" : ""].filter(Boolean).join(" और ");
+                uploadStatusLines.push(`• आधार कार्ड / डॉक्यूमेंट (${docSides}) फोटो अपलोड और सेव कर लिया गया है।`);
+            }
+            const mediaMsg = uploadStatusLines.length > 0 ? `\n${uploadStatusLines.join("\n")}` : "";
+
+            alert(`✅ रिकॉर्ड सफलतापूर्वक सेव कर लिया गया है!\n\n• ID: ${uniId} — ${fullName}\n• वैधता (${durationMonths * 28} दिन): ${formatDisplayDate(cycleStartDate)} से ${formatDisplayDate(validUpto)}${mediaMsg}`);
         }
 
         function formatResDualColorHtml(s) {
@@ -2141,7 +2147,6 @@
 
             const today = new Date().toISOString().split('T')[0];
 
-            // एक ही स्मार्ट कोने वाला बार + सेक्शन के अंदर अपना सर्च बॉक्स
             const anchorEl = document.getElementById('listSectionAnchor');
             if (anchorEl) {
                 let smartBar = document.getElementById('autoExpiredCornerBar');
@@ -2227,14 +2232,13 @@
                 }
             }
 
-            // हमेशा ID नंबर के क्रम से ही लिस्ट तैयार करें
             let workingList = students.map((item, idx) => ({ item, originalIdx: idx }));
             if(currentTab === 'promise') {
                 workingList.sort((a, b) => (a.item.promiseDate || '9999-99-99').localeCompare(b.item.promiseDate || '9999-99-99'));
             } else if(currentTab === 'expiring7') {
                 workingList.sort((a, b) => (a.item.validUpto || '9999-99-99').localeCompare(b.item.validUpto || '9999-99-99'));
             } else {
-                workingList.sort((a, b) => (parseInt(a.item.uniId) || 99999) - (parseInt(b.item.uniId) || 99999));
+                workingList.sort((a, b) => (parseInt(a.item.uniId, 10) || 99999) - (parseInt(b.item.uniId, 10) || 99999));
             }
 
             let filtered = workingList.filter(({ item: s }) => {
@@ -2262,8 +2266,8 @@
 
                     if(innerQ) {
                         if(/^\d+$/.test(innerQ)) {
-                            if(innerQ.length <= 4 && parseInt(innerQ) >= 1 && parseInt(innerQ) <= 5000) {
-                                return parseInt(s.uniId) === parseInt(innerQ);
+                            if(innerQ.length <= 4 && parseInt(innerQ, 10) >= 1 && parseInt(innerQ, 10) <= 5000) {
+                                return parseInt(s.uniId, 10) === parseInt(innerQ, 10);
                             }
                             return (s.mobile && s.mobile.includes(innerQ)) || (s.guardianMobile && s.guardianMobile.includes(innerQ));
                         }
@@ -2275,8 +2279,8 @@
                 }
 
                 if(/^\d+$/.test(rawQuery)) {
-                    if(rawQuery.length <= 4 && parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000) {
-                        return parseInt(s.uniId) === parseInt(rawQuery);
+                    if(rawQuery.length <= 4 && parseInt(rawQuery, 10) >= 1 && parseInt(rawQuery, 10) <= 5000) {
+                        return parseInt(s.uniId, 10) === parseInt(rawQuery, 10);
                     }
                     return (s.mobile && s.mobile.includes(rawQuery)) || (s.guardianMobile && s.guardianMobile.includes(rawQuery));
                 }
@@ -2319,7 +2323,6 @@
                 container.className = "grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch";
             }
 
-            // DocumentFragment का उपयोग ताकि बिना किसी लैग/हैंग के सैकड़ों कार्ड एक झटके में रेंडर हों
             const frag = document.createDocumentFragment();
             visibleItems.forEach(({ item: s, originalIdx }, serialIdx) => {
                 const isActive = s.validUpto >= today;
@@ -2365,6 +2368,8 @@
                                     <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition">⚙️ Options</button>
                                 </div>
                             </div>
+
+                            ${s.promiseDate ? `<div class="mt-1"><span class="inline-block bg-rose-100 text-rose-900 border border-rose-300 text-[10.5px] font-extrabold px-2 py-0.5 rounded-md">📅 Promise Date: ${formatDisplayDate(s.promiseDate)}</span></div>` : ''}
 
                             <p class="text-xs text-slate-700 font-semibold mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                 <span>📞 <a href="tel:${s.mobile}" class="text-blue-700 font-extrabold no-underline hover:underline">${s.mobile}</a></span>
@@ -2652,7 +2657,6 @@
             renderStudentList();
         }
 
-        // एक ही जैसा स्मार्ट कलेक्शन ब्रेकडाउन + Cash/Online क्लिक फ़िल्टर और अंदर अपना सर्च बॉक्स
         function openCollectionBreakdownModal(periodType) {
             closeAllOpenSections('collectionBreakdownModal');
             const now = new Date();
@@ -2689,7 +2693,7 @@
                 });
             });
 
-            rows.sort((a, b) => (parseInt(a.s.uniId) || 99999) - (parseInt(b.s.uniId) || 99999));
+            rows.sort((a, b) => (parseInt(a.s.uniId, 10) || 99999) - (parseInt(b.s.uniId, 10) || 99999));
 
             activeBreakdownContext = { type: periodType, gender: 'All', mode: 'All', query: '', rows: rows };
             renderCollectionBreakdownFiltered();
@@ -2740,18 +2744,38 @@
             sumEl.innerHTML = `
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <button type="button" onclick="setColBreakdownFilter('All','All','')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${rows.length})</button>
-                        <button type="button" onclick="setColBreakdownFilter('Male',null,null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bAmt})</button>
-                        <button type="button" onclick="setColBreakdownFilter('Female',null,null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gAmt})</button>
-                        <button type="button" onclick="setColBreakdownFilter(null, mode==='Cash'?'All':'Cash', null)" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
-                        <button type="button" onclick="setColBreakdownFilter(null, mode==='Online'?'All':'Online', null)" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${onlineSum}</button>
+                        <button type="button" data-col-act="all" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1.5 rounded-lg cursor-pointer">All (${rows.length})</button>
+                        <button type="button" data-col-act="male" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1.5 rounded-lg cursor-pointer">👦 Boys: ${bCount} (₹${bAmt})</button>
+                        <button type="button" data-col-act="female" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1.5 rounded-lg cursor-pointer">👧 Girls: ${gCount} (₹${gAmt})</button>
+                        <button type="button" data-col-act="cash" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1.5 rounded-lg cursor-pointer">💵 Cash: ₹${cashSum}</button>
+                        <button type="button" data-col-act="online" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1.5 rounded-lg cursor-pointer">📱 Online: ₹${onlineSum}</button>
                     </div>
-                    <div class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">🏦 Selected (${filteredRows.length}): ₹${shownTotal}</div>
+                    <div class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg shadow-sm">🏦 Selected (${filteredRows.length}): ₹${shownTotal}</div>
                 </div>
                 <div>
-                    <input type="text" value="${(query || '').replace(/"/g, '&quot;')}" oninput="setColBreakdownFilter(null,null,this.value)" placeholder="🔍 इस कलेक्शन में ID, नाम, मोबाइल, राशि या तारीख से खोजें..." class="w-full border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50">
+                    <input type="text" id="colBreakdownSearchInp" value="${(query || '').replace(/"/g, '&quot;')}" placeholder="🔍 इस कलेक्शन में ID, नाम, मोबाइल, राशि या तारीख से खोजें..." class="w-full border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50">
                 </div>
             `;
+
+            sumEl.querySelectorAll('button[data-col-act]').forEach(btn => {
+                btn.onclick = function() {
+                    const act = this.getAttribute('data-col-act');
+                    if (act === 'all') setColBreakdownFilter('All', 'All', '');
+                    else if (act === 'male') setColBreakdownFilter(gender === 'Male' ? 'All' : 'Male', null, null);
+                    else if (act === 'female') setColBreakdownFilter(gender === 'Female' ? 'All' : 'Female', null, null);
+                    else if (act === 'cash') setColBreakdownFilter(null, mode === 'Cash' ? 'All' : 'Cash', null);
+                    else if (act === 'online') setColBreakdownFilter(null, mode === 'Online' ? 'All' : 'Online', null);
+                };
+            });
+            const sBox = document.getElementById('colBreakdownSearchInp');
+            if (sBox) {
+                sBox.oninput = function() {
+                    activeBreakdownContext.query = this.value;
+                    renderCollectionBreakdownFiltered();
+                    const refocus = document.getElementById('colBreakdownSearchInp');
+                    if (refocus) { refocus.focus(); refocus.setSelectionRange(refocus.value.length, refocus.value.length); }
+                };
+            }
 
             const tbody = document.getElementById('colBreakdownTableBody');
             if(filteredRows.length === 0) {
@@ -2792,7 +2816,7 @@
 
             let occupiedMap = {};
             students.forEach(s => {
-                let num = parseInt(cleanResNum(s[field]));
+                let num = parseInt(cleanResNum(s[field]), 10);
                 if(num && num >= 1 && num <= maxCount) {
                     occupiedMap[num] = s;
                 }
@@ -2980,11 +3004,10 @@
 
         function closeRenewModal() { document.getElementById('renewModal').classList.add('hidden'); }
 
-        // सटीक 28-दिन प्रति माह के अनुसार रिन्यूअल की अगली तारीख निकालना
         function recalcRenewalDates() {
             const startStr = document.getElementById('renewStartDate').value;
             if(!startStr) return;
-            const months = parseInt(document.getElementById('renewMonths').value) || 1;
+            const months = parseInt(document.getElementById('renewMonths').value, 10) || 1;
             document.getElementById('renewNewValid').value = addExact28DayMonths(startStr, months);
         }
 
@@ -2992,7 +3015,7 @@
             const shiftSel = document.getElementById('renewShiftSelect');
             const opt = shiftSel.options[shiftSel.selectedIndex];
             const rate = parseFloat(opt.getAttribute('data-rate')) || 300;
-            const months = parseInt(document.getElementById('renewMonths').value) || 1;
+            const months = parseInt(document.getElementById('renewMonths').value, 10) || 1;
 
             let shiftSub = rate * months;
             if(months === 3) shiftSub = Math.round(shiftSub * 0.95);
@@ -3026,7 +3049,7 @@
             const newLocker = hasLockerMonth ? cleanResNum(document.getElementById('renewLockerNo').value) : '';
             const newKey = hasLockerMonth ? cleanResNum(document.getElementById('renewKeyNo').value) : '';
             const startD = document.getElementById('renewStartDate').value;
-            const months = parseInt(document.getElementById('renewMonths').value) || 1;
+            const months = parseInt(document.getElementById('renewMonths').value, 10) || 1;
             const newValid = document.getElementById('renewNewValid').value || addExact28DayMonths(startD, months);
             const billD = document.getElementById('renewBillDate').value || new Date().toISOString().split('T')[0];
             const isGst = document.getElementById('renewGstCheck').checked;
@@ -3254,7 +3277,6 @@
             }
         }
 
-        // ID-Wise All Collection + Boys/Girls, Cash/Online फ़िल्टर और अंदर अपना सर्च बॉक्स
         function openMyCollectionModal() {
             closeAllOpenSections('myCollectionModal');
             activeAllColFilter = { gender: 'All', mode: 'All', query: '' };
@@ -3270,7 +3292,7 @@
         }
 
         function renderMyCollectionFiltered() {
-            let sorted = [...students].sort((a, b) => (parseInt(a.uniId) || 99999) - (parseInt(b.uniId) || 99999));
+            let sorted = [...students].sort((a, b) => (parseInt(a.uniId, 10) || 99999) - (parseInt(b.uniId, 10) || 99999));
             let bCount = 0, bPaid = 0, gCount = 0, gPaid = 0, grandCash = 0, grandOnline = 0;
 
             sorted.forEach(s => {
@@ -3355,21 +3377,41 @@
             strip.innerHTML = `
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <button type="button" onclick="setAllColFilter('All','All','')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${sorted.length})</button>
-                        <button type="button" onclick="setAllColFilter('Male',null,null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bPaid})</button>
-                        <button type="button" onclick="setAllColFilter('Female',null,null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gPaid})</button>
-                        <button type="button" onclick="setAllColFilter(null, mode==='Cash'?'All':'Cash', null)" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${grandCash}</button>
-                        <button type="button" onclick="setAllColFilter(null, mode==='Online'?'All':'Online', null)" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${grandOnline}</button>
+                        <button type="button" data-allcol-act="all" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1.5 rounded-lg cursor-pointer">All (${sorted.length})</button>
+                        <button type="button" data-allcol-act="male" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1.5 rounded-lg cursor-pointer">👦 Boys: ${bCount} (₹${bPaid})</button>
+                        <button type="button" data-allcol-act="female" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1.5 rounded-lg cursor-pointer">👧 Girls: ${gCount} (₹${gPaid})</button>
+                        <button type="button" data-allcol-act="cash" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1.5 rounded-lg cursor-pointer">💵 Cash: ₹${grandCash}</button>
+                        <button type="button" data-allcol-act="online" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1.5 rounded-lg cursor-pointer">📱 Online: ₹${grandOnline}</button>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg">🏦 Shown (${shownMembers}): ₹${(mode==='Cash'?shownCash:(mode==='Online'?shownOnline:(shownCash+shownOnline)))}</span>
-                        <span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg border border-red-200">⚠️ Due: ₹${shownDue}</span>
+                        <span class="bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg">🏦 Shown (${shownMembers}): ₹${(mode==='Cash'?shownCash:(mode==='Online'?shownOnline:(shownCash+shownOnline)))}</span>
+                        <span class="bg-red-100 text-red-700 px-2.5 py-1.5 rounded-lg border border-red-200">⚠️ Due: ₹${shownDue}</span>
                     </div>
                 </div>
                 <div>
-                    <input type="text" value="${(query || '').replace(/"/g, '&quot;')}" oninput="setAllColFilter(null,null,this.value)" placeholder="🔍 ऑल कलेक्शन में ID, नाम, मोबाइल या गाँव से खोजें..." class="w-full border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50">
+                    <input type="text" id="allColSearchInp" value="${(query || '').replace(/"/g, '&quot;')}" placeholder="🔍 ऑल कलेक्शन में ID, नाम, मोबाइल या गाँव से खोजें..." class="w-full border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50">
                 </div>
             `;
+
+            strip.querySelectorAll('button[data-allcol-act]').forEach(btn => {
+                btn.onclick = function() {
+                    const act = this.getAttribute('data-allcol-act');
+                    if (act === 'all') setAllColFilter('All', 'All', '');
+                    else if (act === 'male') setAllColFilter(gender === 'Male' ? 'All' : 'Male', null, null);
+                    else if (act === 'female') setAllColFilter(gender === 'Female' ? 'All' : 'Female', null, null);
+                    else if (act === 'cash') setAllColFilter(null, mode === 'Cash' ? 'All' : 'Cash', null);
+                    else if (act === 'online') setAllColFilter(null, mode === 'Online' ? 'All' : 'Online', null);
+                };
+            });
+            const aBox = document.getElementById('allColSearchInp');
+            if (aBox) {
+                aBox.oninput = function() {
+                    activeAllColFilter.query = this.value;
+                    renderMyCollectionFiltered();
+                    const refocus = document.getElementById('allColSearchInp');
+                    if (refocus) { refocus.focus(); refocus.setSelectionRange(refocus.value.length, refocus.value.length); }
+                };
+            }
         }
 
         function calculateStudentTenure(admDateStr) {
@@ -3398,7 +3440,7 @@
 
         function autoCalcProfileValidDate() {
             const cyc = document.getElementById('profEditCycleStart').value;
-            const m = parseInt(document.getElementById('profQuickMonths').value) || 1;
+            const m = parseInt(document.getElementById('profQuickMonths').value, 10) || 1;
             if(!cyc) return;
             document.getElementById('profEditValidUpto').value = addExact28DayMonths(cyc, m);
         }
@@ -3735,12 +3777,12 @@
             const colThisEl = document.getElementById('colThisMonth');
             if (colThisEl && colThisEl.parentElement) {
                 const lbl = colThisEl.parentElement.querySelector('p');
-                if (lbl) lbl.innerText = `📅 ${getShortMonthYearLabel(thisMonthPrefix)}`;
+                if (lbl) lbl.innerText = `📅 ${getShortMonthYearLabel(thisMonthPrefix)} Collection`;
             }
             const colLastEl = document.getElementById('colLastMonth');
             if (colLastEl && colLastEl.parentElement) {
                 const lbl = colLastEl.parentElement.querySelector('p');
-                if (lbl) lbl.innerText = `⏮️ ${getShortMonthYearLabel(lastMonthPrefix)}`;
+                if (lbl) lbl.innerText = `⏮️ ${getShortMonthYearLabel(lastMonthPrefix)} Collection`;
             }
 
             let activeCount = 0, expiredCount = 0, expiring7Count = 0;
@@ -3757,11 +3799,11 @@
 
                 totalDues += (parseFloat(s.remainingDue) || 0);
 
-                let sNum = parseInt(cleanResNum(s.seatNo));
+                let sNum = parseInt(cleanResNum(s.seatNo), 10);
                 if(sNum >= 1 && sNum <= TOTAL_SEATS) usedSeats.add(sNum);
-                let cNum = parseInt(cleanResNum(s.chairNo));
+                let cNum = parseInt(cleanResNum(s.chairNo), 10);
                 if(cNum >= 1 && cNum <= TOTAL_CHAIRS) usedChairs.add(cNum);
-                let lNum = parseInt(cleanResNum(s.lockerNo));
+                let lNum = parseInt(cleanResNum(s.lockerNo), 10);
                 if(lNum >= 1 && lNum <= TOTAL_LOCKERS) usedLockers.add(lNum);
 
                 (s.paymentHistory || []).forEach(p => {
@@ -3900,11 +3942,10 @@
             openSecretIncomeLedgerModal('expense');
         }
 
-        // ================= Unified Personal Income & Expense Ledger (Single File, Persistent Login, FY-Wise, Smart Search) =================
-        let ledgerActiveTab = 'income'; // 'income' या 'expense'
+        let ledgerActiveTab = 'income';
         let secIncFyFilter = 'All';
         let secIncModeFilter = 'All';
-        let secIncPeriodFilter = 'All'; // 'All', 'Today', 'Month'
+        let secIncPeriodFilter = 'All';
         let secIncSearchQuery = '';
 
         function isSecretIncomeLoggedIn() {
@@ -4182,7 +4223,6 @@
 
             const netBalance = fyIncomeTotal - fyExpenseTotal;
 
-            // सक्रिय टैब (Income या Expense) का माध्यम-वार व अवधि-वार हिसाब
             const activeSourceArr = isExp ? expenses : personalIncomes;
             const fyScoped = activeSourceArr.map((item, idx) => ({ item, idx }))
                 .filter(o => secIncFyFilter === 'All' || getFinancialYearLabel(o.item.date) === secIncFyFilter);
@@ -4305,7 +4345,7 @@
             if(firebaseDbUrl) {
                 const syncTxt = document.getElementById('menuSyncText');
                 if(syncTxt) { syncTxt.innerText = "(Connected 🟢)"; syncTxt.className = "text-[10px] text-emerald-600 ml-auto font-extrabold"; }
-                fetchFromFirebase();
+                fetchFromFirebase(false);
             }
             alert("✅ Firebase Cloud Sync URL सेव हो गया!");
         }
@@ -4315,23 +4355,31 @@
             updateDashboardStats();
             if(firebaseDbUrl) {
                 const url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
-                fetch(url, { method: 'PUT', body: JSON.stringify(students) }).catch(() => {});
+                fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(students)
+                }).then(() => {
+                    const syncTxt = document.getElementById('menuSyncText');
+                    if(syncTxt) { syncTxt.innerText = "(Synced ✅)"; syncTxt.className = "text-[10px] text-emerald-600 ml-auto font-extrabold"; }
+                }).catch(() => {});
             }
         }
 
-        function fetchFromFirebase() {
+        function fetchFromFirebase(silent) {
             if(!firebaseDbUrl) return;
             const url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
             fetch(url).then(r => r.json()).then(data => {
                 if(data && Array.isArray(data) && data.length > 0) {
+                    const prevCount = students.length;
                     const beforeJson = JSON.stringify(students.map(x => ({ id: x.uniId, hasP: !!(x.photo && x.photo.length > 30) })));
                     students = mergeStudentArrays(students, data);
                     normalizeStudentDates();
                     saveStudentsToBigDB(students);
                     updateDashboardStats();
                     const afterJson = JSON.stringify(students.map(x => ({ id: x.uniId, hasP: !!(x.photo && x.photo.length > 30) })));
-                    if (beforeJson !== afterJson) {
-                        fetch(url, { method: 'PUT', body: JSON.stringify(students) }).catch(() => {});
+                    if (beforeJson !== afterJson && students.length > prevCount) {
+                        fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(students) }).catch(() => {});
                     }
                     const listWrap = document.getElementById('memberListMainWrapper');
                     if (listWrap && !listWrap.classList.contains('hidden')) {
@@ -4384,5 +4432,5 @@
     </script>
 </body>
 </html>
-   
+
 
