@@ -978,7 +978,6 @@
             <div id="expenseListBox" class="space-y-2 text-xs"></div>
         </div>
     </div>
-
 <!-- ================= APPLICATION JAVASCRIPT ================= -->
     <script>
         const TOTAL_SEATS = 250;
@@ -993,10 +992,11 @@
 
         let students = [];
         let expenses = [];
+        let personalIncomes = [];
         let currentTab = 'all';
-        let currentSortOrder = 'id';
         let selectedGenderCorner = 'All';
-        let displayLimit = 50;
+        let selectedAddressCorner = 'All';
+        let displayLimit = 60;
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
         let founderPhoto = localStorage.getItem('buddha_library_founder_photo') || '';
@@ -1004,6 +1004,10 @@
         let hindiNameCache = {};
         let deferredPwaPrompt = null;
         let zoomModalRotation = 0;
+        let activeIdCardIndex = null;
+
+        let activeBreakdownContext = { type: 'today', gender: 'All', mode: 'All', rows: [] };
+        let activeAllColFilter = { gender: 'All', mode: 'All' };
 
         let mediaAdjustState = {
             targetType: 'student',
@@ -1020,6 +1024,7 @@
 
         try { students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]'); } catch(e) { students = []; }
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
+        try { personalIncomes = JSON.parse(localStorage.getItem('buddha_library_personal_incomes') || '[]'); } catch(e) { personalIncomes = []; }
 
         // 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी
         function openBuddhaBigDB() {
@@ -1089,6 +1094,14 @@
                 return `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
             return dateStr;
+        }
+
+        function getShortMonthYearLabel(yyyyMm) {
+            if(!yyyyMm || yyyyMm.length < 7) return yyyyMm;
+            const mNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const parts = yyyyMm.split('-');
+            const mIdx = parseInt(parts[1], 10) - 1;
+            return `${mNames[mIdx] || parts[1]} ${parts[0]}`;
         }
 
         // बच्चे के सिलेक्टेड शिफ्ट प्लान (Rate ÷ 28 × Expired Days, अधिकतम 84 दिन) के अनुसार बकाया निकालना
@@ -1199,6 +1212,17 @@
             return conv;
         }
 
+        // बाहर क्लिक करने पर ऊपर का 3-Dot Menu अपने आप बंद होने का सिस्टम
+        document.addEventListener('click', function(e) {
+            const drop = document.getElementById('headerDropdown');
+            if (drop && !drop.classList.contains('hidden')) {
+                const btn = e.target.closest('button[onclick*="toggleHeaderMenu"]');
+                if (!drop.contains(e.target) && !btn) {
+                    drop.classList.add('hidden');
+                }
+            }
+        });
+
         window.onload = function() {
             if(libraryLogo) {
                 makeCircularTransparentPng(libraryLogo, (cleanPng) => {
@@ -1296,8 +1320,68 @@
             });
         }
 
+        // डैशबोर्ड कार्ड और लेआउट को बिना HTML छेड़े आपके बताए क्रम में व्यवस्थित करना
+        function arrangeCleanDashboardLayout() {
+            // 1. आपकी फोटो को लॉक करें ताकि क्लिक करने पर अपलोड बॉक्स न खुले
+            const fImg = document.getElementById('headerFounderImg');
+            const fEmo = document.getElementById('headerFounderEmoji');
+            if (fImg) { fImg.removeAttribute('onclick'); fImg.classList.remove('cursor-pointer'); fImg.title = "Founder & Director (Locked)"; }
+            if (fEmo) { fEmo.removeAttribute('onclick'); fEmo.classList.remove('cursor-pointer'); }
+
+            // 2. Total Members के बगल में Personal Income (गुप्त आय) और नीचे Expired + Promise Date सेट करें
+            const cardAll = document.getElementById('cardTab-all');
+            const cardExp = document.getElementById('cardTab-expired');
+            const cardProm = document.getElementById('cardTab-promise');
+            const cardAct = document.getElementById('cardTab-active');
+            const cardExp7 = document.getElementById('cardTab-expiring7');
+
+            if (cardAll && cardAll.parentElement) {
+                const gridParent = cardAll.parentElement;
+                let secretCard = document.getElementById('cardTab-secretIncome');
+                if (!secretCard) {
+                    secretCard = document.createElement('div');
+                    secretCard.id = 'cardTab-secretIncome';
+                    secretCard.onclick = openSecretIncomeLedgerModal;
+                    secretCard.className = "bg-gradient-to-br from-slate-900 via-red-950 to-slate-900 text-white p-3.5 rounded-2xl shadow-md cursor-pointer border-2 border-amber-400/70 hover:shadow-lg transition flex flex-col justify-between";
+                    secretCard.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider">🔒 Personal Income</span>
+                            <span class="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">🔑 PIN Lock</span>
+                        </div>
+                        <div class="mt-1.5 flex items-baseline justify-between">
+                            <h3 class="text-lg sm:text-xl font-black text-white">गुप्त आय बही</h3>
+                            <span class="text-[11px] font-bold text-amber-200 underline">खोलें ➔</span>
+                        </div>
+                    `;
+                }
+                // क्रम: 1. Total Members, 2. Personal Income, 3. Expired Members, 4. Promise Date, 5. Live Active, 6. Expiring 1-7 Days
+                gridParent.appendChild(cardAll);
+                gridParent.appendChild(secretCard);
+                if (cardExp) gridParent.appendChild(cardExp);
+                if (cardProm) gridParent.appendChild(cardProm);
+                if (cardAct) gridParent.appendChild(cardAct);
+                if (cardExp7) gridParent.appendChild(cardExp7);
+            }
+
+            // 3. डबल फ़िल्टर और फालतू सॉर्ट बटन हटाएं तथा डिफ़ॉल्ट रूप से नीचे की लिस्ट छिपा दें
+            const sortIdBtn = document.getElementById('sortBtn-id');
+            if (sortIdBtn && sortIdBtn.parentElement) {
+                sortIdBtn.parentElement.classList.add('hidden');
+            }
+            const oldGenderAll = document.getElementById('gBtn-All') || document.getElementById('gFilter-All');
+            if (oldGenderAll && oldGenderAll.parentElement) {
+                oldGenderAll.parentElement.classList.add('hidden');
+            }
+
+            const listWrap = document.getElementById('memberListMainWrapper');
+            if (listWrap) {
+                listWrap.classList.add('hidden');
+            }
+        }
+
         function initSystem() {
             normalizeStudentDates();
+            arrangeCleanDashboardLayout();
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('admissionDateInput').value = today;
             document.getElementById('cycleStartDate').value = today;
@@ -1306,7 +1390,6 @@
             if(libraryLogo) applyLogoToUi(libraryLogo);
             if(founderPhoto) applyFounderPhotoToUi(founderPhoto);
             update28DayValidity();
-            renderStudentList();
             updateDashboardStats();
             loadStudentsFromBigDBInBackground();
             if(firebaseDbUrl) {
@@ -1810,7 +1893,7 @@
 
         function openTotalMembersOnly() {
             selectedGenderCorner = 'All';
-            updateCornerGenderBtns();
+            selectedAddressCorner = 'All';
             const wrap = document.getElementById('memberListMainWrapper');
             if (wrap) wrap.classList.remove('hidden');
             setTab('all', true);
@@ -1825,36 +1908,14 @@
 
         function filterTotalByGender(g) {
             selectedGenderCorner = g;
-            updateCornerGenderBtns();
-            displayLimit = 50;
+            displayLimit = 60;
             renderStudentList();
         }
 
-        function updateCornerGenderBtns() {
-            const bAll = document.getElementById('gBtn-All') || document.getElementById('gFilter-All');
-            const bMale = document.getElementById('gBtn-Male') || document.getElementById('gFilter-Male');
-            const bFemale = document.getElementById('gBtn-Female') || document.getElementById('gFilter-Female');
-            if (bAll) {
-                bAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
-                bMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-                bFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
-            }
-            const ebAll = document.getElementById('expCornerBtn-All');
-            const ebMale = document.getElementById('expCornerBtn-Male');
-            const ebFemale = document.getElementById('expCornerBtn-Female');
-            if (ebAll) {
-                ebAll.className = (selectedGenderCorner === 'All' && currentTab === 'expired') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
-                ebMale.className = (selectedGenderCorner === 'Male' && currentTab === 'expired') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-                ebFemale.className = (selectedGenderCorner === 'Female' && currentTab === 'expired') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
-            }
-            const obAll = document.getElementById('outCornerBtn-All');
-            const obMale = document.getElementById('outCornerBtn-Male');
-            const obFemale = document.getElementById('outCornerBtn-Female');
-            if (obAll) {
-                obAll.className = (selectedGenderCorner === 'All') ? "bg-slate-900 text-yellow-300 px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-800 px-2 py-0.5 rounded-md";
-                obMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-                obFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
-            }
+        function filterTotalByAddress(addrVal) {
+            selectedAddressCorner = addrVal || 'All';
+            displayLimit = 60;
+            renderStudentList();
         }
 
         function setGenderFilter(g) { filterTotalByGender(g); }
@@ -1870,32 +1931,23 @@
                 if(listWrap) listWrap.classList.remove('hidden');
             } else {
                 if(dashWrap) dashWrap.classList.remove('hidden');
+                if(listWrap) listWrap.classList.add('hidden');
             }
-            displayLimit = 50;
+            displayLimit = 60;
             renderStudentList();
         }
 
         function clearSearchBox() {
             document.getElementById('searchInput').value = '';
             const dashWrap = document.getElementById('dashboardCardsWrapper');
+            const listWrap = document.getElementById('memberListMainWrapper');
             if(dashWrap) dashWrap.classList.remove('hidden');
-            displayLimit = 50;
-            renderStudentList();
-        }
-
-        function setSortOrder(order) {
-            currentSortOrder = order;
-            document.getElementById('sortBtn-id').className = (order === 'id')
-                ? "px-2.5 py-1 rounded-lg theme-maroon text-white"
-                : "px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700";
-            document.getElementById('sortBtn-latest').className = (order === 'latest')
-                ? "px-2.5 py-1 rounded-lg theme-maroon text-white"
-                : "px-2.5 py-1 rounded-lg bg-slate-200 text-slate-700";
-            renderStudentList();
+            if(listWrap) listWrap.classList.add('hidden');
+            displayLimit = 60;
         }
 
         function loadMoreMembers() {
-            displayLimit += 50;
+            displayLimit += 60;
             renderStudentList();
         }
 
@@ -1913,92 +1965,87 @@
             const qLower = rawQuery.toLowerCase();
             container.innerHTML = '';
 
-            let boysTotal = 0, girlsTotal = 0;
-            students.forEach(s => {
-                if ((s.gender || 'Male') === 'Female') girlsTotal++;
-                else boysTotal++;
-            });
-            const bEl = document.getElementById('cornerBoysCount') || document.getElementById('listBoysCount');
-            const gEl = document.getElementById('cornerGirlsCount') || document.getElementById('listGirlsCount');
-            if (bEl) bEl.innerText = boysTotal;
-            if (gEl) gEl.innerText = girlsTotal;
-
             const today = new Date().toISOString().split('T')[0];
 
-            // Expired और OUT Folder में कोने पर Boys/Girls की पूरी संख्या और बकाया का ऑटो-बार
+            // एक ही स्मार्ट कोने वाला बार: Total Members, Expired और OUT Folder सभी के लिए
             const anchorEl = document.getElementById('listSectionAnchor');
             if (anchorEl) {
-                let expBar = document.getElementById('autoExpiredCornerBar');
-                if (!expBar) {
-                    expBar = document.createElement('div');
-                    expBar.id = 'autoExpiredCornerBar';
-                    anchorEl.parentNode.insertBefore(expBar, anchorEl.nextSibling);
+                let smartBar = document.getElementById('autoExpiredCornerBar');
+                if (!smartBar) {
+                    smartBar = document.createElement('div');
+                    smartBar.id = 'autoExpiredCornerBar';
+                    anchorEl.parentNode.insertBefore(smartBar, anchorEl.nextSibling);
                 }
-                if ((currentTab === 'expired' || currentTab === 'out_members') && !rawQuery) {
-                    let eBoys = 0, eGirls = 0, eBoysDue = 0, eGirlsDue = 0;
-                    let oBoys = 0, oGirls = 0, oBoysDue = 0, oGirlsDue = 0;
+
+                if (!rawQuery && (currentTab === 'all' || currentTab === 'expired' || currentTab === 'out_members' || currentTab === 'active')) {
+                    let countAll = 0, bCount = 0, gCount = 0, bDue = 0, gDue = 0, outCount = 0;
+                    let addrCounts = {};
 
                     students.forEach(st => {
+                        if (st.isOut) outCount++;
+                        const isAct = st.validUpto >= today;
                         const info = getExpiredDailyDuesInfo(st, today);
-                        const lockedOrCalcDue = (st.outDueAmount !== undefined && st.outDueAmount !== null) ? parseFloat(st.outDueAmount) : info.totalEstimatedDue;
-                        if (st.isOut) {
-                            if ((st.gender || 'Male') === 'Female') {
-                                oGirls++;
-                                oGirlsDue += lockedOrCalcDue;
-                            } else {
-                                oBoys++;
-                                oBoysDue += lockedOrCalcDue;
-                            }
-                        } else if (st.validUpto && st.validUpto < today) {
-                            if ((st.gender || 'Male') === 'Female') {
-                                eGirls++;
-                                eGirlsDue += info.totalEstimatedDue;
-                            } else {
-                                eBoys++;
-                                eBoysDue += info.totalEstimatedDue;
-                            }
+                        const memberDue = st.isOut
+                            ? ((st.outDueAmount !== undefined && st.outDueAmount !== null) ? parseFloat(st.outDueAmount) : info.totalEstimatedDue)
+                            : (!isAct ? info.totalEstimatedDue : (parseFloat(st.remainingDue) || 0));
+
+                        let inScope = false;
+                        if (currentTab === 'all') inScope = true;
+                        else if (currentTab === 'active' && isAct && !st.isOut) inScope = true;
+                        else if (currentTab === 'expired' && !isAct && !st.isOut) inScope = true;
+                        else if (currentTab === 'out_members' && st.isOut) inScope = true;
+
+                        if (inScope) {
+                            countAll++;
+                            if ((st.gender || 'Male') === 'Female') { gCount++; gDue += memberDue; }
+                            else { bCount++; bDue += memberDue; }
+
+                            const cleanAddr = toTitleCaseWords((st.address || 'Patna').trim());
+                            addrCounts[cleanAddr] = (addrCounts[cleanAddr] || 0) + 1;
                         }
                     });
 
-                    if (currentTab === 'expired') {
-                        expBar.className = "bg-rose-50 border border-rose-300 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
-                        expBar.innerHTML = `
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                <span class="text-rose-900">📊 Active Expired (Max 3M):</span>
-                                <button id="expCornerBtn-All" onclick="setTab('expired', false)" class="bg-slate-800 text-white px-2 py-0.5 rounded-md">Total: ${eBoys + eGirls}</button>
-                                <button id="expCornerBtn-Male" onclick="filterTotalByGender('Male')" class="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md">👦 Boys: ${eBoys} (₹${eBoysDue})</button>
-                                <button id="expCornerBtn-Female" onclick="filterTotalByGender('Female')" class="bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md">👧 Girls: ${eGirls} (₹${eGirlsDue})</button>
-                                <button onclick="setTab('out_members', false)" class="bg-slate-200 hover:bg-slate-800 hover:text-white text-slate-900 border border-slate-400 px-2.5 py-0.5 rounded-md transition">🚪 OUT Folder: ${oBoys + oGirls}</button>
-                            </div>
-                            <span class="text-rose-800 bg-white px-2.5 py-0.5 rounded border border-rose-200">💰 Active Exp Due: ₹${eBoysDue + eGirlsDue}</span>
-                        `;
-                    } else {
-                        expBar.className = "bg-slate-800 text-white border border-slate-700 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
-                        expBar.innerHTML = `
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                <span class="text-yellow-300">🚪 OUT Summary:</span>
-                                <button id="outCornerBtn-All" onclick="filterTotalByGender('All')" class="bg-slate-900 text-yellow-300 px-2 py-0.5 rounded-md">Total OUT: ${oBoys + oGirls}</button>
-                                <button id="outCornerBtn-Male" onclick="filterTotalByGender('Male')" class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded-md">👦 Boys OUT: ${oBoys} (₹${oBoysDue})</button>
-                                <button id="outCornerBtn-Female" onclick="filterTotalByGender('Female')" class="bg-pink-100 text-pink-900 px-2 py-0.5 rounded-md">👧 Girls OUT: ${oGirls} (₹${oGirlsDue})</button>
-                                <button onclick="setTab('expired', false)" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-0.5 rounded-md transition">⬅️ Back to Active Expired (${eBoys + eGirls})</button>
-                            </div>
-                            <span class="text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded border border-slate-600">💰 Total OUT Dues: ₹${oBoysDue + oGirlsDue}</span>
-                        `;
-                    }
-                    updateCornerGenderBtns();
+                    const addrOptionsHtml = Object.keys(addrCounts).sort().map(a =>
+                        `<option value="${a}" ${selectedAddressCorner === a ? 'selected' : ''}>📍 ${a} (${addrCounts[a]})</option>`
+                    ).join('');
+
+                    const barTitle = currentTab === 'all' ? '📊 Total Members' : (currentTab === 'expired' ? '📊 Expired (Max 3M)' : (currentTab === 'out_members' ? '🚪 OUT Folder' : '🟢 Active Members'));
+
+                    smartBar.className = "bg-rose-50 border border-rose-300 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
+                    smartBar.innerHTML = `
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-rose-900">${barTitle}:</span>
+                            <button onclick="filterTotalByGender('All')" class="${selectedGenderCorner === 'All' ? 'bg-slate-800 text-white ring-2 ring-amber-400' : 'bg-slate-200 text-slate-700'} px-2 py-0.5 rounded-md">All: ${countAll}</button>
+                            <button onclick="filterTotalByGender('Male')" class="${selectedGenderCorner === 'Male' ? 'bg-blue-700 text-white ring-2 ring-amber-400' : 'bg-blue-100 text-blue-900 border border-blue-300'} px-2 py-0.5 rounded-md">👦 Boys: ${bCount} (₹${bDue})</button>
+                            <button onclick="filterTotalByGender('Female')" class="${selectedGenderCorner === 'Female' ? 'bg-pink-700 text-white ring-2 ring-amber-400' : 'bg-pink-100 text-pink-900 border border-pink-300'} px-2 py-0.5 rounded-md">👧 Girls: ${gCount} (₹${gDue})</button>
+                            ${currentTab === 'all' ? `
+                                <select onchange="filterTotalByAddress(this.value)" class="bg-white border border-slate-400 text-slate-900 px-2 py-0.5 rounded-md font-extrabold text-[11px] max-w-[165px]">
+                                    <option value="All" ${selectedAddressCorner === 'All' ? 'selected' : ''}>📍 सभी गाँव/पता (${countAll})</option>
+                                    ${addrOptionsHtml}
+                                </select>
+                            ` : ''}
+                            ${(currentTab === 'expired' || currentTab === 'out_members') ? `
+                                <button onclick="setTab('${currentTab === 'out_members' ? 'expired' : 'out_members'}', false)" class="bg-slate-800 text-yellow-300 px-2.5 py-0.5 rounded-md">
+                                    ${currentTab === 'out_members' ? '⬅️ Active Expired' : `🚪 OUT Folder (${outCount})`}
+                                </button>
+                            ` : ''}
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-rose-800 bg-white px-2 py-0.5 rounded border border-rose-200">💰 Total Due: ₹${bDue + gDue}</span>
+                            <button onclick="closeTotalMembersOnly()" class="bg-red-700 hover:bg-red-800 text-white px-2.5 py-0.5 rounded-md">✖ Close</button>
+                        </div>
+                    `;
                 } else {
-                    expBar.className = "hidden";
+                    smartBar.className = "hidden";
                 }
             }
 
+            // हमेशा ID नंबर के क्रम से ही लिस्ट तैयार करें
             let workingList = students.map((item, idx) => ({ item, originalIdx: idx }));
-
             if(currentTab === 'promise') {
                 workingList.sort((a, b) => (a.item.promiseDate || '9999-99-99').localeCompare(b.item.promiseDate || '9999-99-99'));
             } else if(currentTab === 'expiring7') {
                 workingList.sort((a, b) => (a.item.validUpto || '9999-99-99').localeCompare(b.item.validUpto || '9999-99-99'));
-            } else if(currentSortOrder === 'latest') {
-                workingList.sort((a, b) => b.originalIdx - a.originalIdx);
             } else {
                 workingList.sort((a, b) => (parseInt(a.item.uniId) || 99999) - (parseInt(b.item.uniId) || 99999));
             }
@@ -2017,6 +2064,10 @@
                     if(s.isOut && currentTab !== 'all') return false;
                     if(selectedGenderCorner === 'Male' && (s.gender || 'Male') === 'Female') return false;
                     if(selectedGenderCorner === 'Female' && s.gender !== 'Female') return false;
+                    if(currentTab === 'all' && selectedAddressCorner !== 'All') {
+                        const sAddr = toTitleCaseWords((s.address || 'Patna').trim());
+                        if(sAddr !== selectedAddressCorner) return false;
+                    }
                     if(currentTab === 'active' && !isActive) return false;
                     if(currentTab === 'expired' && isActive) return false;
                     if(currentTab === 'dues' && !(parseFloat(s.remainingDue) > 0)) return false;
@@ -2025,20 +2076,23 @@
                     return true;
                 }
 
+                // स्मार्ट सर्च नियम: अंक (ID या Mobile) व अक्षर (Name, ब्रैकेट उपनाम, या Address)
                 if(/^\d+$/.test(rawQuery)) {
-                    if(parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000 && rawQuery.length <= 4) {
+                    if(rawQuery.length <= 4 && parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000) {
                         return parseInt(s.uniId) === parseInt(rawQuery);
                     }
                     return (s.mobile && s.mobile.includes(rawQuery)) || (s.guardianMobile && s.guardianMobile.includes(rawQuery));
                 }
-                return (s.fullName && s.fullName.toLowerCase().includes(qLower));
+                const nameMatch = s.fullName && s.fullName.toLowerCase().includes(qLower);
+                const addrMatch = s.address && s.address.toLowerCase().includes(qLower);
+                return nameMatch || addrMatch;
             });
 
             const tabNames = {
-                all: '👥 All Members',
+                all: '👥 Total Registered Members',
                 active: '🟢 Live Active Members',
                 expired: '🔴 Expired Members (तगादा लिस्ट)',
-                out_members: '🚪 OUT Members Folder (छोड़ चुके छात्र)',
+                out_members: '🚪 OUT Members Folder',
                 expiring7: '⏳ Expiring in 1 to 7 Days',
                 promise: '📅 Promise Date / Pending Dues List'
             };
@@ -2049,7 +2103,7 @@
                 if(resetBtnEl) resetBtnEl.classList.remove('hidden');
             } else {
                 if(filterTitleEl) filterTitleEl.innerText = `${tabNames[currentTab] || '👥 Members'} (${filtered.length})`;
-                if(resetBtnEl) resetBtnEl.classList.toggle('hidden', currentTab === 'all');
+                if(resetBtnEl) resetBtnEl.classList.add('hidden');
             }
 
             if(filtered.length === 0) {
@@ -2077,7 +2131,7 @@
                 const outDisplayDue = (s.outDueAmount !== undefined && s.outDueAmount !== null) ? parseFloat(s.outDueAmount) : (expInfo ? expInfo.totalEstimatedDue : dueAmt);
                 const thumbAvatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
                 const fullZoomAvatar = s.photoFull || thumbAvatar;
-                const shiftClean = cleanShiftName(s.shiftPlan);
+                const shiftClean = cleanShiftName(s.customIdShift || s.shiftPlan);
                 const resDualHtml = formatResDualColorHtml(s);
                 const failList = s.promiseHistory || [];
                 const lastFail = failList.length > 0 ? failList[failList.length - 1].failedDate : null;
@@ -2100,12 +2154,13 @@
                                 <div class="flex flex-wrap items-center gap-1.5">
                                     <span class="theme-maroon-solid text-white text-xs px-2.5 py-0.5 rounded-md font-extrabold">ID: ${s.uniId}</span>
                                     <h3 onclick="openProfileModal(${originalIdx})" class="font-extrabold official-name-color text-sm sm:text-base cursor-pointer hover:underline">${toTitleCaseWords(s.fullName)}</h3>
-                                    ${s.isOut ? `<span class="bg-slate-800 text-yellow-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full">🚪 OUT</span>` : ''}
+                                    ${s.outDate ? `<span class="bg-slate-200 text-slate-700 text-[9.5px] font-bold px-1.5 py-0.2 rounded" title="OUT Date">🚪 OUT: ${formatDisplayDate(s.outDate)}</span>` : ''}
+                                    ${s.reInDate ? `<span class="bg-emerald-100 text-emerald-800 text-[9.5px] font-bold px-1.5 py-0.2 rounded" title="Re-IN Date">✅ IN: ${formatDisplayDate(s.reInDate)}</span>` : ''}
                                     ${!s.isOut && isExpiringSoon ? `<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full">⏳ ${daysLeft === 0 ? 'आज एक्सपायर' : daysLeft + ' दिन शेष'}</span>` : ''}
                                 </div>
                                 <div class="flex items-center gap-1.5 flex-shrink-0">
                                     ${s.isOut
-                                        ? `<button onclick="toggleStudentOutStatus(${originalIdx}, false)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm transition" title="वापस एक्टिव तगादा लिस्ट में लाएं">✅ IN</button>`
+                                        ? `<button onclick="toggleStudentOutStatus(${originalIdx}, false)" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm transition" title="वापस एक्टिव लिस्ट में लाएं">✅ IN</button>`
                                         : (!isActive ? `<button onclick="toggleStudentOutStatus(${originalIdx}, true)" class="bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 px-2 py-1 rounded-lg text-[11px] font-bold transition" title="OUT फोल्डर में भेजें">🚫 OUT</button>` : '')
                                     }
                                     <button onclick="toggleCardMenu(${originalIdx})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold border transition">⚙️ Options</button>
@@ -2127,19 +2182,12 @@
                             <div class="flex flex-wrap items-center justify-between gap-2 text-[11.5px] mt-2 pt-1.5 border-t border-slate-200">
                                 <span class="text-slate-800 font-extrabold">▶️ Start: <b class="text-blue-800">${formatDisplayDate(startShow)}</b> ➔ End: <b class="${isActive ? 'text-emerald-700' : 'text-red-700 underline'}">${formatDisplayDate(s.validUpto)}</b></span>
                                 ${s.isOut
-                                    ? `<span class="bg-slate-800 text-amber-300 px-2.5 py-1 rounded-lg font-extrabold shadow-sm">🚪 OUT पर बकाया: ₹${outDisplayDue}</span>`
+                                    ? `<span class="bg-slate-800 text-amber-300 px-2.5 py-1 rounded-lg font-extrabold shadow-sm">🚪 OUT बकाया: ₹${outDisplayDue}</span>`
                                     : (!isActive
                                         ? `<span class="bg-red-600 text-white border border-red-800 px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm">⏳ ${expInfo.expiredDays}d Exp ${expInfo.isCapped ? '(Max 84d)' : ''} | बकाया: ₹${expInfo.totalEstimatedDue}</span>`
                                         : (dueAmt > 0 ? `<span class="bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold shadow-sm">⚠️ Due: ₹${dueAmt}</span>` : `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold">✅ Not Due</span>`))
                                 }
                             </div>
-
-                            ${(s.outDate || s.reInDate) ? `
-                                <div class="mt-1.5 bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1 text-[10.5px] font-extrabold text-slate-800 flex flex-wrap items-center justify-between gap-2">
-                                    ${s.outDate ? `<span class="text-rose-800">🚪 OUT Date: ${formatDisplayDate(s.outDate)} से नहीं आ रहा</span>` : ''}
-                                    ${s.reInDate ? `<span class="text-emerald-800">✅ Re-IN Date: ${formatDisplayDate(s.reInDate)} से वापस आ रहा है</span>` : ''}
-                                </div>
-                            ` : ''}
 
                             ${(!s.isOut && (dueAmt > 0 || totalRem > 0)) ? `
                                 <div class="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 text-[11px] flex flex-wrap items-center justify-between gap-1">
@@ -2155,7 +2203,7 @@
                         </div>
                     </div>
 
-                    <div id="cardMenu-${originalIdx}" class="hidden mt-3 pt-2.5 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl fade-in">
+                    <div id="cardMenu-${originalIdx}" class="student-card-options-menu hidden mt-3 pt-2.5 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl fade-in">
                         <button onclick="openIdCardModal(${originalIdx})" class="w-full theme-maroon text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">🪪 ID Card</button>
                         <button onclick="openProfileModal(${originalIdx})" class="w-full bg-purple-700 hover:bg-purple-600 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">👤 Profile</button>
                         <button onclick="openRenewModal(${originalIdx})" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 px-2 rounded-lg text-xs font-extrabold shadow-sm flex items-center justify-center gap-1">🔄 Renew Plan</button>
@@ -2170,9 +2218,14 @@
             });
         }
 
+        // एक बच्चे के Options पर क्लिक करने पर बाकी खुले हुए Options अपने आप बंद हो जाएंगे
         function toggleCardMenu(idx) {
-            const el = document.getElementById(`cardMenu-${idx}`);
-            if(el) el.classList.toggle('hidden');
+            const target = document.getElementById(`cardMenu-${idx}`);
+            const wasHidden = target ? target.classList.contains('hidden') : true;
+            document.querySelectorAll('.student-card-options-menu').forEach(el => el.classList.add('hidden'));
+            if (target && wasHidden) {
+                target.classList.remove('hidden');
+            }
         }
 
         function toggleStudentOutStatus(index, makeOut) {
@@ -2398,6 +2451,7 @@
             renderStudentList();
         }
 
+        // एक ही जैसा स्मार्ट कलेक्शन ब्रेकडाउन (Today, This Month, Last Month, This Year)
         function openCollectionBreakdownModal(periodType) {
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
@@ -2407,16 +2461,14 @@
             const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
             const titles = {
-                today: `💵 Today's Collection List (${formatDisplayDate(todayStr)})`,
-                thisMonth: `📅 This Month's Collection List (${thisMonthPrefix})`,
-                lastMonth: `⏮️ Last Month's Collection List (${lastMonthPrefix})`,
-                thisYear: `🏦 This Year's Collection List (${thisYearPrefix})`
+                today: `💵 Today's Collection (${formatDisplayDate(todayStr)})`,
+                thisMonth: `📅 ${getShortMonthYearLabel(thisMonthPrefix)} Collection`,
+                lastMonth: `⏮️ ${getShortMonthYearLabel(lastMonthPrefix)} Collection`,
+                thisYear: `🏦 ${thisYearPrefix} Annual Collection`
             };
             document.getElementById('colBreakdownHeading').innerText = titles[periodType] || "💵 Collection List";
 
             let rows = [];
-            let cashSum = 0, onlineSum = 0;
-
             students.forEach((s, sIdx) => {
                 (s.paymentHistory || []).forEach((p, pIdx) => {
                     const d = p.date || '';
@@ -2430,31 +2482,68 @@
                     else if(periodType === 'thisYear' && d.startsWith(thisYearPrefix)) matched = true;
 
                     if(matched) {
-                        if(p.mode === 'Cash') cashSum += amt;
-                        else onlineSum += amt;
                         rows.push({ s, sIdx, p, pIdx, amt });
                     }
                 });
             });
 
-            rows.sort((a, b) => (b.p.date || '').localeCompare(a.p.date || ''));
+            // हमेशा ID नंबर के क्रम से दिखाएं
+            rows.sort((a, b) => (parseInt(a.s.uniId) || 99999) - (parseInt(b.s.uniId) || 99999));
 
-            document.getElementById('colBreakdownSummary').innerHTML = `
-                <div class="bg-blue-50 p-2.5 rounded-xl border border-blue-200">👥 Students Paid: <span class="text-blue-900">${rows.length}</span></div>
-                <div class="bg-slate-100 p-2.5 rounded-xl border">💵 Cash: <span class="text-slate-900">₹${cashSum}</span></div>
-                <div class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200">📱 Online/UPI: <span class="text-indigo-800">₹${onlineSum}</span></div>
-                <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">🏦 Total Collection: <span class="text-emerald-700">₹${cashSum + onlineSum}</span></div>
+            activeBreakdownContext = { type: periodType, gender: 'All', mode: 'All', rows: rows };
+            renderCollectionBreakdownFiltered();
+            document.getElementById('collectionBreakdownModal').classList.remove('hidden');
+        }
+
+        function setColBreakdownFilter(g, m) {
+            if (g !== null) activeBreakdownContext.gender = g;
+            if (m !== null) activeBreakdownContext.mode = m;
+            renderCollectionBreakdownFiltered();
+        }
+
+        function renderCollectionBreakdownFiltered() {
+            const { gender, mode, rows } = activeBreakdownContext;
+            let bCount = 0, bAmt = 0, gCount = 0, gAmt = 0, cashSum = 0, onlineSum = 0;
+
+            rows.forEach(r => {
+                if ((r.s.gender || 'Male') === 'Female') { gCount++; gAmt += r.amt; }
+                else { bCount++; bAmt += r.amt; }
+                if (r.p.mode === 'Cash') cashSum += r.amt;
+                else onlineSum += r.amt;
+            });
+
+            const filteredRows = rows.filter(r => {
+                if (gender === 'Male' && (r.s.gender || 'Male') === 'Female') return false;
+                if (gender === 'Female' && r.s.gender !== 'Female') return false;
+                if (mode === 'Cash' && r.p.mode !== 'Cash') return false;
+                if (mode === 'Online' && r.p.mode === 'Cash') return false;
+                return true;
+            });
+
+            const shownTotal = filteredRows.reduce((acc, r) => acc + r.amt, 0);
+
+            const sumEl = document.getElementById('colBreakdownSummary');
+            sumEl.className = "flex flex-wrap items-center justify-between gap-2 mb-3 text-xs font-extrabold";
+            sumEl.innerHTML = `
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <button onclick="setColBreakdownFilter('All','All')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${rows.length})</button>
+                    <button onclick="setColBreakdownFilter('Male',null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bAmt})</button>
+                    <button onclick="setColBreakdownFilter('Female',null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gAmt})</button>
+                    <button onclick="setColBreakdownFilter(null, mode==='Cash'?'All':'Cash')" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
+                    <button onclick="setColBreakdownFilter(null, mode==='Online'?'All':'Online')" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${onlineSum}</button>
+                </div>
+                <div class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">🏦 Selected Total: ₹${shownTotal}</div>
             `;
 
             const tbody = document.getElementById('colBreakdownTableBody');
-            if(rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500 font-bold">📭 इस अवधि में किसी छात्र का पेमेंट दर्ज नहीं है।</td></tr>`;
+            if(filteredRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500 font-bold">📭 इस फ़िल्टर में कोई पेमेंट रिकॉर्ड नहीं मिला।</td></tr>`;
             } else {
-                tbody.innerHTML = rows.map((r, i) => `
+                tbody.innerHTML = filteredRows.map((r, i) => `
                     <tr class="border-b hover:bg-slate-50">
                         <td class="p-2.5 font-bold">${i + 1}</td>
                         <td class="p-2.5 font-extrabold text-red-900">ID: ${r.s.uniId}</td>
-                        <td class="p-2.5 font-bold official-name-color">${r.s.fullName}</td>
+                        <td class="p-2.5 font-bold official-name-color">${r.s.fullName} <span class="text-[10px] text-slate-500">(${r.s.gender === 'Female' ? '👧' : '👦'})</span></td>
                         <td class="p-2.5 font-bold"><a href="tel:${r.s.mobile}" class="text-blue-700 hover:underline">📞 ${r.s.mobile}</a></td>
                         <td class="p-2.5 font-bold text-purple-900">${formatDisplayDate(r.p.date)}</td>
                         <td class="p-2.5 text-slate-600">${r.p.type || 'Fee'}</td>
@@ -2464,8 +2553,6 @@
                     </tr>
                 `).join('');
             }
-
-            document.getElementById('collectionBreakdownModal').classList.remove('hidden');
         }
 
         function openVacantModal() {
@@ -2514,7 +2601,9 @@
         }
 
         function openIdCardModal(index) {
+            activeIdCardIndex = index;
             const s = students[index];
+            const today = new Date().toISOString().split('T')[0];
             const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
             if(libraryLogo) {
                 document.getElementById('idCardLogoImg').src = libraryLogo;
@@ -2531,24 +2620,53 @@
             document.getElementById('idCardName').innerText = (s.fullName || '').toUpperCase();
             document.getElementById('idCardMobile').innerText = `📞 ${s.mobile}`;
             document.getElementById('idCardAddress').innerText = `📍 ${toTitleCaseWords(s.address || 'Kachchhi Dargah, Patna')}`;
-            document.getElementById('idCardShift').innerText = cleanShiftName(s.shiftPlan);
+            document.getElementById('idCardShift').innerText = cleanShiftName(s.customIdShift || s.shiftPlan);
             document.getElementById('idCardResources').innerHTML = formatResDualColorHtml(s);
             document.getElementById('idCardStart').innerText = formatDisplayDate(s.cycleStartDate || s.admissionDate || '-');
             document.getElementById('idCardEnd').innerText = formatDisplayDate(s.validUpto);
 
-            const due = parseFloat(s.remainingDue) || 0;
+            // आज की तारीख तक का पूरा बकाया (पुराना Due + एक्सपायरी के बाद प्रतिदिन का बकाया)
+            const isExpired = s.validUpto && s.validUpto < today;
+            const expInfo = isExpired ? getExpiredDailyDuesInfo(s, today) : null;
+            const totalDueToday = s.isOut
+                ? ((s.outDueAmount !== undefined && s.outDueAmount !== null) ? parseFloat(s.outDueAmount) : (expInfo ? expInfo.totalEstimatedDue : 0))
+                : (isExpired ? expInfo.totalEstimatedDue : (parseFloat(s.remainingDue) || 0));
+
             const dueEl = document.getElementById('idCardDueStatus');
-            if(due > 0) {
+            if(totalDueToday > 0) {
                 dueEl.className = "text-red-600 font-extrabold id-safe-line";
-                dueEl.innerText = `⚠️ Pending Due: ₹${due}`;
+                dueEl.innerText = `⚠️ Total Due (${formatDisplayDate(today)}): ₹${totalDueToday}`;
             } else {
                 dueEl.className = "text-emerald-700 font-extrabold id-safe-line";
                 dueEl.innerText = `✅ Not Due (No Dues)`;
             }
 
+            // ID Card के ऊपर वाले बटन बार में कस्टम टाइम एडिट बटन जोड़ें (जो शेयर फोटो से बाहर रहेगा)
+            const btnBar = document.getElementById('idCardBtnBar');
+            if (btnBar && !document.getElementById('editIdShiftTimeBtn')) {
+                const tBtn = document.createElement('button');
+                tBtn.id = 'editIdShiftTimeBtn';
+                tBtn.onclick = editCustomIdCardTiming;
+                tBtn.className = "bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-2 rounded-xl text-xs font-extrabold shadow";
+                tBtn.innerText = "⏱️ Edit ID Time";
+                btnBar.insertBefore(tBtn, btnBar.firstChild);
+            }
+
             document.getElementById('idCardModal').setAttribute('data-student-id', s.uniId);
-            document.getElementById('idCardBtnBar').classList.remove('hidden');
+            if(btnBar) btnBar.classList.remove('hidden');
             document.getElementById('idCardModal').classList.remove('hidden');
+        }
+
+        function editCustomIdCardTiming() {
+            if (activeIdCardIndex === null) return;
+            const s = students[activeIdCardIndex];
+            const currentTiming = cleanShiftName(s.customIdShift || s.shiftPlan);
+            const newTime = prompt(`⏱️ केवल ID Card पर छपने वाला समय लिखें (प्लान/फीस नहीं बदलेगी):\nउदाहरण: 10:00 AM - 03:00 PM (5 Hrs)\n(वापस सामान्य करने के लिए खाली छोड़ दें)`, currentTiming);
+            if (newTime === null) return;
+            s.customIdShift = newTime.trim();
+            syncAndSaveData();
+            openIdCardModal(activeIdCardIndex);
+            renderStudentList();
         }
 
         function toggleIdCardBtns() {
@@ -2780,13 +2898,13 @@
                             <div class="text-[8.5px] font-bold text-red-900 mt-1 tracking-wider leading-none">ESTD: 2023</div>
                         </div>
                         <div>
-                            <h2 class="text-lg font-extrabold theme-maroon-text leading-none tracking-wider whitespace-nowrap">BUDDHA LIBRARY</h2>
+                            <h2 class="text-lg font-extrabold theme-maroon-text leading-none tracking-wider">BUDDHA LIBRARY</h2>
                             <p class="text-[11px] font-bold text-amber-700 leading-tight mt-0.5">A Unit of Flair Foundation</p>
                             <p class="text-[10px] text-slate-600 leading-tight mt-0.5">📍 Kachchhi Dargah, Patna | 📞 7050668855</p>
                             <p class="text-[10px] font-extrabold text-slate-900 leading-tight mt-0.5">GSTIN: ${LIBRARY_GSTIN} | SAC: ${HSN_SAC_CODE}</p>
                         </div>
                     </div>
-                    <div class="text-right whitespace-nowrap">
+                    <div class="text-right">
                         <p class="text-xs font-black text-red-900 uppercase tracking-wider leading-none">${isGst ? 'GST TAX INVOICE' : 'FEE RECEIPT'}</p>
                         <p class="text-[10.5px] font-bold text-slate-800 mt-1">Invoice No: <b>${p.invNo || 'BL-001'}</b></p>
                         <p class="text-[10px] text-purple-900 font-extrabold mt-0.5">Bill Date: ${formatDisplayDate(p.date)}</p>
@@ -2795,20 +2913,20 @@
 
                 <div class="grid grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-300 mb-2.5 text-[11px]">
                     <div class="space-y-1">
-                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Student Name:</span> <b class="official-name-color uppercase font-extrabold">${s.fullName} (${s.gender || 'Male'})</b></div>
-                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Unique ID:</span> <b class="text-red-800 font-extrabold">ID NO: ${s.uniId}</b></div>
-                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Mobile No:</span> <b class="text-blue-800">${s.mobile}</b></div>
+                        <div class="flex justify-between gap-1"><span class="text-slate-500 font-bold">Student Name:</span> <b class="official-name-color uppercase font-extrabold text-right">${s.fullName} (${s.gender || 'Male'})</b></div>
+                        <div class="flex justify-between gap-1"><span class="text-slate-500 font-bold">Unique ID:</span> <b class="text-red-800 font-extrabold">ID NO: ${s.uniId}</b></div>
+                        <div class="flex justify-between gap-1"><span class="text-slate-500 font-bold">Mobile No:</span> <b class="text-blue-800">${s.mobile}</b></div>
                     </div>
                     <div class="space-y-1 border-l pl-3 border-slate-300">
-                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Shift Timing:</span> <b class="text-slate-900 whitespace-nowrap">${shiftUsed}</b></div>
-                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Seat / Locker:</span> <b class="text-indigo-900 whitespace-nowrap">${formatResPlain(s)}</b></div>
-                        <div class="flex justify-between"><span class="text-slate-500 font-bold">Payment Count:</span> <b class="text-emerald-800 whitespace-nowrap">#${payIdx + 1} of ${totalPayCount} (${p.mode})</b></div>
+                        <div class="flex justify-between gap-1"><span class="text-slate-500 font-bold">Shift Timing:</span> <b class="text-slate-900 text-right">${shiftUsed}</b></div>
+                        <div class="flex justify-between gap-1"><span class="text-slate-500 font-bold">Seat / Locker:</span> <b class="text-indigo-900">${formatResPlain(s)}</b></div>
+                        <div class="flex justify-between gap-1"><span class="text-slate-500 font-bold">Payment:</span> <b class="text-emerald-800">#${payIdx + 1} of ${totalPayCount} (${p.mode})</b></div>
                     </div>
                 </div>
 
-                <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 mb-2.5 flex justify-between items-center text-[11px] font-extrabold text-blue-900 whitespace-nowrap">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 mb-2.5 flex flex-wrap justify-between items-center gap-1 text-[11px] font-extrabold text-blue-900">
                     <span>🗓️ Plan: ${p.type || 'Fee'} (${(p.months || 1) * 28}-Day Cycle)</span>
-                    <span>▶️ Start: ${formatDisplayDate(pStart)} &nbsp;➔&nbsp; ⏳ Valid Upto: ${formatDisplayDate(pEnd)}</span>
+                    <span>▶️ Start: ${formatDisplayDate(pStart)} ➔ ⏳ Valid Upto: ${formatDisplayDate(pEnd)}</span>
                 </div>
 
                 <table class="w-full border-collapse border border-slate-300 text-[11px] mb-2.5">
@@ -2883,29 +3001,83 @@
 
         function closeInvoiceModal() { document.getElementById('invoiceModal').classList.add('hidden'); }
 
+        // WhatsApp बिल फोटो बाहर न भागे इसके लिए सुरक्षित फिक्स-चौड़ाई रेंडरिंग
         async function shareInvoiceAsImage() {
             const box = document.getElementById('invoiceCaptureBox');
-            const canvas = await html2canvas(box, { scale: 2.5, useCORS: true, backgroundColor: '#ffffff' });
-            canvas.toBlob(async (blob) => {
-                const file = new File([blob], `Buddha_Library_Invoice.png`, { type: 'image/png' });
-                if(navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file] });
-                } else {
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `Buddha_Library_Invoice.png`;
-                    a.click();
-                }
-            });
+            const origWidth = box.style.width;
+            const origMaxW = box.style.maxWidth;
+            box.style.width = '760px';
+            box.style.maxWidth = '760px';
+
+            try {
+                const canvas = await html2canvas(box, {
+                    scale: 2.5,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    width: 760,
+                    windowWidth: 800,
+                    scrollX: 0,
+                    scrollY: -window.scrollY
+                });
+                box.style.width = origWidth;
+                box.style.maxWidth = origMaxW;
+
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], `Buddha_Library_Invoice.png`, { type: 'image/png' });
+                    if(navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `Buddha_Library_Invoice.png`;
+                        a.click();
+                    }
+                });
+            } catch (err) {
+                box.style.width = origWidth;
+                box.style.maxWidth = origMaxW;
+            }
         }
 
+        // ID-Wise All Collection में भी एक जैसा Boys/Girls और Cash/Online फ़िल्टर
         function openMyCollectionModal() {
+            activeAllColFilter = { gender: 'All', mode: 'All' };
+            renderMyCollectionFiltered();
+            document.getElementById('myCollectionModal').classList.remove('hidden');
+        }
+
+        function setAllColFilter(g, m) {
+            if (g !== null) activeAllColFilter.gender = g;
+            if (m !== null) activeAllColFilter.mode = m;
+            renderMyCollectionFiltered();
+        }
+
+        function renderMyCollectionFiltered() {
             let sorted = [...students].sort((a, b) => (parseInt(a.uniId) || 99999) - (parseInt(b.uniId) || 99999));
-            let grandCash = 0, grandOnline = 0, grandTotal = 0, grandDue = 0;
-            const tbody = document.getElementById('myCollectionTableBody');
-            tbody.innerHTML = '';
+            let bCount = 0, bPaid = 0, gCount = 0, gPaid = 0, grandCash = 0, grandOnline = 0;
 
             sorted.forEach(s => {
+                let sCash = 0, sOnl = 0;
+                (s.paymentHistory || []).forEach(p => {
+                    const amt = parseFloat(p.amount) || 0;
+                    if (p.mode === 'Cash') sCash += amt;
+                    else sOnl += amt;
+                });
+                grandCash += sCash;
+                grandOnline += sOnl;
+                if ((s.gender || 'Male') === 'Female') { gCount++; gPaid += (sCash + sOnl); }
+                else { bCount++; bPaid += (sCash + sOnl); }
+            });
+
+            const { gender, mode } = activeAllColFilter;
+            const tbody = document.getElementById('myCollectionTableBody');
+            tbody.innerHTML = '';
+            let shownCash = 0, shownOnline = 0, shownDue = 0;
+
+            sorted.forEach(s => {
+                if (gender === 'Male' && (s.gender || 'Male') === 'Female') return;
+                if (gender === 'Female' && s.gender !== 'Female') return;
+
                 const hist = s.paymentHistory || [];
                 let cPaid = 0, oPaid = 0, lastD = '-';
                 hist.forEach(p => {
@@ -2914,17 +3086,20 @@
                     else oPaid += amt;
                     if(p.date) lastD = p.date;
                 });
-                const tot = cPaid + oPaid;
+
+                if (mode === 'Cash' && cPaid <= 0) return;
+                if (mode === 'Online' && oPaid <= 0) return;
+
+                const tot = (mode === 'Cash') ? cPaid : (mode === 'Online' ? oPaid : (cPaid + oPaid));
                 const due = parseFloat(s.remainingDue) || 0;
-                grandCash += cPaid;
-                grandOnline += oPaid;
-                grandTotal += tot;
-                grandDue += due;
+                shownCash += cPaid;
+                shownOnline += oPaid;
+                shownDue += due;
 
                 tbody.innerHTML += `
                     <tr class="border-b hover:bg-slate-50">
                         <td class="p-2.5 font-extrabold text-red-900">ID: ${s.uniId}</td>
-                        <td class="p-2.5 font-bold official-name-color">${s.fullName}</td>
+                        <td class="p-2.5 font-bold official-name-color">${s.fullName} <span class="text-[10px] text-slate-500">(${s.gender === 'Female' ? '👧' : '👦'})</span></td>
                         <td class="p-2.5 font-semibold text-blue-800"><a href="tel:${s.mobile}" class="hover:underline">📞 ${s.mobile}</a></td>
                         <td class="p-2.5 text-center font-extrabold">${hist.length} बार</td>
                         <td class="p-2.5 text-right font-bold text-slate-700">₹${cPaid}</td>
@@ -2936,13 +3111,21 @@
                 `;
             });
 
-            document.getElementById('myCollectionSummaryStrip').innerHTML = `
-                <div class="bg-slate-100 p-2.5 rounded-xl border">💵 Total Cash: <span class="text-slate-900">₹${grandCash}</span></div>
-                <div class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200">📱 Total Online/UPI: <span class="text-indigo-800">₹${grandOnline}</span></div>
-                <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">🏦 Grand Total Received: <span class="text-emerald-700">₹${grandTotal}</span></div>
-                <div class="bg-red-50 p-2.5 rounded-xl border border-red-200">⚠️ Total Pending Due: <span class="text-red-600">₹${grandDue}</span></div>
+            const strip = document.getElementById('myCollectionSummaryStrip');
+            strip.className = "flex flex-wrap items-center justify-between gap-2 mb-3 text-xs font-extrabold";
+            strip.innerHTML = `
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <button onclick="setAllColFilter('All','All')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${sorted.length})</button>
+                    <button onclick="setAllColFilter('Male',null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bPaid})</button>
+                    <button onclick="setAllColFilter('Female',null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gPaid})</button>
+                    <button onclick="setAllColFilter(null, mode==='Cash'?'All':'Cash')" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${grandCash}</button>
+                    <button onclick="setAllColFilter(null, mode==='Online'?'All':'Online')" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${grandOnline}</button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg">🏦 Total: ₹${(mode==='Cash'?shownCash:(mode==='Online'?shownOnline:(shownCash+shownOnline)))}</span>
+                    <span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg border border-red-200">⚠️ Due: ₹${shownDue}</span>
+                </div>
             `;
-            document.getElementById('myCollectionModal').classList.remove('hidden');
         }
 
         function calculateStudentTenure(admDateStr) {
@@ -3305,6 +3488,18 @@
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
+            // This Month और Last Month के कार्ड पर महीने का शॉर्ट नाम अपडेट करें
+            const colThisEl = document.getElementById('colThisMonth');
+            if (colThisEl && colThisEl.parentElement) {
+                const lbl = colThisEl.parentElement.querySelector('p');
+                if (lbl) lbl.innerText = `📅 ${getShortMonthYearLabel(thisMonthPrefix)}`;
+            }
+            const colLastEl = document.getElementById('colLastMonth');
+            if (colLastEl && colLastEl.parentElement) {
+                const lbl = colLastEl.parentElement.querySelector('p');
+                if (lbl) lbl.innerText = `⏮️ ${getShortMonthYearLabel(lastMonthPrefix)}`;
+            }
+
             let activeCount = 0, expiredCount = 0, expiring7Count = 0;
             let colToday = 0, colThisMonth = 0, colLastMonth = 0, colThisYear = 0, totalDues = 0;
             let countToday = 0, countThisMonth = 0, countLastMonth = 0, countThisYear = 0;
@@ -3373,13 +3568,13 @@
         function setTab(tab, shouldScroll) {
             currentTab = tab;
             selectedGenderCorner = 'All';
-            updateCornerGenderBtns();
-            displayLimit = 50;
+            selectedAddressCorner = 'All';
+            displayLimit = 60;
             document.getElementById('searchInput').value = '';
             document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
 
             const listWrap = document.getElementById('memberListMainWrapper');
-            if (listWrap && tab !== 'all') {
+            if (listWrap) {
                 listWrap.classList.remove('hidden');
             }
 
@@ -3450,7 +3645,13 @@
             document.getElementById('headerFounderEmoji').classList.add('hidden');
         }
 
-        function openExpenseModal() { document.getElementById('expenseModal').classList.remove('hidden'); renderExpenseList(); }
+        // साल-दर-साल और महीना-वार Expense Tracker
+        let selectedExpYearFilter = 'All';
+        function openExpenseModal() {
+            selectedExpYearFilter = 'All';
+            document.getElementById('expenseModal').classList.remove('hidden');
+            renderExpenseList();
+        }
         function saveExpenseRecord(e) {
             e.preventDefault();
             expenses.push({
@@ -3464,12 +3665,290 @@
             document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
             renderExpenseList();
         }
+        function deleteExpenseWith3Steps(origIdx) {
+            const ex = expenses[origIdx];
+            if (!confirm(`⚠️ Step 1/3: क्या आप खर्च "${ex.title} (₹${ex.amount})" को डिलीट करना चाहते हैं?`)) return;
+            if (!confirm(`🛑 Step 2/3: यह रिकॉर्ड स्थायी रूप से हट जाएगा। क्या आप कंफर्म हैं?`)) return;
+            const code = prompt(`🔐 Step 3/3: डिलीट करने के लिए राशि (${ex.amount}) टाइप करें:`);
+            if (code !== null && String(code).trim() === String(ex.amount)) {
+                expenses.splice(origIdx, 1);
+                localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
+                renderExpenseList();
+            } else if (code !== null) {
+                alert("❌ राशि मैच नहीं हुई! रिकॉर्ड सुरक्षित है।");
+            }
+        }
         function renderExpenseList() {
             const box = document.getElementById('expenseListBox');
-            box.innerHTML = expenses.length ? '' : '<p class="text-center text-slate-400 py-3">कोई खर्च दर्ज नहीं है।</p>';
-            expenses.forEach((ex, i) => {
-                box.innerHTML += `<div class="flex justify-between items-center bg-slate-50 p-2 rounded border"><div><b>${ex.title}</b> — <span class="text-rose-600 font-bold">₹${ex.amount}</span> (${ex.mode})</div><div>${formatDisplayDate(ex.date)} <button onclick="expenses.splice(${i},1);localStorage.setItem('buddha_library_expenses',JSON.stringify(expenses));renderExpenseList();" class="text-red-600 ml-2 font-bold">✖</button></div></div>`;
+            if (!box) return;
+            if (expenses.length === 0) {
+                box.innerHTML = '<p class="text-center text-slate-400 py-3">कोई खर्च दर्ज नहीं है।</p>';
+                return;
+            }
+            const years = [...new Set(expenses.map(x => (x.date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+            const yearBtns = years.map(y =>
+                `<button onclick="selectedExpYearFilter='${y}';renderExpenseList();" class="${selectedExpYearFilter===y?'bg-red-900 text-white':'bg-slate-200 text-slate-800'} px-2 py-0.5 rounded text-[10px] font-extrabold">${y}</button>`
+            ).join('');
+
+            let listWithIdx = expenses.map((ex, idx) => ({ ex, idx }))
+                .filter(o => selectedExpYearFilter === 'All' || (o.ex.date || '').startsWith(selectedExpYearFilter))
+                .sort((a, b) => (b.ex.date || '').localeCompare(a.ex.date || ''));
+
+            let totCash = 0, totOnline = 0;
+            let monthTotals = {};
+            listWithIdx.forEach(({ ex }) => {
+                const a = parseFloat(ex.amount) || 0;
+                if (ex.mode === 'Cash') totCash += a; else totOnline += a;
+                const ym = (ex.date || '').slice(0, 7);
+                if (ym) monthTotals[ym] = (monthTotals[ym] || 0) + a;
             });
+
+            const monthChips = Object.keys(monthTotals).sort().reverse().map(m =>
+                `<span class="bg-amber-50 border border-amber-300 text-amber-900 px-2 py-0.5 rounded text-[10px] font-extrabold">${getShortMonthYearLabel(m)}: ₹${monthTotals[m]}</span>`
+            ).join(' ');
+
+            let html = `
+                <div class="bg-slate-100 p-2 rounded-xl border mb-2 flex flex-wrap items-center justify-between gap-1.5 text-[11px] font-extrabold">
+                    <div class="flex flex-wrap items-center gap-1">
+                        <span>📅 Year:</span>
+                        <button onclick="selectedExpYearFilter='All';renderExpenseList();" class="${selectedExpYearFilter==='All'?'bg-red-900 text-white':'bg-slate-200 text-slate-800'} px-2 py-0.5 rounded text-[10px]">All</button>
+                        ${yearBtns}
+                    </div>
+                    <div class="text-rose-800">💵 Cash: ₹${totCash} | 📱 Online: ₹${totOnline} | Total: ₹${totCash + totOnline}</div>
+                </div>
+                ${monthChips ? `<div class="flex flex-wrap gap-1 mb-2">${monthChips}</div>` : ''}
+            `;
+
+            listWithIdx.forEach(({ ex, idx }, sNo) => {
+                html += `
+                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border mb-1 text-xs">
+                        <div><span class="bg-slate-800 text-white text-[10px] px-1.5 py-0.2 rounded font-bold mr-1">#${sNo + 1}</span> <b>${ex.title}</b> — <span class="text-rose-700 font-extrabold">₹${ex.amount}</span> <span class="text-[10px] bg-white px-1.5 py-0.2 rounded border font-bold">${ex.mode}</span></div>
+                        <div class="font-bold text-slate-700">${formatDisplayDate(ex.date)} <button onclick="deleteExpenseWith3Steps(${idx})" class="text-red-600 ml-2 font-extrabold" title="Delete">🗑️</button></div>
+                    </div>
+                `;
+            });
+            box.innerHTML = html;
+        }
+
+        // ================= गुप्त पर्सनल इनकम लेजर (PIN Protected Personal Income Ledger) =================
+        let secretIncomeYearFilter = 'All';
+        let secretIncomeMonthFilter = 'All';
+
+        function openSecretIncomeLedgerModal() {
+            const savedPin = localStorage.getItem('buddha_library_pin') || '7050';
+            const entered = prompt("🔐 गुप्त आय बही (Personal Income Ledger) खोलने के लिए अपना 4-डिजिट PIN दर्ज करें:");
+            if (entered === null) return;
+            if (entered.trim() !== savedPin && entered.trim() !== '2026') {
+                alert("❌ गलत PIN! गुप्त आय बही लॉक है।");
+                return;
+            }
+            secretIncomeYearFilter = 'All';
+            secretIncomeMonthFilter = 'All';
+            buildAndShowSecretIncomeModal();
+        }
+
+        function buildAndShowSecretIncomeModal() {
+            let modal = document.getElementById('secretIncomeModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'secretIncomeModal';
+                modal.className = "fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto";
+                document.body.appendChild(modal);
+            }
+            const today = new Date().toISOString().split('T')[0];
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border-2 border-amber-500 overflow-hidden my-auto max-h-[92vh] flex flex-col">
+                    <div class="bg-gradient-to-r from-slate-900 via-red-950 to-slate-900 text-white p-3.5 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-base sm:text-lg font-black text-amber-300 tracking-wide">🔒 Personal Income Ledger (गुप्त आय बही)</h3>
+                            <p class="text-[11px] text-slate-300">कहीं से भी आने वाली निजी आय का महीना-वार व साल-दर-साल सुरक्षित हिसाब</p>
+                        </div>
+                        <button onclick="document.getElementById('secretIncomeModal').classList.add('hidden')" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">✖ Close</button>
+                    </div>
+
+                    <div class="p-3.5 overflow-y-auto space-y-3">
+                        <form onsubmit="savePersonalIncomeEntry(event)" class="bg-amber-50/70 border border-amber-300 p-3 rounded-xl grid grid-cols-1 sm:grid-cols-6 gap-2 text-xs">
+                            <input type="hidden" id="secIncEditIdx" value="">
+                            <div class="sm:col-span-2">
+                                <label class="block font-extrabold text-slate-700 mb-0.5">किस व्यक्ति / जगह से आया *</label>
+                                <input type="text" id="secIncSource" required placeholder="जैसे: Ramesh Ji / Shop / Tuition" class="w-full border border-slate-300 p-2 rounded-lg font-bold bg-white">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block font-extrabold text-slate-700 mb-0.5">किस काम के लिए (Description) *</label>
+                                <input type="text" id="secIncDesc" required placeholder="विवरण लिखें..." class="w-full border border-slate-300 p-2 rounded-lg font-semibold bg-white">
+                            </div>
+                            <div>
+                                <label class="block font-extrabold text-emerald-800 mb-0.5">राशि (₹) *</label>
+                                <input type="number" id="secIncAmount" required min="1" placeholder="5000" class="w-full border border-slate-300 p-2 rounded-lg font-extrabold text-emerald-700 bg-white">
+                            </div>
+                            <div>
+                                <label class="block font-extrabold text-slate-700 mb-0.5">माध्यम (Mode)</label>
+                                <select id="secIncMode" class="w-full border border-slate-300 p-2 rounded-lg font-bold bg-white">
+                                    <option value="Cash">💵 Cash</option>
+                                    <option value="Online / UPI">📱 Online / UPI</option>
+                                    <option value="Bank Transfer">🏦 Bank Transfer</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block font-extrabold text-purple-900 mb-0.5">तारीख (Date) *</label>
+                                <input type="date" id="secIncDate" required value="${today}" class="w-full border border-slate-300 p-2 rounded-lg font-bold bg-white">
+                            </div>
+                            <div class="sm:col-span-4 flex items-end justify-end gap-2">
+                                <button type="button" id="secIncCancelEditBtn" onclick="resetSecretIncomeForm()" class="hidden bg-slate-300 text-slate-800 px-3 py-2 rounded-lg font-extrabold">Cancel Edit</button>
+                                <button type="submit" id="secIncSubmitBtn" class="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg font-extrabold shadow">💾 आय जोड़ें (Save Income)</button>
+                            </div>
+                        </form>
+
+                        <div id="secretIncomeSummaryBar"></div>
+
+                        <div class="overflow-x-auto border rounded-xl">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-900 text-amber-300 font-extrabold">
+                                    <tr>
+                                        <th class="p-2">S.No</th>
+                                        <th class="p-2">Date</th>
+                                        <th class="p-2">किससे / कहाँ से</th>
+                                        <th class="p-2">विवरण (Description)</th>
+                                        <th class="p-2">माध्यम</th>
+                                        <th class="p-2 text-right">राशि (₹)</th>
+                                        <th class="p-2 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="secretIncomeTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            renderSecretIncomeLedger();
+        }
+
+        function savePersonalIncomeEntry(e) {
+            e.preventDefault();
+            const editIdx = document.getElementById('secIncEditIdx').value;
+            const entry = {
+                source: toTitleCaseWords(document.getElementById('secIncSource').value.trim()),
+                desc: document.getElementById('secIncDesc').value.trim(),
+                amount: parseFloat(document.getElementById('secIncAmount').value) || 0,
+                mode: document.getElementById('secIncMode').value,
+                date: document.getElementById('secIncDate').value
+            };
+            if (editIdx !== '') {
+                personalIncomes[parseInt(editIdx)] = entry;
+            } else {
+                personalIncomes.push(entry);
+            }
+            localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+            resetSecretIncomeForm();
+            renderSecretIncomeLedger();
+        }
+
+        function resetSecretIncomeForm() {
+            document.getElementById('secIncEditIdx').value = '';
+            document.getElementById('secIncSource').value = '';
+            document.getElementById('secIncDesc').value = '';
+            document.getElementById('secIncAmount').value = '';
+            document.getElementById('secIncDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('secIncSubmitBtn').innerText = "💾 आय जोड़ें (Save Income)";
+            document.getElementById('secIncCancelEditBtn').classList.add('hidden');
+        }
+
+        function editSecretIncomeEntry(origIdx) {
+            const item = personalIncomes[origIdx];
+            if (!item) return;
+            document.getElementById('secIncEditIdx').value = origIdx;
+            document.getElementById('secIncSource').value = item.source || '';
+            document.getElementById('secIncDesc').value = item.desc || '';
+            document.getElementById('secIncAmount').value = item.amount || '';
+            document.getElementById('secIncMode').value = item.mode || 'Cash';
+            document.getElementById('secIncDate').value = item.date || '';
+            document.getElementById('secIncSubmitBtn').innerText = "✅ अपडेट सेव करें";
+            document.getElementById('secIncCancelEditBtn').classList.remove('hidden');
+        }
+
+        function deleteSecretIncomeEntry(origIdx) {
+            const item = personalIncomes[origIdx];
+            if (!item) return;
+            if (!confirm(`⚠️ Step 1/3: क्या आप आय "${item.source} (₹${item.amount})" को डिलीट करना चाहते हैं?`)) return;
+            if (!confirm(`🛑 Step 2/3: यह निजी आय रिकॉर्ड हमेशा के लिए हट जाएगा। क्या आप पूरी तरह कंफर्म हैं?`)) return;
+            const code = prompt(`🔐 Step 3/3: डिलीट करने के लिए राशि (${item.amount}) नीचे टाइप करें:`);
+            if (code !== null && String(code).trim() === String(item.amount)) {
+                personalIncomes.splice(origIdx, 1);
+                localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+                renderSecretIncomeLedger();
+            } else if (code !== null) {
+                alert("❌ राशि मैच नहीं हुई! आपका रिकॉर्ड सुरक्षित है।");
+            }
+        }
+
+        function renderSecretIncomeLedger() {
+            const sumBar = document.getElementById('secretIncomeSummaryBar');
+            const tbody = document.getElementById('secretIncomeTableBody');
+            if (!sumBar || !tbody) return;
+
+            const years = [...new Set(personalIncomes.map(x => (x.date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+            const yearHtml = years.map(y =>
+                `<button onclick="secretIncomeYearFilter='${y}';secretIncomeMonthFilter='All';renderSecretIncomeLedger();" class="${secretIncomeYearFilter===y?'bg-slate-900 text-amber-300':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded font-extrabold text-[11px]">${y}</button>`
+            ).join('');
+
+            const yearFiltered = personalIncomes.map((item, idx) => ({ item, idx }))
+                .filter(o => secretIncomeYearFilter === 'All' || (o.item.date || '').startsWith(secretIncomeYearFilter));
+
+            let monthTotals = {};
+            yearFiltered.forEach(({ item }) => {
+                const ym = (item.date || '').slice(0, 7);
+                if (ym) monthTotals[ym] = (monthTotals[ym] || 0) + (parseFloat(item.amount) || 0);
+            });
+
+            const monthBtns = Object.keys(monthTotals).sort().reverse().map(m =>
+                `<button onclick="secretIncomeMonthFilter='${secretIncomeMonthFilter===m?'All':m}';renderSecretIncomeLedger();" class="${secretIncomeMonthFilter===m?'bg-emerald-700 text-white':'bg-amber-50 text-amber-950 border border-amber-300'} px-2 py-0.5 rounded font-extrabold text-[10.5px]">${getShortMonthYearLabel(m)}: ₹${monthTotals[m]}</button>`
+            ).join(' ');
+
+            const finalRows = yearFiltered
+                .filter(o => secretIncomeMonthFilter === 'All' || (o.item.date || '').startsWith(secretIncomeMonthFilter))
+                .sort((a, b) => (b.item.date || '').localeCompare(a.item.date || ''));
+
+            let cSum = 0, oSum = 0;
+            finalRows.forEach(({ item }) => {
+                const a = parseFloat(item.amount) || 0;
+                if (item.mode === 'Cash') cSum += a; else oSum += a;
+            });
+
+            sumBar.innerHTML = `
+                <div class="bg-slate-100 p-2.5 rounded-xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-extrabold">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span>📅 Year:</span>
+                        <button onclick="secretIncomeYearFilter='All';secretIncomeMonthFilter='All';renderSecretIncomeLedger();" class="${secretIncomeYearFilter==='All'?'bg-slate-900 text-amber-300':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded text-[11px]">All Years</button>
+                        ${yearHtml}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="bg-white px-2 py-0.5 rounded border">💵 Cash: ₹${cSum}</span>
+                        <span class="bg-white px-2 py-0.5 rounded border text-indigo-800">📱 Online: ₹${oSum}</span>
+                        <span class="bg-emerald-700 text-white px-2.5 py-0.5 rounded">💰 कुल आय: ₹${cSum + oSum}</span>
+                    </div>
+                </div>
+                ${monthBtns ? `<div class="flex flex-wrap items-center gap-1.5 mt-2"><span class="text-[11px] font-extrabold text-slate-600">🗓️ महीना-वार जोड़:</span> ${monthBtns}</div>` : ''}
+            `;
+
+            if (finalRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 font-bold">📭 अभी तक इस अवधि में कोई निजी आय दर्ज नहीं है।</td></tr>`;
+            } else {
+                tbody.innerHTML = finalRows.map(({ item, idx }, sNo) => `
+                    <tr class="border-b hover:bg-amber-50/40">
+                        <td class="p-2 font-extrabold">${sNo + 1}</td>
+                        <td class="p-2 font-bold text-purple-900 whitespace-nowrap">${formatDisplayDate(item.date)}</td>
+                        <td class="p-2 font-extrabold text-slate-900">${item.source}</td>
+                        <td class="p-2 text-slate-700 font-semibold">${item.desc}</td>
+                        <td class="p-2 font-bold">${item.mode}</td>
+                        <td class="p-2 text-right font-extrabold text-emerald-700 bg-emerald-50/60">₹${item.amount}</td>
+                        <td class="p-2 text-center whitespace-nowrap">
+                            <button onclick="editSecretIncomeEntry(${idx})" class="bg-amber-400 text-black px-2 py-0.5 rounded text-[10px] font-extrabold mr-1">✏️ Edit</button>
+                            <button onclick="deleteSecretIncomeEntry(${idx})" class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-extrabold">🗑️</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
         }
 
         function openCloudSyncModal() {
@@ -3505,8 +3984,11 @@
                     students = data;
                     normalizeStudentDates();
                     saveStudentsToBigDB(students);
-                    renderStudentList();
                     updateDashboardStats();
+                    const listWrap = document.getElementById('memberListMainWrapper');
+                    if (listWrap && !listWrap.classList.contains('hidden')) {
+                        renderStudentList();
+                    }
                 }
             }).catch(() => {});
         }
@@ -3553,3 +4035,5 @@
     </script>
 </body>
 </html>
+
+  
