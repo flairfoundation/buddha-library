@@ -996,7 +996,8 @@
         let currentTab = 'all';
         let selectedGenderCorner = 'All';
         let selectedAddressCorner = 'All';
-        let displayLimit = 200;
+        let sectionInnerSearch = '';
+        let displayLimit = 250;
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
         let founderPhoto = localStorage.getItem('buddha_library_founder_photo') || '';
@@ -1006,8 +1007,8 @@
         let zoomModalRotation = 0;
         let activeIdCardIndex = null;
 
-        let activeBreakdownContext = { type: 'today', gender: 'All', mode: 'All', rows: [] };
-        let activeAllColFilter = { gender: 'All', mode: 'All' };
+        let activeBreakdownContext = { type: 'today', gender: 'All', mode: 'All', query: '', rows: [] };
+        let activeAllColFilter = { gender: 'All', mode: 'All', query: '' };
 
         let mediaAdjustState = {
             targetType: 'student',
@@ -1025,6 +1026,34 @@
         try { students = JSON.parse(localStorage.getItem('buddha_library_students') || '[]'); } catch(e) { students = []; }
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
         try { personalIncomes = JSON.parse(localStorage.getItem('buddha_library_personal_incomes') || '[]'); } catch(e) { personalIncomes = []; }
+
+        // सटीक 28-दिन प्रति माह जोड़ने वाला फंक्शन (चाहे महीना 28, 29, 30 या 31 दिन का हो)
+        function addExact28DayMonths(startDateStr, monthsCount) {
+            if (!startDateStr) return '';
+            const parts = String(startDateStr).split('-');
+            if (parts.length !== 3) return startDateStr;
+            const d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
+            const totalDaysToAdd = (parseInt(monthsCount, 10) || 1) * 28;
+            d.setUTCDate(d.getUTCDate() + totalDaysToAdd);
+            return d.toISOString().split('T')[0];
+        }
+
+        // भारतीय वित्तीय वर्ष (1 अप्रैल से 31 मार्च) निकालने वाला फंक्शन
+        function getFinancialYearLabel(dateStr) {
+            if (!dateStr || dateStr.length < 7) return 'FY 2026-27';
+            const parts = dateStr.split('-');
+            const yr = parseInt(parts[0], 10);
+            const mo = parseInt(parts[1], 10);
+            if (isNaN(yr) || isNaN(mo)) return 'FY 2026-27';
+            const startYr = (mo >= 4) ? yr : (yr - 1);
+            const endYrShort = String(startYr + 1).slice(-2);
+            return `FY ${startYr}-${endYrShort}`;
+        }
+
+        function getCurrentFinancialYearLabel() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            return getFinancialYearLabel(todayStr);
+        }
 
         // 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी
         function openBuddhaBigDB() {
@@ -1048,7 +1077,6 @@
             try {
                 localStorage.setItem('buddha_library_students', JSON.stringify(dataArray));
             } catch (err) {
-                // मोबाइल पर localStorage 5MB भरने पर केवल बैकअप के लिए हल्की कॉपी रखें (IndexedDB व Firebase में पूरे फोटो रहेंगे)
                 try {
                     const liteCopy = dataArray.map(s => ({ ...s, photo: s.photo || '', photoFull: '', aadhaarFront: '', aadhaarBack: '' }));
                     localStorage.setItem('buddha_library_students', JSON.stringify(liteCopy));
@@ -1056,7 +1084,6 @@
             }
         }
 
-        // दोनों स्रोतों (IndexedDB और Firebase) के फोटो व दस्तावेज़ को सुरक्षित मर्ज करना (खाली फोटो से पुरानी फोटो कभी नहीं मिटेगी)
         function mergeStudentArrays(localArr, remoteArr) {
             if (!Array.isArray(remoteArr) || remoteArr.length === 0) return localArr;
             if (!Array.isArray(localArr) || localArr.length === 0) return remoteArr;
@@ -1380,8 +1407,8 @@
                 if(!s.cycleStartDate) {
                     if(s.admissionDate) s.cycleStartDate = s.admissionDate;
                     else if(s.validUpto) {
-                        let d = new Date(s.validUpto);
-                        d.setDate(d.getDate() - 28);
+                        let d = new Date(s.validUpto + 'T00:00:00Z');
+                        d.setUTCDate(d.getUTCDate() - 28);
                         s.cycleStartDate = d.toISOString().split('T')[0];
                         s.admissionDate = s.cycleStartDate;
                     } else {
@@ -1395,7 +1422,7 @@
             });
         }
 
-        // मोबाइल और कंप्यूटर दोनों पर सभी बटनों/कार्ड्स को एक बराबर साइज और सलीकेदार ग्रिड में सजाना
+        // मोबाइल (Portrait/Landscape), लैपटॉप और TV पर सभी बटनों व कार्ड्स को बराबर साइज और सलीकेदार ग्रिड में सजाना
         function arrangeCleanDashboardLayout() {
             // 1. डायरेक्टर की फोटो और उसके पूरे बॉक्स से क्लिक पूरी तरह लॉक करें
             const fImg = document.getElementById('headerFounderImg');
@@ -1409,7 +1436,14 @@
                 }
             });
 
-            // 2. डैशबोर्ड के सभी ऊपर वाले और नीचे वाले कार्ड्स को बराबर ऊँचाई और साइज दें
+            // 2. "+ Admission" बटन को एक ही साफ़, एक-लाइन वाले आकर्षक "➕ New Admission" बटन में बदलें
+            const admBtn = document.querySelector('button[onclick*="toggleAdmissionForm"]');
+            if (admBtn) {
+                admBtn.className = "theme-maroon text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold shadow-sm hover:opacity-95 transition flex items-center justify-center gap-1.5 whitespace-nowrap";
+                admBtn.innerHTML = `<span>➕ New Admission</span>`;
+            }
+
+            // 3. डैशबोर्ड के सभी ऊपर वाले और नीचे वाले कार्ड्स को बराबर ऊँचाई और साइज दें (Mobile 2-col, Tablet/Laptop/TV 3-col)
             const cardAll = document.getElementById('cardTab-all');
             const cardExp = document.getElementById('cardTab-expired');
             const cardProm = document.getElementById('cardTab-promise');
@@ -1418,7 +1452,7 @@
 
             if (cardAll && cardAll.parentElement) {
                 const gridParent = cardAll.parentElement;
-                gridParent.className = "grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3 items-stretch mb-3";
+                gridParent.className = "grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 items-stretch mb-3";
 
                 let secretCard = document.getElementById('cardTab-secretIncome');
                 if (!secretCard) {
@@ -1437,7 +1471,6 @@
                     `;
                 }
 
-                // यदि ग्रिड में कोई अन्य कार्ड (जैसे Vacant या Birthday) पहले से है तो उसे भी बराबर साइज दें
                 Array.from(gridParent.children).forEach(ch => {
                     ch.classList.add('min-h-[86px]', 'h-full', 'flex', 'flex-col', 'justify-between');
                 });
@@ -1450,7 +1483,7 @@
                 });
             }
 
-            // कलेक्शन वाले कार्ड्स को भी मोबाइल पर 2-2 और लैपटॉप पर बराबर साइज में सेट करें
+            // कलेक्शन वाले कार्ड्स को भी बराबर ऊँचाई व ग्रिड में सेट करें
             const colTodayEl = document.getElementById('colToday');
             if (colTodayEl) {
                 const colCard = colTodayEl.closest('div[onclick]');
@@ -1462,7 +1495,7 @@
                 }
             }
 
-            // 3. डबल फ़िल्टर और फालतू सॉर्ट बटन हटाएं तथा डिफ़ॉल्ट रूप से नीचे की लिस्ट छिपा दें
+            // 4. डबल फ़िल्टर और फालतू सॉर्ट बटन हटाएं तथा डिफ़ॉल्ट रूप से नीचे की लिस्ट छिपा दें
             const sortIdBtn = document.getElementById('sortBtn-id');
             if (sortIdBtn && sortIdBtn.parentElement) {
                 sortIdBtn.parentElement.classList.add('hidden');
@@ -1517,13 +1550,12 @@
             recalcAdmissionBill();
         }
 
+        // सटीक 28-दिन प्रति माह के अनुसार नया एडमिशन वैधता अपडेट करना
         function update28DayValidity() {
             const startVal = document.getElementById('cycleStartDate').value;
             if(!startVal) return;
-            const startObj = new Date(startVal);
             const months = parseInt(document.getElementById('durationMonths').value) || 1;
-            startObj.setDate(startObj.getDate() + (28 * months));
-            document.getElementById('validUpto').value = startObj.toISOString().split('T')[0];
+            document.getElementById('validUpto').value = addExact28DayMonths(startVal, months);
             recalcAdmissionBill();
         }
 
@@ -1552,7 +1584,7 @@
 
             document.getElementById('totalBill').value = finalPayable;
             document.getElementById('paidNow').value = finalPayable;
-            document.getElementById('admissionBillBreakdown').innerHTML = `💡 <b>Bill Breakdown:</b> Shift (${months}M): ₹${shiftTotal} + Admission Fee: ₹${admFeeAmt} + Locker Rent (${months}M): ₹${lockerRent} + Security Deposit: ₹${secDepositAmt} + GST: ₹${gstAmt} = <b class="text-red-800">Total ₹${finalPayable}</b>`;
+            document.getElementById('admissionBillBreakdown').innerHTML = `💡 <b>Bill Breakdown (${months * 28} Days):</b> Shift (${months}M): ₹${shiftTotal} + Admission Fee: ₹${admFeeAmt} + Locker Rent (${months}M): ₹${lockerRent} + Security Deposit: ₹${secDepositAmt} + GST: ₹${gstAmt} = <b class="text-red-800">Total ₹${finalPayable}</b>`;
             recalcDuesOnly();
         }
 
@@ -1862,7 +1894,7 @@
             const durationMonths = parseInt(document.getElementById('durationMonths').value) || 1;
             const admissionDate = document.getElementById('admissionDateInput').value;
             const cycleStartDate = document.getElementById('cycleStartDate').value;
-            const validUpto = document.getElementById('validUpto').value;
+            const validUpto = document.getElementById('validUpto').value || addExact28DayMonths(cycleStartDate, durationMonths);
             const billDate = document.getElementById('manualBillDate').value || new Date().toISOString().split('T')[0];
 
             const isGst = document.getElementById('applyGstCheck').checked;
@@ -1958,7 +1990,7 @@
                         months: durationMonths,
                         shiftAtTime: shiftPlan,
                         mode: paymentMode,
-                        period: `${formatDisplayDate(cycleStartDate)} to ${formatDisplayDate(validUpto)} (${durationMonths}M)`,
+                        period: `${formatDisplayDate(cycleStartDate)} to ${formatDisplayDate(validUpto)} (${durationMonths * 28} Days)`,
                         type: 'Admission'
                     }]
                 };
@@ -1999,18 +2031,19 @@
             closeAllOpenSections('memberListMainWrapper');
             selectedGenderCorner = 'All';
             selectedAddressCorner = 'All';
-            displayLimit = 200;
+            sectionInnerSearch = '';
+            displayLimit = 250;
             const wrap = document.getElementById('memberListMainWrapper');
             if (wrap) wrap.classList.remove('hidden');
             setTab('all', true);
         }
 
-        // ✖ Close बटन का पक्का समाधान: लिस्ट और स्मार्ट बार दोनों तुरंत बंद होंगे
         function closeTotalMembersOnly() {
             const wrap = document.getElementById('memberListMainWrapper');
             if (wrap) wrap.classList.add('hidden');
             const smartBar = document.getElementById('autoExpiredCornerBar');
             if (smartBar) smartBar.classList.add('hidden');
+            sectionInnerSearch = '';
             const sInp = document.getElementById('searchInput');
             if (sInp) sInp.value = '';
             const dashWrap = document.getElementById('dashboardCardsWrapper');
@@ -2020,13 +2053,19 @@
 
         function filterTotalByGender(g) {
             selectedGenderCorner = g;
-            displayLimit = 200;
+            displayLimit = 250;
             renderStudentList();
         }
 
         function filterTotalByAddress(addrVal) {
             selectedAddressCorner = addrVal || 'All';
-            displayLimit = 200;
+            displayLimit = 250;
+            renderStudentList();
+        }
+
+        function onSectionInnerSearchInput(val) {
+            sectionInnerSearch = (val || '').trim();
+            displayLimit = 250;
             renderStudentList();
         }
 
@@ -2046,7 +2085,7 @@
                 if(dashWrap) dashWrap.classList.remove('hidden');
                 if(listWrap) listWrap.classList.add('hidden');
             }
-            displayLimit = 200;
+            displayLimit = 250;
             renderStudentList();
         }
 
@@ -2055,7 +2094,7 @@
         }
 
         function loadMoreMembers() {
-            displayLimit += 200;
+            displayLimit += 250;
             renderStudentList();
         }
 
@@ -2071,11 +2110,13 @@
             if(!container) return;
             const rawQuery = document.getElementById('searchInput').value.trim();
             const qLower = rawQuery.toLowerCase();
+            const innerQ = sectionInnerSearch.trim();
+            const innerQLower = innerQ.toLowerCase();
             container.innerHTML = '';
 
             const today = new Date().toISOString().split('T')[0];
 
-            // एक ही स्मार्ट कोने वाला बार: Total Members, Expired, Active और OUT Folder सभी के लिए
+            // एक ही स्मार्ट कोने वाला बार + सेक्शन के अंदर अपना सर्च बॉक्स
             const anchorEl = document.getElementById('listSectionAnchor');
             if (anchorEl) {
                 let smartBar = document.getElementById('autoExpiredCornerBar');
@@ -2085,7 +2126,7 @@
                     anchorEl.parentNode.insertBefore(smartBar, anchorEl.nextSibling);
                 }
 
-                if (!rawQuery && (currentTab === 'all' || currentTab === 'expired' || currentTab === 'out_members' || currentTab === 'active' || currentTab === 'expiring7' || currentTab === 'promise' || currentTab === 'dues')) {
+                if (!rawQuery) {
                     let countAll = 0, bCount = 0, gCount = 0, bDue = 0, gDue = 0, outCount = 0;
                     let addrCounts = {};
 
@@ -2126,28 +2167,34 @@
                         : (currentTab === 'active' ? '🟢 Active Members'
                         : (currentTab === 'expiring7' ? '⏳ Expiring (1-7d)' : '📅 Promise / Dues'))));
 
-                    smartBar.className = "bg-rose-50 border border-rose-300 px-3 py-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold shadow-sm fade-in";
+                    smartBar.className = "bg-rose-50 border border-rose-300 px-3 py-2.5 rounded-xl mb-3 space-y-2 text-[11px] font-extrabold shadow-sm fade-in";
                     smartBar.innerHTML = `
-                        <div class="flex flex-wrap items-center gap-1.5">
-                            <span class="text-rose-900">${barTitle}:</span>
-                            <button type="button" onclick="filterTotalByGender('All')" class="${selectedGenderCorner === 'All' ? 'bg-slate-800 text-white ring-2 ring-amber-400' : 'bg-slate-200 text-slate-700'} px-2 py-0.5 rounded-md">All: ${countAll}</button>
-                            <button type="button" onclick="filterTotalByGender('Male')" class="${selectedGenderCorner === 'Male' ? 'bg-blue-700 text-white ring-2 ring-amber-400' : 'bg-blue-100 text-blue-900 border border-blue-300'} px-2 py-0.5 rounded-md">👦 Boys: ${bCount} (₹${bDue})</button>
-                            <button type="button" onclick="filterTotalByGender('Female')" class="${selectedGenderCorner === 'Female' ? 'bg-pink-700 text-white ring-2 ring-amber-400' : 'bg-pink-100 text-pink-900 border border-pink-300'} px-2 py-0.5 rounded-md">👧 Girls: ${gCount} (₹${gDue})</button>
-                            ${currentTab === 'all' ? `
-                                <select onchange="filterTotalByAddress(this.value)" class="bg-white border border-slate-400 text-slate-900 px-2 py-0.5 rounded-md font-extrabold text-[11px] max-w-[165px]">
-                                    <option value="All" ${selectedAddressCorner === 'All' ? 'selected' : ''}>📍 सभी गाँव/पता (${countAll})</option>
-                                    ${addrOptionsHtml}
-                                </select>
-                            ` : ''}
-                            ${(currentTab === 'expired' || currentTab === 'out_members') ? `
-                                <button type="button" onclick="setTab('${currentTab === 'out_members' ? 'expired' : 'out_members'}', false)" class="bg-slate-800 text-yellow-300 px-2.5 py-0.5 rounded-md">
-                                    ${currentTab === 'out_members' ? '⬅️ Active Expired' : `🚪 OUT Folder (${outCount})`}
-                                </button>
-                            ` : ''}
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-rose-900">${barTitle}:</span>
+                                <button type="button" onclick="filterTotalByGender('All')" class="${selectedGenderCorner === 'All' ? 'bg-slate-800 text-white ring-2 ring-amber-400' : 'bg-slate-200 text-slate-700'} px-2 py-0.5 rounded-md">All: ${countAll}</button>
+                                <button type="button" onclick="filterTotalByGender('Male')" class="${selectedGenderCorner === 'Male' ? 'bg-blue-700 text-white ring-2 ring-amber-400' : 'bg-blue-100 text-blue-900 border border-blue-300'} px-2 py-0.5 rounded-md">👦 Boys: ${bCount} (₹${bDue})</button>
+                                <button type="button" onclick="filterTotalByGender('Female')" class="${selectedGenderCorner === 'Female' ? 'bg-pink-700 text-white ring-2 ring-amber-400' : 'bg-pink-100 text-pink-900 border border-pink-300'} px-2 py-0.5 rounded-md">👧 Girls: ${gCount} (₹${gDue})</button>
+                                ${currentTab === 'all' ? `
+                                    <select onchange="filterTotalByAddress(this.value)" class="bg-white border border-slate-400 text-slate-900 px-2 py-0.5 rounded-md font-extrabold text-[11px] max-w-[165px]">
+                                        <option value="All" ${selectedAddressCorner === 'All' ? 'selected' : ''}>📍 सभी गाँव/पता (${countAll})</option>
+                                        ${addrOptionsHtml}
+                                    </select>
+                                ` : ''}
+                                ${(currentTab === 'expired' || currentTab === 'out_members') ? `
+                                    <button type="button" onclick="setTab('${currentTab === 'out_members' ? 'expired' : 'out_members'}', false)" class="bg-slate-800 text-yellow-300 px-2.5 py-0.5 rounded-md">
+                                        ${currentTab === 'out_members' ? '⬅️ Active Expired' : `🚪 OUT Folder (${outCount})`}
+                                    </button>
+                                ` : ''}
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-rose-800 bg-white px-2 py-0.5 rounded border border-rose-200">💰 Due: ₹${bDue + gDue}</span>
+                                <button type="button" onclick="closeTotalMembersOnly()" class="bg-red-700 hover:bg-red-800 text-white px-2.5 py-0.5 rounded-md cursor-pointer">✖ Close</button>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-rose-800 bg-white px-2 py-0.5 rounded border border-rose-200">💰 Total Due: ₹${bDue + gDue}</span>
-                            <button type="button" onclick="closeTotalMembersOnly()" class="bg-red-700 hover:bg-red-800 text-white px-2.5 py-0.5 rounded-md cursor-pointer">✖ Close</button>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="sectionInnerSearchInput" value="${sectionInnerSearch.replace(/"/g, '&quot;')}" oninput="onSectionInnerSearchInput(this.value)" placeholder="🔍 इस लिस्ट के अंदर ID, नाम, मोबाइल या गाँव से खोजें..." class="w-full bg-white border border-rose-300 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-800">
+                            ${sectionInnerSearch ? `<button type="button" onclick="sectionInnerSearch='';renderStudentList();" class="bg-slate-300 text-slate-800 px-2.5 py-1.5 rounded-lg text-xs font-extrabold">Clear</button>` : ''}
                         </div>
                     `;
                 } else {
@@ -2172,26 +2219,38 @@
                 if(!rawQuery) {
                     if(currentTab === 'out_members') {
                         if(!s.isOut) return false;
-                        if(selectedGenderCorner === 'Male' && (s.gender || 'Male') === 'Female') return false;
-                        if(selectedGenderCorner === 'Female' && s.gender !== 'Female') return false;
-                        return true;
+                    } else {
+                        if(s.isOut && currentTab !== 'all') return false;
+                        if(currentTab === 'active' && !isActive) return false;
+                        if(currentTab === 'expired' && isActive) return false;
+                        if(currentTab === 'dues' && !(parseFloat(s.remainingDue) > 0)) return false;
+                        if(currentTab === 'promise' && !(parseFloat(s.remainingDue) > 0)) return false;
+                        if(currentTab === 'expiring7' && !(daysLeft >= 0 && daysLeft <= 7)) return false;
                     }
-                    if(s.isOut && currentTab !== 'all') return false;
+
                     if(selectedGenderCorner === 'Male' && (s.gender || 'Male') === 'Female') return false;
                     if(selectedGenderCorner === 'Female' && s.gender !== 'Female') return false;
                     if(currentTab === 'all' && selectedAddressCorner !== 'All') {
                         const sAddr = toTitleCaseWords((s.address || 'Patna').trim());
                         if(sAddr !== selectedAddressCorner) return false;
                     }
-                    if(currentTab === 'active' && !isActive) return false;
-                    if(currentTab === 'expired' && isActive) return false;
-                    if(currentTab === 'dues' && !(parseFloat(s.remainingDue) > 0)) return false;
-                    if(currentTab === 'promise' && !(parseFloat(s.remainingDue) > 0)) return false;
-                    if(currentTab === 'expiring7' && !(daysLeft >= 0 && daysLeft <= 7)) return false;
+
+                    // सेक्शन के अंदर वाले सर्च बॉक्स का फ़िल्टर
+                    if(innerQ) {
+                        if(/^\d+$/.test(innerQ)) {
+                            if(innerQ.length <= 4 && parseInt(innerQ) >= 1 && parseInt(innerQ) <= 5000) {
+                                return parseInt(s.uniId) === parseInt(innerQ);
+                            }
+                            return (s.mobile && s.mobile.includes(innerQ)) || (s.guardianMobile && s.guardianMobile.includes(innerQ));
+                        }
+                        const nM = s.fullName && s.fullName.toLowerCase().includes(innerQLower);
+                        const aM = s.address && s.address.toLowerCase().includes(innerQLower);
+                        return nM || aM;
+                    }
                     return true;
                 }
 
-                // स्मार्ट सर्च नियम: अंक (ID या Mobile) व अक्षर (Name, ब्रैकेट उपनाम, या Address)
+                // मास्टर सर्च नियम: अंक (ID या Mobile) व अक्षर (Name, ब्रैकेट उपनाम, या Address)
                 if(/^\d+$/.test(rawQuery)) {
                     if(rawQuery.length <= 4 && parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000) {
                         return parseInt(s.uniId) === parseInt(rawQuery);
@@ -2333,7 +2392,6 @@
             });
         }
 
-        // एक बच्चे के Options पर क्लिक करने पर बाकी खुले हुए Options अपने आप बंद हो जाएंगे
         function toggleCardMenu(idx) {
             const target = document.getElementById(`cardMenu-${idx}`);
             const wasHidden = target ? target.classList.contains('hidden') : true;
@@ -2567,7 +2625,7 @@
             renderStudentList();
         }
 
-        // एक ही जैसा स्मार्ट कलेक्शन ब्रेकडाउन (Today, This Month, Last Month, This Year)
+        // एक ही जैसा स्मार्ट कलेक्शन ब्रेकडाउन + अंदर अपना सर्च बॉक्स
         function openCollectionBreakdownModal(periodType) {
             closeAllOpenSections('collectionBreakdownModal');
             const now = new Date();
@@ -2606,19 +2664,22 @@
 
             rows.sort((a, b) => (parseInt(a.s.uniId) || 99999) - (parseInt(b.s.uniId) || 99999));
 
-            activeBreakdownContext = { type: periodType, gender: 'All', mode: 'All', rows: rows };
+            activeBreakdownContext = { type: periodType, gender: 'All', mode: 'All', query: '', rows: rows };
             renderCollectionBreakdownFiltered();
             document.getElementById('collectionBreakdownModal').classList.remove('hidden');
         }
 
-        function setColBreakdownFilter(g, m) {
-            if (g !== null) activeBreakdownContext.gender = g;
-            if (m !== null) activeBreakdownContext.mode = m;
+        function setColBreakdownFilter(g, m, qVal) {
+            if (g !== null && g !== undefined) activeBreakdownContext.gender = g;
+            if (m !== null && m !== undefined) activeBreakdownContext.mode = m;
+            if (qVal !== null && qVal !== undefined) activeBreakdownContext.query = qVal;
             renderCollectionBreakdownFiltered();
         }
 
         function renderCollectionBreakdownFiltered() {
-            const { gender, mode, rows } = activeBreakdownContext;
+            const { gender, mode, query, rows } = activeBreakdownContext;
+            const qClean = (query || '').trim();
+            const qLow = qClean.toLowerCase();
             let bCount = 0, bAmt = 0, gCount = 0, gAmt = 0, cashSum = 0, onlineSum = 0;
 
             rows.forEach(r => {
@@ -2635,22 +2696,34 @@
                 if (gender === 'Female' && r.s.gender !== 'Female') return false;
                 if (mode === 'Cash' && !isCash) return false;
                 if (mode === 'Online' && isCash) return false;
+                if (qClean) {
+                    if (/^\d+$/.test(qClean)) {
+                        if (qClean.length <= 4) return String(r.s.uniId) === qClean || String(r.amt) === qClean;
+                        return (r.s.mobile && r.s.mobile.includes(qClean));
+                    }
+                    return (r.s.fullName && r.s.fullName.toLowerCase().includes(qLow)) || formatDisplayDate(r.p.date).includes(qClean);
+                }
                 return true;
             });
 
             const shownTotal = filteredRows.reduce((acc, r) => acc + r.amt, 0);
 
             const sumEl = document.getElementById('colBreakdownSummary');
-            sumEl.className = "flex flex-wrap items-center justify-between gap-2 mb-3 text-xs font-extrabold";
+            sumEl.className = "space-y-2 mb-3 text-xs font-extrabold";
             sumEl.innerHTML = `
-                <div class="flex flex-wrap items-center gap-1.5">
-                    <button type="button" onclick="setColBreakdownFilter('All','All')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${rows.length})</button>
-                    <button type="button" onclick="setColBreakdownFilter('Male',null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bAmt})</button>
-                    <button type="button" onclick="setColBreakdownFilter('Female',null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gAmt})</button>
-                    <button type="button" onclick="setColBreakdownFilter(null, mode==='Cash'?'All':'Cash')" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
-                    <button type="button" onclick="setColBreakdownFilter(null, mode==='Online'?'All':'Online')" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${onlineSum}</button>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <button type="button" onclick="setColBreakdownFilter('All','All','')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${rows.length})</button>
+                        <button type="button" onclick="setColBreakdownFilter('Male',null,null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bAmt})</button>
+                        <button type="button" onclick="setColBreakdownFilter('Female',null,null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gAmt})</button>
+                        <button type="button" onclick="setColBreakdownFilter(null, mode==='Cash'?'All':'Cash', null)" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
+                        <button type="button" onclick="setColBreakdownFilter(null, mode==='Online'?'All':'Online', null)" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${onlineSum}</button>
+                    </div>
+                    <div class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">🏦 Selected Total: ₹${shownTotal}</div>
                 </div>
-                <div class="bg-emerald-600 text-white px-3 py-1 rounded-lg shadow-sm">🏦 Selected Total: ₹${shownTotal}</div>
+                <div>
+                    <input type="text" value="${(query || '').replace(/"/g, '&quot;')}" oninput="setColBreakdownFilter(null,null,this.value)" placeholder="🔍 इस कलेक्शन में ID, नाम, मोबाइल, राशि या तारीख से खोजें..." class="w-full border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50">
+                </div>
             `;
 
             const tbody = document.getElementById('colBreakdownTableBody');
@@ -2880,13 +2953,12 @@
 
         function closeRenewModal() { document.getElementById('renewModal').classList.add('hidden'); }
 
+        // सटीक 28-दिन प्रति माह के अनुसार रिन्यूअल की अगली तारीख निकालना
         function recalcRenewalDates() {
             const startStr = document.getElementById('renewStartDate').value;
             if(!startStr) return;
             const months = parseInt(document.getElementById('renewMonths').value) || 1;
-            let d = new Date(startStr);
-            d.setDate(d.getDate() + (28 * months));
-            document.getElementById('renewNewValid').value = d.toISOString().split('T')[0];
+            document.getElementById('renewNewValid').value = addExact28DayMonths(startStr, months);
         }
 
         function recalcRenewalBill() {
@@ -2927,9 +2999,9 @@
             const newLocker = hasLockerMonth ? cleanResNum(document.getElementById('renewLockerNo').value) : '';
             const newKey = hasLockerMonth ? cleanResNum(document.getElementById('renewKeyNo').value) : '';
             const startD = document.getElementById('renewStartDate').value;
-            const newValid = document.getElementById('renewNewValid').value;
-            const billD = document.getElementById('renewBillDate').value || new Date().toISOString().split('T')[0];
             const months = parseInt(document.getElementById('renewMonths').value) || 1;
+            const newValid = document.getElementById('renewNewValid').value || addExact28DayMonths(startD, months);
+            const billD = document.getElementById('renewBillDate').value || new Date().toISOString().split('T')[0];
             const isGst = document.getElementById('renewGstCheck').checked;
             const hasSec = document.getElementById('renewLockerSecCheck').checked;
             const lockerRentAmt = hasLockerMonth ? (LOCKER_MONTHLY_FEE * months) : 0;
@@ -2969,7 +3041,7 @@
                 months: months,
                 shiftAtTime: newShift,
                 mode: payMode,
-                period: `${formatDisplayDate(startD)} to ${formatDisplayDate(newValid)} (${months}M / ${months * 28} Days)`,
+                period: `${formatDisplayDate(startD)} to ${formatDisplayDate(newValid)} (${months * 28} Days)`,
                 type: `Renewal (${months}M)`
             });
 
@@ -3155,17 +3227,18 @@
             }
         }
 
-        // ID-Wise All Collection में भी एक जैसा Boys/Girls और Cash/Online फ़िल्टर (जो क्लिक करने पर सही लिस्ट छाँटता है)
+        // ID-Wise All Collection + Boys/Girls, Cash/Online फ़िल्टर और अंदर अपना सर्च बॉक्स
         function openMyCollectionModal() {
             closeAllOpenSections('myCollectionModal');
-            activeAllColFilter = { gender: 'All', mode: 'All' };
+            activeAllColFilter = { gender: 'All', mode: 'All', query: '' };
             renderMyCollectionFiltered();
             document.getElementById('myCollectionModal').classList.remove('hidden');
         }
 
-        function setAllColFilter(g, m) {
-            if (g !== null) activeAllColFilter.gender = g;
-            if (m !== null) activeAllColFilter.mode = m;
+        function setAllColFilter(g, m, qVal) {
+            if (g !== null && g !== undefined) activeAllColFilter.gender = g;
+            if (m !== null && m !== undefined) activeAllColFilter.mode = m;
+            if (qVal !== null && qVal !== undefined) activeAllColFilter.query = qVal;
             renderMyCollectionFiltered();
         }
 
@@ -3187,7 +3260,9 @@
                 else { bCount++; bPaid += (sCash + sOnl); }
             });
 
-            const { gender, mode } = activeAllColFilter;
+            const { gender, mode, query } = activeAllColFilter;
+            const qClean = (query || '').trim();
+            const qLow = qClean.toLowerCase();
             const tbody = document.getElementById('myCollectionTableBody');
             tbody.innerHTML = '';
             let shownCash = 0, shownOnline = 0, shownDue = 0, shownMembers = 0;
@@ -3208,6 +3283,18 @@
 
                 if (mode === 'Cash' && cPaid <= 0) return;
                 if (mode === 'Online' && oPaid <= 0) return;
+
+                if (qClean) {
+                    if (/^\d+$/.test(qClean)) {
+                        if (qClean.length <= 4) {
+                            if (String(s.uniId) !== qClean) return;
+                        } else if (!(s.mobile && s.mobile.includes(qClean))) {
+                            return;
+                        }
+                    } else if (!(s.fullName && s.fullName.toLowerCase().includes(qLow)) && !(s.address && s.address.toLowerCase().includes(qLow))) {
+                        return;
+                    }
+                }
 
                 shownMembers++;
                 const tot = (mode === 'Cash') ? cPaid : (mode === 'Online' ? oPaid : (cPaid + oPaid));
@@ -3237,18 +3324,23 @@
             }
 
             const strip = document.getElementById('myCollectionSummaryStrip');
-            strip.className = "flex flex-wrap items-center justify-between gap-2 mb-3 text-xs font-extrabold";
+            strip.className = "space-y-2 mb-3 text-xs font-extrabold";
             strip.innerHTML = `
-                <div class="flex flex-wrap items-center gap-1.5">
-                    <button type="button" onclick="setAllColFilter('All','All')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${sorted.length})</button>
-                    <button type="button" onclick="setAllColFilter('Male',null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bPaid})</button>
-                    <button type="button" onclick="setAllColFilter('Female',null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gPaid})</button>
-                    <button type="button" onclick="setAllColFilter(null, mode==='Cash'?'All':'Cash')" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${grandCash}</button>
-                    <button type="button" onclick="setAllColFilter(null, mode==='Online'?'All':'Online')" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${grandOnline}</button>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <button type="button" onclick="setAllColFilter('All','All','')" class="${gender==='All'&&mode==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All (${sorted.length})</button>
+                        <button type="button" onclick="setAllColFilter('Male',null,null)" class="${gender==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-1 rounded-lg">👦 Boys: ${bCount} (₹${bPaid})</button>
+                        <button type="button" onclick="setAllColFilter('Female',null,null)" class="${gender==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-1 rounded-lg">👧 Girls: ${gCount} (₹${gPaid})</button>
+                        <button type="button" onclick="setAllColFilter(null, mode==='Cash'?'All':'Cash', null)" class="${mode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 text-amber-900 border border-amber-300'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${grandCash}</button>
+                        <button type="button" onclick="setAllColFilter(null, mode==='Online'?'All':'Online', null)" class="${mode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-1 rounded-lg">📱 Online: ₹${grandOnline}</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg">🏦 Shown (${shownMembers}): ₹${(mode==='Cash'?shownCash:(mode==='Online'?shownOnline:(shownCash+shownOnline)))}</span>
+                        <span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg border border-red-200">⚠️ Due: ₹${shownDue}</span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg">🏦 Shown (${shownMembers}): ₹${(mode==='Cash'?shownCash:(mode==='Online'?shownOnline:(shownCash+shownOnline)))}</span>
-                    <span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg border border-red-200">⚠️ Due: ₹${shownDue}</span>
+                <div>
+                    <input type="text" value="${(query || '').replace(/"/g, '&quot;')}" oninput="setAllColFilter(null,null,this.value)" placeholder="🔍 ऑल कलेक्शन में ID, नाम, मोबाइल या गाँव से खोजें..." class="w-full border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50">
                 </div>
             `;
         }
@@ -3277,13 +3369,12 @@
             alert("✅ तारीखें सफलतापूर्वक अपडेट हो गईं!");
         }
 
+        // सटीक 28-दिन प्रति माह के अनुसार प्रोफ़ाइल में वैधता जोड़ना
         function autoCalcProfileValidDate() {
             const cyc = document.getElementById('profEditCycleStart').value;
             const m = parseInt(document.getElementById('profQuickMonths').value) || 1;
             if(!cyc) return;
-            let d = new Date(cyc);
-            d.setDate(d.getDate() + (28 * m));
-            document.getElementById('profEditValidUpto').value = d.toISOString().split('T')[0];
+            document.getElementById('profEditValidUpto').value = addExact28DayMonths(cyc, m);
         }
 
         function openProfileModal(index) {
@@ -3339,7 +3430,7 @@
                 ` : ''}
 
                 <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 mb-4 text-xs">
-                    <h4 class="font-extrabold text-blue-900 mb-2">📅 Direct Admission & Plan Date Editor</h4>
+                    <h4 class="font-extrabold text-blue-900 mb-2">📅 Direct Admission & Plan Date Editor (28-Day Cycle)</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
                         <div>
                             <label class="block font-bold text-slate-700 mb-1">Original Admission Date</label>
@@ -3696,7 +3787,8 @@
             currentTab = tab;
             selectedGenderCorner = 'All';
             selectedAddressCorner = 'All';
-            displayLimit = 200;
+            sectionInnerSearch = '';
+            displayLimit = 250;
             document.getElementById('searchInput').value = '';
             document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
 
@@ -3778,29 +3870,67 @@
             document.getElementById('headerFounderEmoji').classList.add('hidden');
         }
 
-        // साल-दर-साल और महीना-वार Expense Tracker
-        let selectedExpYearFilter = 'All';
+        // ================= Professional Expense Tracker (Financial Year Wise + Smart Search + Edit + CSV) =================
+        let expFyFilter = 'All';
+        let expModeFilter = 'All';
+        let expPeriodFilter = 'All'; // 'All', 'Today', 'Month'
+        let expSearchQuery = '';
+        let expEditIdx = '';
+
         function openExpenseModal() {
             closeAllOpenSections('expenseModal');
-            selectedExpYearFilter = 'All';
-            document.getElementById('expenseModal').classList.remove('hidden');
+            expFyFilter = getCurrentFinancialYearLabel();
+            expModeFilter = 'All';
+            expPeriodFilter = 'All';
+            expSearchQuery = '';
+            expEditIdx = '';
+            const modal = document.getElementById('expenseModal');
+            if (modal) modal.classList.remove('hidden');
             renderExpenseList();
         }
+
         function saveExpenseRecord(e) {
             e.preventDefault();
-            expenses.push({
-                title: toTitleCaseWords(document.getElementById('expTitle').value),
+            const entry = {
+                title: toTitleCaseWords(document.getElementById('expTitle').value.trim()),
                 amount: parseFloat(document.getElementById('expAmount').value) || 0,
                 date: document.getElementById('expDate').value,
                 mode: document.getElementById('expMode').value
-            });
+            };
+            if (expEditIdx !== '') {
+                expenses[parseInt(expEditIdx, 10)] = entry;
+                expEditIdx = '';
+            } else {
+                expenses.push(entry);
+            }
             localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
             document.getElementById('expenseForm').reset();
             document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+            const subBtn = document.querySelector('#expenseForm button[type="submit"]');
+            if (subBtn) subBtn.innerText = "💾 Add Expense";
             renderExpenseList();
         }
+
+        function startEditExpense(origIdx) {
+            const ex = expenses[origIdx];
+            if (!ex) return;
+            expEditIdx = String(origIdx);
+            document.getElementById('expTitle').value = ex.title || '';
+            document.getElementById('expAmount').value = ex.amount || '';
+            document.getElementById('expDate').value = ex.date || '';
+            const modeSel = document.getElementById('expMode');
+            if (modeSel) {
+                for (let i = 0; i < modeSel.options.length; i++) {
+                    if (modeSel.options[i].value === ex.mode) { modeSel.selectedIndex = i; break; }
+                }
+            }
+            const subBtn = document.querySelector('#expenseForm button[type="submit"]');
+            if (subBtn) subBtn.innerText = "✅ Update Expense";
+        }
+
         function deleteExpenseWith3Steps(origIdx) {
             const ex = expenses[origIdx];
+            if (!ex) return;
             if (!confirm(`⚠️ Step 1/3: क्या आप खर्च "${ex.title} (₹${ex.amount})" को डिलीट करना चाहते हैं?`)) return;
             if (!confirm(`🛑 Step 2/3: यह रिकॉर्ड स्थायी रूप से हट जाएगा। क्या आप कंफर्म हैं?`)) return;
             const code = prompt(`🔐 Step 3/3: डिलीट करने के लिए राशि (${ex.amount}) टाइप करें:`);
@@ -3812,78 +3942,171 @@
                 alert("❌ राशि मैच नहीं हुई! रिकॉर्ड सुरक्षित है।");
             }
         }
+
+        function exportExpenseCsv() {
+            let csv = "Serial,Financial Year,Date,Expense Description,Payment Mode,Amount\n";
+            expenses.forEach((ex, i) => {
+                csv += `${i + 1},${getFinancialYearLabel(ex.date)},${formatDisplayDate(ex.date)},"${ex.title}",${ex.mode},${ex.amount}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Buddha_Library_Expenses_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
         function renderExpenseList() {
             const box = document.getElementById('expenseListBox');
             if (!box) return;
-            if (expenses.length === 0) {
-                box.innerHTML = '<p class="text-center text-slate-400 py-3">कोई खर्च दर्ज नहीं है।</p>';
-                return;
-            }
-            const years = [...new Set(expenses.map(x => (x.date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
-            const yearBtns = years.map(y =>
-                `<button onclick="selectedExpYearFilter='${y}';renderExpenseList();" class="${selectedExpYearFilter===y?'bg-red-900 text-white':'bg-slate-200 text-slate-800'} px-2 py-0.5 rounded text-[10px] font-extrabold">${y}</button>`
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const thisMonthPrefix = todayStr.slice(0, 7);
+            const curFy = getCurrentFinancialYearLabel();
+
+            const fySet = new Set([curFy]);
+            expenses.forEach(x => { if (x.date) fySet.add(getFinancialYearLabel(x.date)); });
+            const fyList = Array.from(fySet).sort().reverse();
+
+            const fyScoped = expenses.map((ex, idx) => ({ ex, idx }))
+                .filter(o => expFyFilter === 'All' || getFinancialYearLabel(o.ex.date) === expFyFilter);
+
+            let todaySum = 0, monthSum = 0, fyTotalSum = 0, cashSum = 0, onlineSum = 0, bankSum = 0;
+            fyScoped.forEach(({ ex }) => {
+                const a = parseFloat(ex.amount) || 0;
+                fyTotalSum += a;
+                if (ex.date === todayStr) todaySum += a;
+                if (ex.date && ex.date.startsWith(thisMonthPrefix)) monthSum += a;
+                const mLow = String(ex.mode || '').toLowerCase();
+                if (mLow.includes('cash')) cashSum += a;
+                else if (mLow.includes('bank')) bankSum += a;
+                else onlineSum += a;
+            });
+
+            // उसी Financial Year की Personal Income से तुलना
+            const fyIncomeSum = personalIncomes
+                .filter(inc => expFyFilter === 'All' || getFinancialYearLabel(inc.date) === expFyFilter)
+                .reduce((acc, inc) => acc + (parseFloat(inc.amount) || 0), 0);
+            const netAfterExp = fyIncomeSum - fyTotalSum;
+
+            const qLow = expSearchQuery.trim().toLowerCase();
+            const finalList = fyScoped.filter(({ ex }) => {
+                if (expPeriodFilter === 'Today' && ex.date !== todayStr) return false;
+                if (expPeriodFilter === 'Month' && !(ex.date && ex.date.startsWith(thisMonthPrefix))) return false;
+                const mLow = String(ex.mode || '').toLowerCase();
+                if (expModeFilter === 'Cash' && !mLow.includes('cash')) return false;
+                if (expModeFilter === 'Online' && (mLow.includes('cash') || mLow.includes('bank'))) return false;
+                if (expModeFilter === 'Bank' && !mLow.includes('bank')) return false;
+                if (qLow) {
+                    const matchT = ex.title && ex.title.toLowerCase().includes(qLow);
+                    const matchD = formatDisplayDate(ex.date).includes(qLow);
+                    const matchA = String(ex.amount) === qLow;
+                    const matchM = mLow.includes(qLow);
+                    return matchT || matchD || matchA || matchM;
+                }
+                return true;
+            }).sort((a, b) => (b.ex.date || '').localeCompare(a.ex.date || ''));
+
+            const fyBtns = fyList.map(fy =>
+                `<button type="button" onclick="expFyFilter='${fy}';expPeriodFilter='All';renderExpenseList();" class="${expFyFilter===fy?'bg-red-900 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg text-[11px] font-extrabold">📆 ${fy}</button>`
             ).join('');
 
-            let listWithIdx = expenses.map((ex, idx) => ({ ex, idx }))
-                .filter(o => selectedExpYearFilter === 'All' || (o.ex.date || '').startsWith(selectedExpYearFilter))
-                .sort((a, b) => (b.ex.date || '').localeCompare(a.ex.date || ''));
-
-            let totCash = 0, totOnline = 0;
-            let monthTotals = {};
-            listWithIdx.forEach(({ ex }) => {
-                const a = parseFloat(ex.amount) || 0;
-                if (String(ex.mode || '').toLowerCase().includes('cash')) totCash += a; else totOnline += a;
-                const ym = (ex.date || '').slice(0, 7);
-                if (ym) monthTotals[ym] = (monthTotals[ym] || 0) + a;
-            });
-
-            const monthChips = Object.keys(monthTotals).sort().reverse().map(m =>
-                `<span class="bg-amber-50 border border-amber-300 text-amber-900 px-2 py-0.5 rounded text-[10px] font-extrabold">${getShortMonthYearLabel(m)}: ₹${monthTotals[m]}</span>`
-            ).join(' ');
-
             let html = `
-                <div class="bg-slate-100 p-2 rounded-xl border mb-2 flex flex-wrap items-center justify-between gap-1.5 text-[11px] font-extrabold">
-                    <div class="flex flex-wrap items-center gap-1">
-                        <span>📅 Year:</span>
-                        <button onclick="selectedExpYearFilter='All';renderExpenseList();" class="${selectedExpYearFilter==='All'?'bg-red-900 text-white':'bg-slate-200 text-slate-800'} px-2 py-0.5 rounded text-[10px]">All</button>
-                        ${yearBtns}
+                <div class="bg-slate-100 p-2.5 rounded-xl border border-slate-300 mb-2.5 space-y-2 text-[11px] font-extrabold">
+                    <div class="flex flex-wrap items-center justify-between gap-1.5">
+                        <div class="flex flex-wrap items-center gap-1">
+                            <button type="button" onclick="expFyFilter='All';expPeriodFilter='All';renderExpenseList();" class="${expFyFilter==='All'?'bg-red-900 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg">All FY</button>
+                            ${fyBtns}
+                        </div>
+                        <button type="button" onclick="exportExpenseCsv()" class="bg-teal-700 text-white px-2.5 py-1 rounded-lg text-[10.5px]">⬇️ CSV Export</button>
                     </div>
-                    <div class="text-rose-800">💵 Cash: ₹${totCash} | 📱 Online: ₹${totOnline} | Total: ₹${totCash + totOnline}</div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        <button type="button" onclick="expPeriodFilter=expPeriodFilter==='Today'?'All':'Today';renderExpenseList();" class="${expPeriodFilter==='Today'?'bg-purple-800 text-white':'bg-white text-slate-800 border'} p-2 rounded-lg text-left">📅 Today<br><span class="text-xs text-rose-700 ${expPeriodFilter==='Today'?'!text-white':''}">₹${todaySum}</span></button>
+                        <button type="button" onclick="expPeriodFilter=expPeriodFilter==='Month'?'All':'Month';renderExpenseList();" class="${expPeriodFilter==='Month'?'bg-purple-800 text-white':'bg-white text-slate-800 border'} p-2 rounded-lg text-left">🗓️ This Month<br><span class="text-xs text-rose-700 ${expPeriodFilter==='Month'?'!text-white':''}">₹${monthSum}</span></button>
+                        <div class="bg-rose-600 text-white p-2 rounded-lg text-left">📉 FY Expense<br><span class="text-xs">₹${fyTotalSum}</span></div>
+                        <div class="bg-slate-800 text-amber-300 p-2 rounded-lg text-left">📊 Net Balance<br><span class="text-xs">₹${netAfterExp}</span></div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <button type="button" onclick="expModeFilter='All';renderExpenseList();" class="${expModeFilter==='All'?'bg-slate-800 text-white':'bg-white border text-slate-700'} px-2.5 py-1 rounded-lg">All Modes</button>
+                        <button type="button" onclick="expModeFilter=expModeFilter==='Cash'?'All':'Cash';renderExpenseList();" class="${expModeFilter==='Cash'?'bg-amber-600 text-white':'bg-amber-50 border border-amber-300 text-amber-900'} px-2.5 py-1 rounded-lg">💵 Cash: ₹${cashSum}</button>
+                        <button type="button" onclick="expModeFilter=expModeFilter==='Online'?'All':'Online';renderExpenseList();" class="${expModeFilter==='Online'?'bg-indigo-700 text-white':'bg-indigo-50 border border-indigo-300 text-indigo-900'} px-2.5 py-1 rounded-lg">📱 Online/UPI: ₹${onlineSum}</button>
+                        <button type="button" onclick="expModeFilter=expModeFilter==='Bank'?'All':'Bank';renderExpenseList();" class="${expModeFilter==='Bank'?'bg-emerald-700 text-white':'bg-emerald-50 border border-emerald-300 text-emerald-900'} px-2.5 py-1 rounded-lg">🏦 Bank: ₹${bankSum}</button>
+                    </div>
+
+                    <input type="text" value="${expSearchQuery.replace(/"/g, '&quot;')}" oninput="expSearchQuery=this.value;renderExpenseList();" placeholder="🔍 खर्च का नाम, तारीख (DD-MM-YYYY), माध्यम या राशि से खोजें..." class="w-full bg-white border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold">
                 </div>
-                ${monthChips ? `<div class="flex flex-wrap gap-1 mb-2">${monthChips}</div>` : ''}
             `;
 
-            listWithIdx.forEach(({ ex, idx }, sNo) => {
-                html += `
-                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border mb-1 text-xs">
-                        <div><span class="bg-slate-800 text-white text-[10px] px-1.5 py-0.2 rounded font-bold mr-1">#${sNo + 1}</span> <b>${ex.title}</b> — <span class="text-rose-700 font-extrabold">₹${ex.amount}</span> <span class="text-[10px] bg-white px-1.5 py-0.2 rounded border font-bold">${ex.mode}</span></div>
-                        <div class="font-bold text-slate-700">${formatDisplayDate(ex.date)} <button onclick="deleteExpenseWith3Steps(${idx})" class="text-red-600 ml-2 font-extrabold" title="Delete">🗑️</button></div>
-                    </div>
-                `;
-            });
+            if (finalList.length === 0) {
+                html += `<p class="text-center text-slate-400 py-4 font-bold">📭 इस फ़िल्टर में कोई खर्च रिकॉर्ड नहीं मिला।</p>`;
+            } else {
+                finalList.forEach(({ ex, idx }, sNo) => {
+                    html += `
+                        <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border mb-1.5 text-xs shadow-sm">
+                            <div>
+                                <span class="bg-slate-800 text-white text-[10px] px-1.5 py-0.2 rounded font-bold mr-1">#${sNo + 1}</span>
+                                <b class="text-slate-900">${ex.title}</b> — <span class="text-rose-700 font-extrabold">₹${ex.amount}</span>
+                                <span class="text-[10px] bg-slate-100 px-1.5 py-0.2 rounded border font-bold ml-1">${ex.mode}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 font-bold text-slate-700 whitespace-nowrap">
+                                <span>${formatDisplayDate(ex.date)}</span>
+                                <button type="button" onclick="startEditExpense(${idx})" class="bg-amber-400 text-black px-2 py-0.5 rounded text-[10px] font-extrabold">✏️</button>
+                                <button type="button" onclick="deleteExpenseWith3Steps(${idx})" class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-extrabold">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
             box.innerHTML = html;
         }
 
-        // ================= Personal Income Ledger (Date-wise, 30-Day, Monthly, Annual) =================
-        let secretIncomeYearFilter = 'All';
-        let secretIncomeMonthFilter = 'All';
-        let secretIncomeDateFilter = 'All';
-        let secretIncomeLast30Only = false;
+        // ================= Professional Personal Income Ledger (Persistent Login, FY-Wise, Net Balance, Smart Search) =================
+        let secIncFyFilter = 'All';
+        let secIncModeFilter = 'All';
+        let secIncPeriodFilter = 'All'; // 'All', 'Today', 'Month'
+        let secIncSearchQuery = '';
+
+        function isSecretIncomeLoggedIn() {
+            return localStorage.getItem('buddha_personal_income_logged_in') === 'true';
+        }
 
         function openSecretIncomeLedgerModal() {
             closeAllOpenSections('secretIncomeModal');
-            const savedPin = localStorage.getItem('buddha_library_pin') || '7050';
-            const entered = prompt("🔐 Personal Income Ledger खोलने के लिए अपना 4-डिजिट PIN दर्ज करें:");
-            if (entered === null) return;
-            if (entered.trim() !== savedPin && entered.trim() !== '2026') {
-                alert("❌ गलत PIN!");
-                return;
+            if (!isSecretIncomeLoggedIn()) {
+                const savedPin = localStorage.getItem('buddha_library_pin') || '7050';
+                const entered = prompt("🔐 Personal Income Ledger खोलने के लिए अपना 4-डिजिट PIN दर्ज करें:\n(एक बार लॉगिन करने पर जब तक आप Logout नहीं करेंगे तब तक खुला रहेगा)");
+                if (entered === null) return;
+                if (entered.trim() !== savedPin && entered.trim() !== '2026') {
+                    alert("❌ गलत PIN! सही PIN दर्ज करें या मुख्य स्क्रीन पर Forgot PIN से रिकवर करें।");
+                    return;
+                }
+                localStorage.setItem('buddha_personal_income_logged_in', 'true');
             }
-            secretIncomeYearFilter = 'All';
-            secretIncomeMonthFilter = 'All';
-            secretIncomeDateFilter = 'All';
-            secretIncomeLast30Only = false;
+            secIncFyFilter = getCurrentFinancialYearLabel();
+            secIncModeFilter = 'All';
+            secIncPeriodFilter = 'All';
+            secIncSearchQuery = '';
             buildAndShowSecretIncomeModal();
+        }
+
+        function logoutSecretIncomeLedger() {
+            localStorage.removeItem('buddha_personal_income_logged_in');
+            const modal = document.getElementById('secretIncomeModal');
+            if (modal) modal.classList.add('hidden');
+            alert("🔒 Personal Income Ledger सुरक्षित रूप से लॉक (Logout) कर दिया गया है।");
+        }
+
+        function exportPersonalIncomeCsv() {
+            let csv = "Serial,Financial Year,Date,Source / Person,Description,Payment Mode,Amount\n";
+            personalIncomes.forEach((item, i) => {
+                csv += `${i + 1},${getFinancialYearLabel(item.date)},${formatDisplayDate(item.date)},"${item.source}","${item.desc}",${item.mode},${item.amount}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Personal_Income_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
         }
 
         function buildAndShowSecretIncomeModal() {
@@ -3896,16 +4119,23 @@
             }
             const today = new Date().toISOString().split('T')[0];
             modal.innerHTML = `
-                <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border-2 border-slate-300 overflow-hidden my-auto max-h-[92vh] flex flex-col">
-                    <div class="theme-maroon text-white p-3.5 flex justify-between items-center">
+                <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border-2 border-slate-300 overflow-hidden my-auto max-h-[94vh] flex flex-col">
+                    <div class="theme-maroon text-white p-3.5 flex flex-wrap justify-between items-center gap-2">
                         <div>
-                            <h3 class="text-base sm:text-lg font-extrabold text-white tracking-wide">Personal Income Ledger</h3>
-                            <p class="text-[11px] text-slate-200">तारीख-वार, पिछले 30 दिन, महीना-वार और हर साल का अलग-अलग हिसाब</p>
+                            <h3 class="text-base sm:text-lg font-extrabold text-white tracking-wide">💼 Personal Income Ledger (Financial Year Account)</h3>
+                            <p class="text-[11px] text-slate-200">स्थायी लॉगिन • माध्यम-वार व वित्तीय वर्ष लेजर • कुल खर्च समायोजन (Net Balance)</p>
                         </div>
-                        <button type="button" onclick="document.getElementById('secretIncomeModal').classList.add('hidden')" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">✖ Close</button>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button type="button" onclick="changeAppPin()" class="bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold border border-white/20">🔑 Change PIN</button>
+                            <button type="button" onclick="openForgotPin()" class="bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold border border-white/20">❓ Forgot PIN</button>
+                            <button type="button" onclick="logoutSecretIncomeLedger()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-3 py-1.5 rounded-xl text-[11px] font-black shadow">🔒 Logout</button>
+                            <button type="button" onclick="document.getElementById('secretIncomeModal').classList.add('hidden')" class="bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-extrabold">✖ Close</button>
+                        </div>
                     </div>
 
                     <div class="p-3.5 overflow-y-auto space-y-3">
+                        <div id="secretIncomeHeaderStats"></div>
+
                         <form onsubmit="savePersonalIncomeEntry(event)" class="bg-slate-50 border border-slate-300 p-3 rounded-xl grid grid-cols-1 sm:grid-cols-6 gap-2 text-xs">
                             <input type="hidden" id="secIncEditIdx" value="">
                             <div class="sm:col-span-2">
@@ -3923,7 +4153,7 @@
                             <div>
                                 <label class="block font-extrabold text-slate-700 mb-0.5">माध्यम (Mode)</label>
                                 <select id="secIncMode" class="w-full border border-slate-300 p-2 rounded-lg font-bold bg-white">
-                                    <option value="Cash">💵 Cash</option>
+                                    <option value="Cash">💵 Cash (Offline)</option>
                                     <option value="Online / UPI">📱 Online / UPI</option>
                                     <option value="Bank Transfer">🏦 Bank Transfer</option>
                                 </select>
@@ -3938,14 +4168,13 @@
                             </div>
                         </form>
 
-                        <div id="secretIncomeSummaryBar"></div>
-
                         <div class="overflow-x-auto border rounded-xl">
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-slate-800 text-white font-extrabold">
                                     <tr>
                                         <th class="p-2">S.No</th>
                                         <th class="p-2">Date</th>
+                                        <th class="p-2">FY</th>
                                         <th class="p-2">किससे / कहाँ से</th>
                                         <th class="p-2">विवरण (Description)</th>
                                         <th class="p-2">माध्यम</th>
@@ -3974,7 +4203,7 @@
                 date: document.getElementById('secIncDate').value
             };
             if (editIdx !== '') {
-                personalIncomes[parseInt(editIdx)] = entry;
+                personalIncomes[parseInt(editIdx, 10)] = entry;
             } else {
                 personalIncomes.push(entry);
             }
@@ -4022,97 +4251,119 @@
         }
 
         function renderSecretIncomeLedger() {
-            const sumBar = document.getElementById('secretIncomeSummaryBar');
+            const headerBox = document.getElementById('secretIncomeHeaderStats');
             const tbody = document.getElementById('secretIncomeTableBody');
-            if (!sumBar || !tbody) return;
+            if (!headerBox || !tbody) return;
 
-            const todayObj = new Date();
-            const todayStr = todayObj.toISOString().split('T')[0];
-            const d30Ago = new Date(todayObj);
-            d30Ago.setDate(d30Ago.getDate() - 30);
-            const str30Ago = d30Ago.toISOString().split('T')[0];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const thisMonthPrefix = todayStr.slice(0, 7);
+            const curFy = getCurrentFinancialYearLabel();
 
-            // 1. पिछले 30 दिन का अलग टोटल
-            let last30Total = 0;
-            // 2. हर साल का अलग टोटल
-            let yearTotals = {};
-            personalIncomes.forEach(x => {
-                const a = parseFloat(x.amount) || 0;
-                if (x.date && x.date >= str30Ago && x.date <= todayStr) last30Total += a;
-                const y = (x.date || '').slice(0, 4);
-                if (y) yearTotals[y] = (yearTotals[y] || 0) + a;
+            const fySet = new Set([curFy]);
+            personalIncomes.forEach(x => { if (x.date) fySet.add(getFinancialYearLabel(x.date)); });
+            expenses.forEach(x => { if (x.date) fySet.add(getFinancialYearLabel(x.date)); });
+            const fyList = Array.from(fySet).sort().reverse();
+
+            const fyScoped = personalIncomes.map((item, idx) => ({ item, idx }))
+                .filter(o => secIncFyFilter === 'All' || getFinancialYearLabel(o.item.date) === secIncFyFilter);
+
+            let todaySum = 0, monthSum = 0, fyIncomeTotal = 0, cashSum = 0, onlineSum = 0, bankSum = 0;
+            fyScoped.forEach(({ item }) => {
+                const a = parseFloat(item.amount) || 0;
+                fyIncomeTotal += a;
+                if (item.date === todayStr) todaySum += a;
+                if (item.date && item.date.startsWith(thisMonthPrefix)) monthSum += a;
+                const mLow = String(item.mode || '').toLowerCase();
+                if (mLow.includes('cash')) cashSum += a;
+                else if (mLow.includes('bank')) bankSum += a;
+                else onlineSum += a;
             });
 
-            const yearHtml = Object.keys(yearTotals).sort().reverse().map(y =>
-                `<button type="button" onclick="secretIncomeYearFilter='${y}';secretIncomeMonthFilter='All';secretIncomeDateFilter='All';secretIncomeLast30Only=false;renderSecretIncomeLedger();" class="${(!secretIncomeLast30Only && secretIncomeYearFilter===y)?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded font-extrabold text-[11px]">🏦 ${y}: ₹${yearTotals[y]}</button>`
+            // उसी Financial Year का कुल खर्च घटाकर शुद्ध बचत (Net Balance) निकालना
+            const fyExpenseTotal = expenses
+                .filter(ex => secIncFyFilter === 'All' || getFinancialYearLabel(ex.date) === secIncFyFilter)
+                .reduce((acc, ex) => acc + (parseFloat(ex.amount) || 0), 0);
+            const netBalance = fyIncomeTotal - fyExpenseTotal;
+
+            const qLow = secIncSearchQuery.trim().toLowerCase();
+            const finalRows = fyScoped.filter(({ item }) => {
+                if (secIncPeriodFilter === 'Today' && item.date !== todayStr) return false;
+                if (secIncPeriodFilter === 'Month' && !(item.date && item.date.startsWith(thisMonthPrefix))) return false;
+                const mLow = String(item.mode || '').toLowerCase();
+                if (secIncModeFilter === 'Cash' && !mLow.includes('cash')) return false;
+                if (secIncModeFilter === 'Online' && (mLow.includes('cash') || mLow.includes('bank'))) return false;
+                if (secIncModeFilter === 'Bank' && !mLow.includes('bank')) return false;
+                if (qLow) {
+                    const matchS = item.source && item.source.toLowerCase().includes(qLow);
+                    const matchDesc = item.desc && item.desc.toLowerCase().includes(qLow);
+                    const matchDate = formatDisplayDate(item.date).includes(qLow);
+                    const matchAmt = String(item.amount) === qLow;
+                    const matchMode = mLow.includes(qLow);
+                    return matchS || matchDesc || matchDate || matchAmt || matchMode;
+                }
+                return true;
+            }).sort((a, b) => (b.item.date || '').localeCompare(a.item.date || ''));
+
+            const fyBtns = fyList.map(fy =>
+                `<button type="button" onclick="secIncFyFilter='${fy}';secIncPeriodFilter='All';renderSecretIncomeLedger();" class="${secIncFyFilter===fy?'bg-red-900 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg text-[11px] font-extrabold">📆 ${fy}</button>`
             ).join('');
 
-            const yearFiltered = personalIncomes.map((item, idx) => ({ item, idx }))
-                .filter(o => {
-                    if (secretIncomeLast30Only) return o.item.date && o.item.date >= str30Ago && o.item.date <= todayStr;
-                    return secretIncomeYearFilter === 'All' || (o.item.date || '').startsWith(secretIncomeYearFilter);
-                });
+            headerBox.innerHTML = `
+                <div class="bg-slate-100 p-3 rounded-xl border border-slate-300 space-y-2.5 text-xs font-extrabold">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-slate-700">Financial Year:</span>
+                            <button type="button" onclick="secIncFyFilter='All';secIncPeriodFilter='All';renderSecretIncomeLedger();" class="${secIncFyFilter==='All'?'bg-red-900 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-1 rounded-lg text-[11px]">All FY</button>
+                            ${fyBtns}
+                        </div>
+                        <button type="button" onclick="exportPersonalIncomeCsv()" class="bg-teal-700 hover:bg-teal-600 text-white px-3 py-1 rounded-lg text-[11px]">⬇️ Export CSV</button>
+                    </div>
 
-            // 3. हर महीने का अलग टोटल
-            let monthTotals = {};
-            yearFiltered.forEach(({ item }) => {
-                const ym = (item.date || '').slice(0, 7);
-                if (ym) monthTotals[ym] = (monthTotals[ym] || 0) + (parseFloat(item.amount) || 0);
-            });
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        <button type="button" onclick="secIncPeriodFilter=secIncPeriodFilter==='Today'?'All':'Today';renderSecretIncomeLedger();" class="${secIncPeriodFilter==='Today'?'bg-purple-800 text-white':'bg-white text-slate-800 border'} p-2.5 rounded-xl text-left shadow-sm">
+                            <span class="text-[10.5px] opacity-80">📅 Today Income</span><br>
+                            <span class="text-sm font-black text-emerald-700 ${secIncPeriodFilter==='Today'?'!text-white':''}">₹${todaySum}</span>
+                        </button>
+                        <button type="button" onclick="secIncPeriodFilter=secIncPeriodFilter==='Month'?'All':'Month';renderSecretIncomeLedger();" class="${secIncPeriodFilter==='Month'?'bg-purple-800 text-white':'bg-white text-slate-800 border'} p-2.5 rounded-xl text-left shadow-sm">
+                            <span class="text-[10.5px] opacity-80">🗓️ This Month</span><br>
+                            <span class="text-sm font-black text-emerald-700 ${secIncPeriodFilter==='Month'?'!text-white':''}">₹${monthSum}</span>
+                        </button>
+                        <div class="bg-emerald-700 text-white p-2.5 rounded-xl text-left shadow-sm">
+                            <span class="text-[10.5px] opacity-90">💰 ${secIncFyFilter === 'All' ? 'All FY' : secIncFyFilter} Income</span><br>
+                            <span class="text-sm font-black">₹${fyIncomeTotal}</span>
+                        </div>
+                        <div onclick="openExpenseModal()" class="bg-rose-50 border border-rose-300 text-rose-900 p-2.5 rounded-xl text-left cursor-pointer hover:bg-rose-100" title="खर्च देखने के लिए क्लिक करें">
+                            <span class="text-[10.5px]">📉 Less: FY Expense</span><br>
+                            <span class="text-sm font-black text-rose-700">- ₹${fyExpenseTotal}</span>
+                        </div>
+                        <div class="col-span-2 sm:col-span-1 bg-slate-900 text-amber-300 p-2.5 rounded-xl text-left shadow-sm">
+                            <span class="text-[10.5px] text-slate-300">📊 Net Balance (बचत)</span><br>
+                            <span class="text-sm font-black">₹${netBalance}</span>
+                        </div>
+                    </div>
 
-            const monthBtns = Object.keys(monthTotals).sort().reverse().map(m =>
-                `<button type="button" onclick="secretIncomeMonthFilter='${secretIncomeMonthFilter===m?'All':m}';secretIncomeDateFilter='All';renderSecretIncomeLedger();" class="${secretIncomeMonthFilter===m?'bg-emerald-700 text-white ring-2 ring-amber-400':'bg-slate-100 text-slate-900 border border-slate-300'} px-2 py-0.5 rounded font-extrabold text-[10.5px]">🗓️ ${getShortMonthYearLabel(m)}: ₹${monthTotals[m]}</button>`
-            ).join(' ');
-
-            const monthFiltered = yearFiltered.filter(o => secretIncomeMonthFilter === 'All' || (o.item.date || '').startsWith(secretIncomeMonthFilter));
-
-            // 4. हर तारीख (Date-wise) का अलग टोटल
-            let dateTotals = {};
-            monthFiltered.forEach(({ item }) => {
-                if (item.date) dateTotals[item.date] = (dateTotals[item.date] || 0) + (parseFloat(item.amount) || 0);
-            });
-
-            const dateBtns = Object.keys(dateTotals).sort().reverse().map(d =>
-                `<button type="button" onclick="secretIncomeDateFilter='${secretIncomeDateFilter===d?'All':d}';renderSecretIncomeLedger();" class="${secretIncomeDateFilter===d?'bg-purple-800 text-white ring-2 ring-amber-400':'bg-purple-50 text-purple-950 border border-purple-200'} px-2 py-0.5 rounded font-extrabold text-[10.5px]">📅 ${formatDisplayDate(d)}: ₹${dateTotals[d]}</button>`
-            ).join(' ');
-
-            const finalRows = monthFiltered
-                .filter(o => secretIncomeDateFilter === 'All' || o.item.date === secretIncomeDateFilter)
-                .sort((a, b) => (b.item.date || '').localeCompare(a.item.date || ''));
-
-            let cSum = 0, oSum = 0;
-            finalRows.forEach(({ item }) => {
-                const a = parseFloat(item.amount) || 0;
-                if (String(item.mode || '').toLowerCase().includes('cash')) cSum += a; else oSum += a;
-            });
-
-            sumBar.innerHTML = `
-                <div class="bg-slate-100 p-2.5 rounded-xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-extrabold">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <button type="button" onclick="secretIncomeYearFilter='All';secretIncomeMonthFilter='All';secretIncomeDateFilter='All';secretIncomeLast30Only=false;renderSecretIncomeLedger();" class="${(!secretIncomeLast30Only && secretIncomeYearFilter==='All')?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2.5 py-0.5 rounded text-[11px]">All Years</button>
-                        <button type="button" onclick="secretIncomeLast30Only=!secretIncomeLast30Only;secretIncomeMonthFilter='All';secretIncomeDateFilter='All';renderSecretIncomeLedger();" class="${secretIncomeLast30Only?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-900 border border-indigo-300'} px-2.5 py-0.5 rounded text-[11px]">⏳ Last 30 Days: ₹${last30Total}</button>
-                        ${yearHtml}
+                        <button type="button" onclick="secIncModeFilter='All';renderSecretIncomeLedger();" class="${secIncModeFilter==='All'?'bg-slate-800 text-white':'bg-white border text-slate-700'} px-2.5 py-1 rounded-lg text-[11px]">All Modes (${fyScoped.length})</button>
+                        <button type="button" onclick="secIncModeFilter=secIncModeFilter==='Cash'?'All':'Cash';renderSecretIncomeLedger();" class="${secIncModeFilter==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-800':'bg-amber-50 border border-amber-300 text-amber-900'} px-2.5 py-1 rounded-lg text-[11px]">💵 Cash (Offline): ₹${cashSum}</button>
+                        <button type="button" onclick="secIncModeFilter=secIncModeFilter==='Online'?'All':'Online';renderSecretIncomeLedger();" class="${secIncModeFilter==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 border border-indigo-300 text-indigo-900'} px-2.5 py-1 rounded-lg text-[11px]">📱 Online / UPI: ₹${onlineSum}</button>
+                        <button type="button" onclick="secIncModeFilter=secIncModeFilter==='Bank'?'All':'Bank';renderSecretIncomeLedger();" class="${secIncModeFilter==='Bank'?'bg-emerald-700 text-white ring-2 ring-amber-400':'bg-emerald-50 border border-emerald-300 text-emerald-900'} px-2.5 py-1 rounded-lg text-[11px]">🏦 Bank Transfer: ₹${bankSum}</button>
                     </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="bg-white px-2 py-0.5 rounded border">💵 Cash: ₹${cSum}</span>
-                        <span class="bg-white px-2 py-0.5 rounded border text-indigo-800">📱 Online: ₹${oSum}</span>
-                        <span class="bg-emerald-700 text-white px-2.5 py-0.5 rounded">💰 Shown Total: ₹${cSum + oSum}</span>
-                    </div>
+
+                    <input type="text" value="${secIncSearchQuery.replace(/"/g, '&quot;')}" oninput="secIncSearchQuery=this.value;renderSecretIncomeLedger();" placeholder="🔍 नाम, विवरण, तारीख (DD-MM-YYYY), माध्यम या राशि (जैसे 300, 5000) से खोजें..." class="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-xs font-bold">
                 </div>
-                ${monthBtns ? `<div class="flex flex-wrap items-center gap-1.5 mt-2"><span class="text-[11px] font-extrabold text-slate-600">महीना-वार टोटल:</span> ${monthBtns}</div>` : ''}
-                ${dateBtns ? `<div class="flex flex-wrap items-center gap-1.5 mt-1.5"><span class="text-[11px] font-extrabold text-purple-900">तारीख-वार टोटल:</span> ${dateBtns}</div>` : ''}
             `;
 
             if (finalRows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 font-bold">📭 इस फ़िल्टर में कोई आय दर्ज नहीं है।</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500 font-bold">📭 इस फ़िल्टर में कोई आय दर्ज नहीं है।</td></tr>`;
             } else {
                 tbody.innerHTML = finalRows.map(({ item, idx }, sNo) => `
                     <tr class="border-b hover:bg-slate-50">
                         <td class="p-2 font-extrabold">${sNo + 1}</td>
                         <td class="p-2 font-bold text-purple-900 whitespace-nowrap">${formatDisplayDate(item.date)}</td>
+                        <td class="p-2 font-bold text-slate-500 whitespace-nowrap">${getFinancialYearLabel(item.date)}</td>
                         <td class="p-2 font-extrabold text-slate-900">${item.source}</td>
                         <td class="p-2 text-slate-700 font-semibold">${item.desc}</td>
-                        <td class="p-2 font-bold">${item.mode}</td>
+                        <td class="p-2 font-bold whitespace-nowrap">${item.mode}</td>
                         <td class="p-2 text-right font-extrabold text-emerald-700 bg-emerald-50/60">₹${item.amount}</td>
                         <td class="p-2 text-center whitespace-nowrap">
                             <button type="button" onclick="editSecretIncomeEntry(${idx})" class="bg-amber-400 text-black px-2 py-0.5 rounded text-[10px] font-extrabold mr-1">✏️ Edit</button>
@@ -4214,5 +4465,6 @@
     </script>
 </body>
 </html>
+ 
 
 
