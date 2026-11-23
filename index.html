@@ -3953,5 +3953,68 @@
             a.click();
         }
     </script>
+    <!-- Personal Income & Expense Firebase Cloud Sync Patch -->
+    <script>
+        function syncPersonalLedgerToFirebase() {
+            if (!firebaseDbUrl) return;
+            const base = firebaseDbUrl.endsWith('/') ? firebaseDbUrl : firebaseDbUrl + '/';
+            fetch(base + 'personal_incomes.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(personalIncomes)
+            }).catch(() => {});
+            fetch(base + 'expenses.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(expenses)
+            }).catch(() => {});
+        }
+
+        function fetchPersonalLedgerFromFirebase() {
+            if (!firebaseDbUrl) return;
+            const base = firebaseDbUrl.endsWith('/') ? firebaseDbUrl : firebaseDbUrl + '/';
+            fetch(base + 'personal_incomes.json').then(r => r.json()).then(data => {
+                if (Array.isArray(data)) {
+                    personalIncomes = data;
+                    localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+                    const m = document.getElementById('expenseModal');
+                    if (m && !m.classList.contains('hidden')) renderPersonalIncomeLedger();
+                }
+            }).catch(() => {});
+
+            fetch(base + 'expenses.json').then(r => r.json()).then(data => {
+                if (Array.isArray(data)) {
+                    expenses = data;
+                    localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
+                    const m = document.getElementById('expenseModal');
+                    if (m && !m.classList.contains('hidden')) renderPersonalIncomeLedger();
+                }
+            }).catch(() => {});
+        }
+
+        const _origSavePersonalLedgerEntry = savePersonalLedgerEntry;
+        savePersonalLedgerEntry = function(e) {
+            _origSavePersonalLedgerEntry(e);
+            syncPersonalLedgerToFirebase();
+        };
+
+        const _origDeletePersonalLedgerEntry = deletePersonalLedgerEntry;
+        deletePersonalLedgerEntry = function(origIdx) {
+            _origDeletePersonalLedgerEntry(origIdx);
+            syncPersonalLedgerToFirebase();
+        };
+
+        const _origOpenExpenseModal = openExpenseModal;
+        openExpenseModal = function() {
+            _origOpenExpenseModal();
+            fetchPersonalLedgerFromFirebase();
+        };
+
+        const _origFetchFromFirebase = fetchFromFirebase;
+        fetchFromFirebase = function() {
+            _origFetchFromFirebase();
+            fetchPersonalLedgerFromFirebase();
+        };
+    </script>
 </body>
 </html>
