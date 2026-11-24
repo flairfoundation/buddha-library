@@ -997,6 +997,7 @@
         let currentTab = 'all';
         let currentSortOrder = 'id';
         let selectedGenderCorner = 'All';
+        let sectionInnerSearch = '';
         let displayLimit = 50;
         let firebaseDbUrl = localStorage.getItem('buddha_library_firebase_url') || '';
         let libraryLogo = localStorage.getItem('buddha_library_logo') || '';
@@ -1005,6 +1006,10 @@
         let hindiNameCache = {};
         let deferredPwaPrompt = null;
         let zoomModalRotation = 0;
+
+        let myColFilterMode = 'All';
+        let myColSearchQuery = '';
+        let lastBreakdownPeriod = 'today';
 
         let mediaAdjustState = {
             targetType: 'student',
@@ -1023,7 +1028,7 @@
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
         try { personalIncomes = JSON.parse(localStorage.getItem('buddha_library_personal_incomes') || '[]'); } catch(e) { personalIncomes = []; }
 
-        // Sateek 28-din prati maah (UTC math - mahina 28, 29, 30 ya 31 din ka ho, theek 28 din judega)
+        // सटीक 28-दिन प्रति माह (UTC गणना - महीना 28, 29, 30 या 31 का हो, ठीक 28 दिन जुड़ेगा)
         function addExact28DayMonths(startDateStr, monthsCount) {
             if (!startDateStr) return '';
             const parts = String(startDateStr).trim().split('-');
@@ -1034,7 +1039,6 @@
             return d.toISOString().split('T')[0];
         }
 
-        // IndexedDB for 2000+ students photos & docs
         function openBuddhaBigDB() {
             return new Promise((resolve, reject) => {
                 if (!window.indexedDB) { reject('No IDB'); return; }
@@ -1058,7 +1062,7 @@
             } catch (err) {}
         }
 
-        // Smart Merge: Kabhi bhi purane ya khali photo/data se naya data overwrite nahi hoga
+        // स्मार्ट मर्ज: कभी भी पुराने या खाली फोटो/डेटा से नया डेटा ओवरराइट नहीं होगा
         function mergeStudentArrays(localArr, remoteArr) {
             if (!Array.isArray(remoteArr) || remoteArr.length === 0) return localArr;
             if (!Array.isArray(localArr) || localArr.length === 0) return remoteArr;
@@ -1087,7 +1091,9 @@
             if (!Array.isArray(remoteArr) || remoteArr.length === 0) return localArr;
             if (!Array.isArray(localArr) || localArr.length === 0) return remoteArr;
             const map = new Map();
-            const makeKey = (item) => `${item.date || ''}|${item[keyField] || ''}|${item.amount || 0}|${item.mode || ''}|${item.desc || ''}`;
+            const makeKey = (item) => item.linkedInvNo
+                ? `INV:${item.linkedInvNo}`
+                : `${item.date || ''}|${item[keyField] || ''}|${item.amount || 0}|${item.mode || ''}|${item.desc || ''}`;
             localArr.forEach(item => map.set(makeKey(item), item));
             remoteArr.forEach(item => map.set(makeKey(item), item));
             return Array.from(map.values());
@@ -1129,6 +1135,12 @@
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
         }
 
+        // चाबी नंबर (Key No) में अक्षर व 0 सुरक्षित रखना (जैसे 0908, B06)
+        function cleanKeyVal(val) {
+            if(!val) return '';
+            return String(val).trim().toUpperCase();
+        }
+
         function formatDisplayDate(dateStr) {
             if(!dateStr || dateStr === '-') return '-';
             const parts = String(dateStr).trim().split('-');
@@ -1136,6 +1148,11 @@
                 return `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
             return dateStr;
+        }
+
+        function getShortMonthNameOnly(monthIndex0Based) {
+            const mNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return mNames[monthIndex0Based] || '';
         }
 
         function getFinancialYearLabel(dateStr) {
@@ -1358,7 +1375,8 @@
             });
         }
 
-        function setupPersonalIncomeBoxLabel() {
+        function setupUiTweaksWithoutBreakingDesign() {
+            // 1. Row 3 के Expense Tracker बॉक्स की जगह My Personal Income
             const expCard = document.querySelector('div[onclick="openExpenseModal()"]');
             if (expCard) {
                 expCard.innerHTML = `
@@ -1366,11 +1384,22 @@
                     <h3 class="text-[11px] sm:text-xs font-extrabold text-indigo-800 mt-0.5">Income & Expense ➔</h3>
                 `;
             }
+
+            // 2. Key No (चाबी नंबर) को मैन्युअल टेक्स्ट बनाना ताकि 0908, B06 आदि लिखा जा सके
+            ['keyNo', 'renewKeyNo'].forEach(id => {
+                const inp = document.getElementById(id);
+                if (inp) {
+                    inp.type = 'text';
+                    inp.removeAttribute('min');
+                    inp.removeAttribute('max');
+                    inp.placeholder = 'e.g. 0908, B06';
+                }
+            });
         }
 
         function initSystem() {
             normalizeStudentDates();
-            setupPersonalIncomeBoxLabel();
+            setupUiTweaksWithoutBreakingDesign();
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('admissionDateInput').value = today;
             document.getElementById('cycleStartDate').value = today;
@@ -1450,7 +1479,6 @@
             const paid = parseFloat(document.getElementById('paidNow').value) || 0;
             const due = Math.max(0, tot - paid);
             document.getElementById('remainingDue').value = due;
-            if(due === 0) document.getElementById('promiseDate').value = '';
         }
 
         function toggleOtherCourseBox() {
@@ -1723,6 +1751,33 @@
             closeMediaAdjuster();
         }
 
+        // स्टूडेंट के नए या एडिट किए गए पेमेंट को Personal Income में अपने आप जोड़ना/अपडेट करना
+        function syncStudentPaymentToPersonalIncome(s, p) {
+            if (!s || !p) return;
+            const amt = parseFloat(p.amount) || 0;
+            if (amt <= 0) return;
+            const invKey = p.invNo || ('PAY-' + s.uniId + '-' + (p.date || ''));
+            p.invNo = invKey;
+
+            const entryObj = {
+                linkedInvNo: invKey,
+                source: `ID:${s.uniId} - ${s.fullName}`,
+                desc: `Library Fee (${p.type || 'Fee'})`,
+                amount: amt,
+                mode: p.mode || 'Cash',
+                date: p.date || new Date().toISOString().split('T')[0]
+            };
+
+            const existingIdx = personalIncomes.findIndex(x => x.linkedInvNo === invKey);
+            if (existingIdx !== -1) {
+                personalIncomes[existingIdx] = entryObj;
+            } else {
+                personalIncomes.push(entryObj);
+            }
+            localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+            syncPersonalLedgerToFirebase();
+        }
+
         function saveStudentRecord(e) {
             e.preventDefault();
             const editIdx = document.getElementById('editIndex').value;
@@ -1738,7 +1793,7 @@
             const seatNo = cleanResNum(document.getElementById('seatNo').value);
             const chairNo = cleanResNum(document.getElementById('chairNo').value);
             const lockerNo = cleanResNum(document.getElementById('lockerNo').value);
-            const keyNo = cleanResNum(document.getElementById('keyNo').value);
+            const keyNo = cleanKeyVal(document.getElementById('keyNo').value);
 
             let studyCourse = document.getElementById('studyCourse').value;
             if(studyCourse === 'Other') studyCourse = toTitleCaseWords(document.getElementById('otherCourseInput').value.trim()) || 'Other';
@@ -1762,7 +1817,7 @@
             const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
             const paidNow = parseFloat(document.getElementById('paidNow').value) || 0;
             const remainingDue = Math.max(0, totalBill - paidNow);
-            const promiseDate = remainingDue > 0 ? document.getElementById('promiseDate').value : '';
+            const promiseDate = document.getElementById('promiseDate').value || '';
             const paymentMode = document.getElementById('paymentMode').value;
 
             if(isNaN(uniId) || uniId < 1 || uniId > 5000) {
@@ -1790,7 +1845,7 @@
 
             if(editIdx !== "") {
                 let st = students[editIdx];
-                if(remainingDue > 0 && promiseDate && promiseDate !== st.promiseDate) {
+                if(promiseDate && promiseDate !== st.promiseDate) {
                     if(!st.promiseHistory) st.promiseHistory = [];
                     if(st.promiseDate) {
                         st.promiseHistory.push({ failedDate: st.promiseDate, newDate: promiseDate, updatedOn: todayStr });
@@ -1813,6 +1868,24 @@
                 if(tempUploads.backBase64) st.aadhaarBack = tempUploads.backBase64;
             } else {
                 const invNo = "BL-" + Date.now().toString().slice(-6);
+                const firstPay = {
+                    invNo: invNo,
+                    date: billDate,
+                    startDate: cycleStartDate,
+                    endDate: validUpto,
+                    amount: paidNow,
+                    totalBill: totalBill,
+                    admissionFee: admFeeAmt,
+                    lockerRent: lockerRentAmt,
+                    lockerSecurity: lockerSecAmt,
+                    dueAfter: remainingDue,
+                    isGst: isGst,
+                    months: durationMonths,
+                    shiftAtTime: shiftPlan,
+                    mode: paymentMode,
+                    period: `${formatDisplayDate(cycleStartDate)} to ${formatDisplayDate(validUpto)} (${durationMonths * 28} Days)`,
+                    type: 'Admission'
+                };
                 let newSt = {
                     uniId, fullName, gender, mobile, guardianMobile, emailId, dob, address,
                     seatNo, chairNo, lockerNo, keyNo, studyCourse, shiftPlan,
@@ -1828,26 +1901,10 @@
                     photoFull: tempUploads.photoFull || '',
                     aadhaarFront: tempUploads.frontBase64 || '',
                     aadhaarBack: tempUploads.backBase64 || '',
-                    paymentHistory: [{
-                        invNo: invNo,
-                        date: billDate,
-                        startDate: cycleStartDate,
-                        endDate: validUpto,
-                        amount: paidNow,
-                        totalBill: totalBill,
-                        admissionFee: admFeeAmt,
-                        lockerRent: lockerRentAmt,
-                        lockerSecurity: lockerSecAmt,
-                        dueAfter: remainingDue,
-                        isGst: isGst,
-                        months: durationMonths,
-                        shiftAtTime: shiftPlan,
-                        mode: paymentMode,
-                        period: `${formatDisplayDate(cycleStartDate)} to ${formatDisplayDate(validUpto)} (${durationMonths * 28} Days)`,
-                        type: 'Admission'
-                    }]
+                    paymentHistory: [firstPay]
                 };
                 students.push(newSt);
+                syncStudentPaymentToPersonalIncome(newSt, firstPay);
             }
 
             syncAndSaveData();
@@ -1861,7 +1918,8 @@
             if(cleanResNum(s.seatNo)) parts.push(`<span class="text-red-800 font-extrabold">S-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.seatNo)}</span>`);
             if(cleanResNum(s.chairNo)) parts.push(`<span class="text-red-800 font-extrabold">C-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.chairNo)}</span>`);
             if(cleanResNum(s.lockerNo)) parts.push(`<span class="text-red-800 font-extrabold">L-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.lockerNo)}</span>`);
-            if(cleanResNum(s.keyNo)) parts.push(`<span class="text-red-800 font-extrabold">K-</span><span class="text-blue-700 font-extrabold">${cleanResNum(s.keyNo)}</span>`);
+            const kVal = cleanKeyVal(s.keyNo);
+            if(kVal) parts.push(`<span class="text-red-800 font-extrabold">K-</span><span class="text-blue-700 font-extrabold">${kVal.replace(/^K-/i, '')}</span>`);
             return parts.length > 0 ? parts.join(' <span class="text-slate-300">|</span> ') : '<span class="text-slate-400">No Seat/Locker</span>';
         }
 
@@ -1870,7 +1928,8 @@
             if(cleanResNum(s.seatNo)) parts.push(`S-${cleanResNum(s.seatNo)}`);
             if(cleanResNum(s.chairNo)) parts.push(`C-${cleanResNum(s.chairNo)}`);
             if(cleanResNum(s.lockerNo)) parts.push(`L-${cleanResNum(s.lockerNo)}`);
-            if(cleanResNum(s.keyNo)) parts.push(`K-${cleanResNum(s.keyNo)}`);
+            const kVal = cleanKeyVal(s.keyNo);
+            if(kVal) parts.push(`K-${kVal.replace(/^K-/i, '')}`);
             return parts.length > 0 ? parts.join(' | ') : 'N/A';
         }
 
@@ -1882,28 +1941,16 @@
 
         function filterTotalByGender(g) {
             selectedGenderCorner = g;
-            updateCornerGenderBtns();
             displayLimit = 50;
             renderStudentList();
         }
 
-        function updateCornerGenderBtns() {
-            const ebAll = document.getElementById('expCornerBtn-All');
-            const ebMale = document.getElementById('expCornerBtn-Male');
-            const ebFemale = document.getElementById('expCornerBtn-Female');
-            if (ebAll) {
-                ebAll.className = (selectedGenderCorner === 'All' && currentTab === 'expired') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
-                ebMale.className = (selectedGenderCorner === 'Male' && currentTab === 'expired') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-                ebFemale.className = (selectedGenderCorner === 'Female' && currentTab === 'expired') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
-            }
-            const obAll = document.getElementById('outCornerBtn-All');
-            const obMale = document.getElementById('outCornerBtn-Male');
-            const obFemale = document.getElementById('outCornerBtn-Female');
-            if (obAll) {
-                obAll.className = (selectedGenderCorner === 'All') ? "bg-slate-900 text-yellow-300 px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-800 px-2 py-0.5 rounded-md";
-                obMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-                obFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
-            }
+        function onSectionInnerSearch(val) {
+            sectionInnerSearch = (val || '').trim();
+            displayLimit = 50;
+            renderStudentList();
+            const el = document.getElementById('innerTabSearchBox');
+            if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
         }
 
         function onSearchInputChanged() {
@@ -1919,6 +1966,7 @@
 
         function clearSearchBox() {
             document.getElementById('searchInput').value = '';
+            sectionInnerSearch = '';
             const dashWrap = document.getElementById('dashboardCardsWrapper');
             if(dashWrap) dashWrap.classList.remove('hidden');
             displayLimit = 50;
@@ -1953,6 +2001,8 @@
             if(!container) return;
             const rawQuery = document.getElementById('searchInput').value.trim();
             const qLower = rawQuery.toLowerCase();
+            const innerQ = sectionInnerSearch.trim();
+            const innerQLow = innerQ.toLowerCase();
             container.innerHTML = '';
 
             const today = new Date().toISOString().split('T')[0];
@@ -1965,7 +2015,34 @@
                     expBar.id = 'autoExpiredCornerBar';
                     anchorEl.parentNode.insertBefore(expBar, anchorEl.nextSibling);
                 }
-                if ((currentTab === 'expired' || currentTab === 'out_members') && !rawQuery) {
+
+                if (!rawQuery && (currentTab === 'all' || currentTab === 'active')) {
+                    // Total Members व Live Active में Boys/Girls संख्या + फ़िल्टर + अंदर सर्च बॉक्स
+                    let boysC = 0, girlsC = 0;
+                    students.forEach(st => {
+                        const isAct = st.validUpto >= today;
+                        if (currentTab === 'active' && (!isAct || st.isOut)) return;
+                        if ((st.gender || 'Male') === 'Female') girlsC++;
+                        else boysC++;
+                    });
+                    const barLabel = currentTab === 'active' ? '🟢 Live Active:' : '👥 Total Members:';
+                    expBar.className = "bg-blue-50 border border-blue-200 px-3 py-2 rounded-xl mb-3 space-y-2 text-[11px] font-extrabold shadow-sm fade-in";
+                    expBar.innerHTML = `
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-blue-950">${barLabel}</span>
+                                <button type="button" onclick="filterTotalByGender('All')" class="${selectedGenderCorner==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-700'} px-2.5 py-0.5 rounded-md">All: ${boysC + girlsC}</button>
+                                <button type="button" onclick="filterTotalByGender('Male')" class="${selectedGenderCorner==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2.5 py-0.5 rounded-md">👦 Boys: ${boysC}</button>
+                                <button type="button" onclick="filterTotalByGender('Female')" class="${selectedGenderCorner==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2.5 py-0.5 rounded-md">👧 Girls: ${girlsC}</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <input type="text" id="innerTabSearchBox" value="${sectionInnerSearch.replace(/"/g, '&quot;')}" oninput="onSectionInnerSearch(this.value)" placeholder="🔍 इस लिस्ट के अंदर ID, नाम या मोबाइल से खोजें..." class="w-full bg-white border border-blue-300 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-800 outline-none">
+                            ${sectionInnerSearch ? `<button type="button" onclick="onSectionInnerSearch('')" class="bg-slate-300 text-slate-800 px-2.5 py-1.5 rounded-lg text-xs font-extrabold">✖</button>` : ''}
+                        </div>
+                    `;
+                } else if ((currentTab === 'expired' || currentTab === 'out_members') && !rawQuery) {
+                    // Expired Members को पहले जैसा ही रखा गया है
                     let eBoys = 0, eGirls = 0, eBoysDue = 0, eGirlsDue = 0;
                     let oBoys = 0, oGirls = 0, oBoysDue = 0, oGirlsDue = 0;
 
@@ -1986,9 +2063,9 @@
                         expBar.innerHTML = `
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <span class="text-rose-900">📊 Active Expired (Max 3M):</span>
-                                <button id="expCornerBtn-All" onclick="setTab('expired', false)" class="bg-slate-800 text-white px-2 py-0.5 rounded-md">Total: ${eBoys + eGirls}</button>
-                                <button id="expCornerBtn-Male" onclick="filterTotalByGender('Male')" class="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md">👦 Boys: ${eBoys} (₹${eBoysDue})</button>
-                                <button id="expCornerBtn-Female" onclick="filterTotalByGender('Female')" class="bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md">👧 Girls: ${eGirls} (₹${eGirlsDue})</button>
+                                <button onclick="setTab('expired', false)" class="${selectedGenderCorner==='All'?'bg-slate-800 text-white ring-2 ring-amber-400':'bg-slate-200 text-slate-700'} px-2 py-0.5 rounded-md">Total: ${eBoys + eGirls}</button>
+                                <button onclick="filterTotalByGender('Male')" class="${selectedGenderCorner==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900 border border-blue-300'} px-2 py-0.5 rounded-md">👦 Boys: ${eBoys} (₹${eBoysDue})</button>
+                                <button onclick="filterTotalByGender('Female')" class="${selectedGenderCorner==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900 border border-pink-300'} px-2 py-0.5 rounded-md">👧 Girls: ${eGirls} (₹${eGirlsDue})</button>
                                 <button onclick="setTab('out_members', false)" class="bg-slate-200 hover:bg-slate-800 hover:text-white text-slate-900 border border-slate-400 px-2.5 py-0.5 rounded-md transition">🚪 OUT Folder: ${oBoys + oGirls}</button>
                             </div>
                             <span class="text-rose-800 bg-white px-2.5 py-0.5 rounded border border-rose-200">💰 Active Exp Due: ₹${eBoysDue + eGirlsDue}</span>
@@ -1998,15 +2075,14 @@
                         expBar.innerHTML = `
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <span class="text-yellow-300">🚪 OUT Summary:</span>
-                                <button id="outCornerBtn-All" onclick="filterTotalByGender('All')" class="bg-slate-900 text-yellow-300 px-2 py-0.5 rounded-md">Total OUT: ${oBoys + oGirls}</button>
-                                <button id="outCornerBtn-Male" onclick="filterTotalByGender('Male')" class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded-md">👦 Boys OUT: ${oBoys} (₹${oBoysDue})</button>
-                                <button id="outCornerBtn-Female" onclick="filterTotalByGender('Female')" class="bg-pink-100 text-pink-900 px-2 py-0.5 rounded-md">👧 Girls OUT: ${oGirls} (₹${oGirlsDue})</button>
+                                <button onclick="filterTotalByGender('All')" class="${selectedGenderCorner==='All'?'bg-slate-900 text-yellow-300 ring-2 ring-amber-400':'bg-slate-200 text-slate-800'} px-2 py-0.5 rounded-md">Total OUT: ${oBoys + oGirls}</button>
+                                <button onclick="filterTotalByGender('Male')" class="${selectedGenderCorner==='Male'?'bg-blue-700 text-white ring-2 ring-amber-400':'bg-blue-100 text-blue-900'} px-2 py-0.5 rounded-md">👦 Boys OUT: ${oBoys} (₹${oBoysDue})</button>
+                                <button onclick="filterTotalByGender('Female')" class="${selectedGenderCorner==='Female'?'bg-pink-700 text-white ring-2 ring-amber-400':'bg-pink-100 text-pink-900'} px-2 py-0.5 rounded-md">👧 Girls OUT: ${oGirls} (₹${oGirlsDue})</button>
                                 <button onclick="setTab('expired', false)" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-0.5 rounded-md transition">⬅️ Back to Active Expired (${eBoys + eGirls})</button>
                             </div>
                             <span class="text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded border border-slate-600">💰 Total OUT Dues: ₹${oBoysDue + oGirlsDue}</span>
                         `;
                     }
-                    updateCornerGenderBtns();
                 } else {
                     expBar.className = "hidden";
                 }
@@ -2041,8 +2117,18 @@
                     if(currentTab === 'active' && !isActive) return false;
                     if(currentTab === 'expired' && isActive) return false;
                     if(currentTab === 'dues' && !(parseFloat(s.remainingDue) > 0)) return false;
-                    if(currentTab === 'promise' && !(parseFloat(s.remainingDue) > 0)) return false;
+                    if(currentTab === 'promise' && !(parseFloat(s.remainingDue) > 0 || (s.promiseDate && s.promiseDate.trim() !== ''))) return false;
                     if(currentTab === 'expiring7' && !(daysLeft >= 0 && daysLeft <= 7)) return false;
+
+                    if (innerQ) {
+                        if(/^\d+$/.test(innerQ)) {
+                            if(parseInt(innerQ, 10) >= 1 && parseInt(innerQ, 10) <= 5000 && innerQ.length <= 4) {
+                                return parseInt(s.uniId, 10) === parseInt(innerQ, 10);
+                            }
+                            return (s.mobile && s.mobile.includes(innerQ)) || (s.guardianMobile && s.guardianMobile.includes(innerQ));
+                        }
+                        return (s.fullName && s.fullName.toLowerCase().includes(innerQLow)) || (s.address && s.address.toLowerCase().includes(innerQLow));
+                    }
                     return true;
                 }
 
@@ -2052,7 +2138,7 @@
                     }
                     return (s.mobile && s.mobile.includes(rawQuery)) || (s.guardianMobile && s.guardianMobile.includes(rawQuery));
                 }
-                return (s.fullName && s.fullName.toLowerCase().includes(qLower));
+                return (s.fullName && s.fullName.toLowerCase().includes(qLower)) || (s.address && s.address.toLowerCase().includes(qLower));
             });
 
             const tabNames = {
@@ -2105,6 +2191,7 @@
                 const rem = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
                 const totalRem = (rem.wa || 0) + (rem.sms || 0) + (rem.mail || 0);
                 const startShow = s.cycleStartDate || s.admissionDate || '-';
+                const hasPromiseOrDueOrRem = !s.isOut && (dueAmt > 0 || (s.promiseDate && s.promiseDate.trim() !== '') || totalRem > 0);
 
                 let card = document.createElement('div');
                 card.className = `bg-white p-3.5 rounded-2xl shadow-sm hover:shadow-md transition border-l-4 ${s.isOut ? 'border-slate-800 bg-slate-50/70' : (isActive ? (isExpiringSoon ? 'border-amber-500' : 'border-emerald-600') : 'border-rose-600')} flex flex-col justify-between`;
@@ -2162,15 +2249,17 @@
                                 </div>
                             ` : ''}
 
-                            ${(!s.isOut && (dueAmt > 0 || totalRem > 0)) ? `
+                            ${hasPromiseOrDueOrRem ? `
                                 <div class="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 text-[11px] flex flex-wrap items-center justify-between gap-1">
                                     <span class="font-extrabold text-red-800">
-                                        ${dueAmt > 0 ? `📅 Promise: ${s.promiseDate ? formatDisplayDate(s.promiseDate) : 'Not Set'}` : ''}
+                                        ${(dueAmt > 0 || s.promiseDate) ? `📅 Promise: ${s.promiseDate ? formatDisplayDate(s.promiseDate) : 'Not Set'}` : ''}
                                         ${lastFail ? `<span class="line-through text-slate-400 ml-1">(${formatDisplayDate(lastFail)})</span> <span class="bg-red-600 text-white px-1.5 py-0.2 rounded text-[10px] ml-1">❌ ${failList.length} बार वादा फेल</span>` : ''}
                                     </span>
-                                    <span class="text-[10px] font-extrabold text-indigo-900 bg-white px-2 py-0.5 rounded border">
-                                        🔔 Sent: ${totalRem} (WA:${rem.wa||0} | SMS:${rem.sms||0} | Mail:${rem.mail||0})
-                                    </span>
+                                    ${totalRem > 0 ? `
+                                        <span class="text-[10px] font-extrabold text-indigo-900 bg-white px-2 py-0.5 rounded border">
+                                            🔔 Sent: ${totalRem} (WA:${rem.wa||0} | SMS:${rem.sms||0} | Mail:${rem.mail||0})
+                                        </span>
+                                    ` : ''}
                                 </div>
                             ` : ''}
                         </div>
@@ -2253,11 +2342,12 @@
             const container = document.getElementById('promiseDefaulterListContainer');
             const todayStr = new Date().toISOString().split('T')[0];
 
-            let allDueMembers = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0);
+            let allDueMembers = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0 || (s.promiseDate && s.promiseDate.trim() !== ''));
             let bCount = 0, bDue = 0, gCount = 0, gDue = 0, defCount = 0;
 
             allDueMembers.forEach(s => {
-                const dueAmt = parseFloat(s.remainingDue) || 0;
+                const expInfo = getExpiredDailyDuesInfo(s, todayStr);
+                const dueAmt = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
                 let rate = 300;
                 if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
                 if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
@@ -2284,11 +2374,13 @@
                 filteredMembers = allDueMembers.filter(s => s.gender === 'Female');
             } else if (currentPromiseFilter === 'Defaulters') {
                 filteredMembers = allDueMembers.filter(s => {
+                    const expInfo = getExpiredDailyDuesInfo(s, todayStr);
+                    const dueAmt = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
                     let rate = 300;
                     if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
                     if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
                     if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
-                    return s.isOut || (parseFloat(s.remainingDue) >= (rate * 3));
+                    return s.isOut || (dueAmt >= (rate * 3));
                 });
             }
 
@@ -2304,6 +2396,8 @@
             } else {
                 container.innerHTML = filteredMembers.map(s => {
                     const originalIdx = students.indexOf(s);
+                    const expInfo = getExpiredDailyDuesInfo(s, todayStr);
+                    const showDue = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
                     const fails = s.promiseHistory ? s.promiseHistory.length : 0;
                     const isUrgent = s.promiseDate && s.promiseDate <= todayStr;
                     const isGirl = s.gender === 'Female';
@@ -2313,7 +2407,7 @@
                     if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
                     if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
 
-                    const is3MonthsDue = s.isOut || (parseFloat(s.remainingDue) >= (rate * 3));
+                    const is3MonthsDue = s.isOut || (showDue >= (rate * 3));
                     const outTag = is3MonthsDue ? '<div class="bg-slate-800 text-white text-center text-[10px] font-extrabold py-1 animate-pulse tracking-widest">🚨 3+ महीने का डिफॉल्टर (OUT घोषित)</div>' : '';
                     const failAlert = fails > 0 ? `<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded ml-2 border border-rose-300 text-[9px] shadow-sm">⚠️ ${fails} बार वादा तोड़ा</span>` : '';
                     const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
@@ -2331,7 +2425,7 @@
                                         <span class="text-[10px] text-slate-500 font-bold bg-slate-100 px-1 rounded">(ID: ${s.uniId})</span>
                                     </h4>
                                     <p class="text-xs font-bold mt-1 text-slate-700">
-                                        बकाया: <span class="text-red-600 font-extrabold text-sm">₹${s.remainingDue}</span>
+                                        बकाया: <span class="text-red-600 font-extrabold text-sm">₹${showDue}</span>
                                         ${failAlert}
                                     </p>
                                     <p class="text-[11px] font-bold text-slate-600 mt-1">
@@ -2382,7 +2476,7 @@
                 const billD = prompt("🧾 बिल / पेमेंट मिलने की तारीख (YYYY-MM-DD) दर्ज करें:", today) || today;
                 const mode = confirm("Cash के लिए OK दबाएं, Online/UPI के लिए Cancel दबाएं") ? "Cash" : "Online / UPI";
                 const invNo = "BL-" + Date.now().toString().slice(-6);
-                s.paymentHistory.push({
+                const payObj = {
                     invNo: invNo,
                     date: billD,
                     startDate: s.cycleStartDate || s.admissionDate,
@@ -2399,14 +2493,17 @@
                     mode: mode,
                     period: `${formatDisplayDate(s.cycleStartDate || s.admissionDate)} to ${formatDisplayDate(s.validUpto)} (Due Cleared)`,
                     type: 'Due Cleared'
-                });
+                };
+                if (!s.paymentHistory) s.paymentHistory = [];
+                s.paymentHistory.push(payObj);
                 s.remainingDue = 0;
                 s.promiseDate = '';
-                alert(`✅ ₹${paidAmt} बकाया जमा हो गया!`);
+                syncStudentPaymentToPersonalIncome(s, payObj);
+                alert(`✅ ₹${paidAmt} बकाया जमा हो गया और Personal Income में जुड़ गया!`);
             } else {
                 const newD = input.trim();
                 if(!/^\d{4}-\d{2}-\d{2}$/.test(newD)) {
-                    alert("❌ गलत तारीख फॉर्मेट! कृपया YYYY-MM-DD (जैसे 2026-11-16) लिखें।");
+                    alert("❌ गलत तारीख फॉर्मेट! कृपया YYYY-MM-DD (जैसे 2026-11-28) लिखें।");
                     return;
                 }
                 if(!s.promiseHistory) s.promiseHistory = [];
@@ -2420,6 +2517,7 @@
         }
 
         function openCollectionBreakdownModal(periodType) {
+            lastBreakdownPeriod = periodType;
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
             const thisMonthPrefix = todayStr.slice(0, 7);
@@ -2427,11 +2525,14 @@
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
+            const curMShort = getShortMonthNameOnly(now.getMonth());
+            const lastMShort = getShortMonthNameOnly(lastMonthDate.getMonth());
+
             const titles = {
-                today: `💵 Today's Collection List (${formatDisplayDate(todayStr)})`,
-                thisMonth: `📅 This Month's Collection List (${thisMonthPrefix})`,
-                lastMonth: `⏮️ Last Month's Collection List (${lastMonthPrefix})`,
-                thisYear: `🏦 This Year's Collection List (${thisYearPrefix})`
+                today: `💵 Today's Collection (${formatDisplayDate(todayStr)})`,
+                thisMonth: `📅 Collection (${curMShort} ${now.getFullYear()})`,
+                lastMonth: `⏮️ Collection (${lastMShort} ${lastMonthDate.getFullYear()})`,
+                thisYear: `🏦 Annual Collection (${thisYearPrefix})`
             };
             document.getElementById('colBreakdownHeading').innerText = titles[periodType] || "💵 Collection List";
 
@@ -2451,7 +2552,7 @@
                     else if(periodType === 'thisYear' && d.startsWith(thisYearPrefix)) matched = true;
 
                     if(matched) {
-                        if(p.mode === 'Cash') cashSum += amt;
+                        if(String(p.mode || '').toLowerCase().includes('cash')) cashSum += amt;
                         else onlineSum += amt;
                         rows.push({ s, sIdx, p, pIdx, amt });
                     }
@@ -2481,12 +2582,47 @@
                         <td class="p-2.5 text-slate-600">${r.p.type || 'Fee'}</td>
                         <td class="p-2.5 font-semibold">${r.p.mode || 'Cash'}</td>
                         <td class="p-2.5 text-right font-extrabold text-emerald-700 bg-emerald-50">₹${r.amt}</td>
-                        <td class="p-2.5 text-center"><button onclick="showInvoiceDetails(${r.sIdx}, ${r.pIdx})" class="bg-teal-700 text-white px-2.5 py-1 rounded text-[10px] font-extrabold">🧾 Bill</button></td>
+                        <td class="p-2.5 text-center whitespace-nowrap">
+                            <button onclick="showInvoiceDetails(${r.sIdx}, ${r.pIdx})" class="bg-teal-700 text-white px-2 py-1 rounded text-[10px] font-extrabold">🧾 Bill</button>
+                            <button onclick="editCollectionPaymentRecord(${r.sIdx}, ${r.pIdx})" class="bg-amber-400 hover:bg-amber-300 text-black px-2 py-1 rounded text-[10px] font-extrabold ml-1">✏️ Edit</button>
+                        </td>
                     </tr>
                 `).join('');
             }
 
             document.getElementById('collectionBreakdownModal').classList.remove('hidden');
+        }
+
+        function editCollectionPaymentRecord(sIdx, pIdx) {
+            const s = students[sIdx];
+            if (!s || !s.paymentHistory || !s.paymentHistory[pIdx]) return;
+            const p = s.paymentHistory[pIdx];
+
+            const newDate = prompt(`📅 नई बिल तारीख (YYYY-MM-DD) दर्ज करें:\n(छात्र: ${s.fullName}, ID: ${s.uniId})`, p.date || '');
+            if (newDate === null) return;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate.trim())) {
+                alert("❌ गलत तारीख फॉर्मेट! कृपया YYYY-MM-DD (जैसे 2026-11-24) लिखें।");
+                return;
+            }
+
+            const newAmtStr = prompt(`💵 सही जमा राशि (₹) दर्ज करें:`, p.amount);
+            if (newAmtStr === null) return;
+            const newAmt = parseFloat(newAmtStr);
+            if (isNaN(newAmt) || newAmt < 0) {
+                alert("❌ कृपया सही राशि दर्ज करें!");
+                return;
+            }
+
+            const isCash = confirm(`💳 पेमेंट माध्यम चुनें:\n• Cash (नकद) के लिए OK दबाएँ\n• Online / UPI के लिए Cancel दबाएँ`);
+            p.date = newDate.trim();
+            p.amount = newAmt;
+            p.mode = isCash ? 'Cash' : 'Online / UPI';
+
+            syncStudentPaymentToPersonalIncome(s, p);
+            syncAndSaveData();
+            renderStudentList();
+            openCollectionBreakdownModal(lastBreakdownPeriod);
+            alert("✅ पेमेंट, GST बिल और Personal Income तीनों जगह अपडेट हो गया!");
         }
 
         function openVacantModal() {
@@ -2534,7 +2670,6 @@
             }
         }
 
-        // ID Card par bhejne ke din tak ka poora bakaya tarikh ke saath
         function openIdCardModal(index) {
             const s = students[index];
             const today = new Date().toISOString().split('T')[0];
@@ -2657,7 +2792,7 @@
 
             const existingLocker = cleanResNum(s.lockerNo);
             document.getElementById('renewLockerNo').value = existingLocker;
-            document.getElementById('renewKeyNo').value = cleanResNum(s.keyNo);
+            document.getElementById('renewKeyNo').value = cleanKeyVal(s.keyNo);
             document.getElementById('renewLockerMonthCheck').checked = (existingLocker !== "");
             document.getElementById('renewStartDate').value = s.validUpto || today;
             document.getElementById('renewBillDate').value = today;
@@ -2716,7 +2851,7 @@
             const newShift = document.getElementById('renewShiftSelect').value;
             const hasLockerMonth = document.getElementById('renewLockerMonthCheck').checked;
             const newLocker = hasLockerMonth ? cleanResNum(document.getElementById('renewLockerNo').value) : '';
-            const newKey = hasLockerMonth ? cleanResNum(document.getElementById('renewKeyNo').value) : '';
+            const newKey = hasLockerMonth ? cleanKeyVal(document.getElementById('renewKeyNo').value) : '';
             const startD = document.getElementById('renewStartDate').value;
             const months = parseInt(document.getElementById('renewMonths').value, 10) || 1;
             const newValid = document.getElementById('renewNewValid').value || addExact28DayMonths(startD, months);
@@ -2741,11 +2876,11 @@
             s.cycleStartDate = startD;
             s.validUpto = newValid;
             s.remainingDue = (parseFloat(s.remainingDue) || 0) + newDue;
-            if(promiseD && s.remainingDue > 0) s.promiseDate = promiseD;
+            if(promiseD) s.promiseDate = promiseD;
 
             const invNo = "BL-" + Date.now().toString().slice(-6);
             if(!s.paymentHistory) s.paymentHistory = [];
-            s.paymentHistory.push({
+            const renewPay = {
                 invNo: invNo,
                 date: billD,
                 startDate: startD,
@@ -2762,7 +2897,9 @@
                 mode: payMode,
                 period: `${formatDisplayDate(startD)} to ${formatDisplayDate(newValid)} (${months}M / ${months * 28} Days)`,
                 type: `Renewal (${months}M)`
-            });
+            };
+            s.paymentHistory.push(renewPay);
+            syncStudentPaymentToPersonalIncome(s, renewPay);
 
             syncAndSaveData();
             closeRenewModal();
@@ -2909,50 +3046,111 @@
 
         function closeInvoiceModal() { document.getElementById('invoiceModal').classList.add('hidden'); }
 
+        // WhatsApp पर बिल बिना कटे-छँटे HD फोटो में शेयर करना
         async function shareInvoiceAsImage() {
             const box = document.getElementById('invoiceCaptureBox');
-            const canvas = await html2canvas(box, { scale: 2.5, useCORS: true, backgroundColor: '#ffffff' });
-            canvas.toBlob(async (blob) => {
-                const file = new File([blob], `Buddha_Library_Invoice.png`, { type: 'image/png' });
-                if(navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file] });
-                } else {
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `Buddha_Library_Invoice.png`;
-                    a.click();
-                }
-            });
+            const origW = box.style.width;
+            const origMaxW = box.style.maxWidth;
+            box.style.width = '760px';
+            box.style.maxWidth = '760px';
+
+            try {
+                const canvas = await html2canvas(box, {
+                    scale: 2.5,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    width: 760,
+                    windowWidth: 820,
+                    scrollX: 0,
+                    scrollY: -window.scrollY
+                });
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], `Buddha_Library_Invoice.png`, { type: 'image/png' });
+                    if(navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `Buddha_Library_Invoice.png`;
+                        a.click();
+                    }
+                });
+            } finally {
+                box.style.width = origW;
+                box.style.maxWidth = origMaxW;
+            }
         }
 
+        // My Collection में Cash / Online क्लिक फ़िल्टर + अंदर सर्च बॉक्स
         function openMyCollectionModal() {
+            myColFilterMode = 'All';
+            myColSearchQuery = '';
+            renderMyCollectionFiltered();
+            document.getElementById('myCollectionModal').classList.remove('hidden');
+        }
+
+        function setMyColMode(m) {
+            myColFilterMode = (myColFilterMode === m && m !== 'All') ? 'All' : m;
+            renderMyCollectionFiltered();
+        }
+
+        function onMyColSearch(val) {
+            myColSearchQuery = (val || '').trim();
+            renderMyCollectionFiltered();
+            const inp = document.getElementById('myColInnerSearch');
+            if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+        }
+
+        function renderMyCollectionFiltered() {
             let sorted = [...students].sort((a, b) => (parseInt(a.uniId, 10) || 99999) - (parseInt(b.uniId, 10) || 99999));
             let grandCash = 0, grandOnline = 0, grandTotal = 0, grandDue = 0;
+
+            sorted.forEach(s => {
+                (s.paymentHistory || []).forEach(p => {
+                    const amt = parseFloat(p.amount) || 0;
+                    if(String(p.mode || '').toLowerCase().includes('cash')) grandCash += amt;
+                    else grandOnline += amt;
+                });
+                grandDue += (parseFloat(s.remainingDue) || 0);
+            });
+            grandTotal = grandCash + grandOnline;
+
+            const qLow = myColSearchQuery.toLowerCase();
             const tbody = document.getElementById('myCollectionTableBody');
             tbody.innerHTML = '';
+            let shownCount = 0;
 
             sorted.forEach(s => {
                 const hist = s.paymentHistory || [];
-                let cPaid = 0, oPaid = 0, lastD = '-';
+                let cPaid = 0, oPaid = 0, cTimes = 0, oTimes = 0, lastD = '-';
                 hist.forEach(p => {
                     const amt = parseFloat(p.amount) || 0;
-                    if(p.mode === 'Cash') cPaid += amt;
-                    else oPaid += amt;
+                    if(String(p.mode || '').toLowerCase().includes('cash')) { cPaid += amt; if(amt > 0) cTimes++; }
+                    else { oPaid += amt; if(amt > 0) oTimes++; }
                     if(p.date) lastD = p.date;
                 });
-                const tot = cPaid + oPaid;
+
+                if (myColFilterMode === 'Cash' && cPaid <= 0) return;
+                if (myColFilterMode === 'Online' && oPaid <= 0) return;
+
+                if (myColSearchQuery) {
+                    const matchId = String(s.uniId) === myColSearchQuery;
+                    const matchName = s.fullName && s.fullName.toLowerCase().includes(qLow);
+                    const matchMob = s.mobile && s.mobile.includes(myColSearchQuery);
+                    if (!matchId && !matchName && !matchMob) return;
+                }
+
+                shownCount++;
+                const tot = myColFilterMode === 'Cash' ? cPaid : (myColFilterMode === 'Online' ? oPaid : (cPaid + oPaid));
+                const timesShow = myColFilterMode === 'Cash' ? cTimes : (myColFilterMode === 'Online' ? oTimes : hist.length);
                 const due = parseFloat(s.remainingDue) || 0;
-                grandCash += cPaid;
-                grandOnline += oPaid;
-                grandTotal += tot;
-                grandDue += due;
 
                 tbody.innerHTML += `
                     <tr class="border-b hover:bg-slate-50">
                         <td class="p-2.5 font-extrabold text-red-900">ID: ${s.uniId}</td>
                         <td class="p-2.5 font-bold official-name-color">${s.fullName}</td>
                         <td class="p-2.5 font-semibold text-blue-800"><a href="tel:${s.mobile}" class="hover:underline">📞 ${s.mobile}</a></td>
-                        <td class="p-2.5 text-center font-extrabold">${hist.length} बार</td>
+                        <td class="p-2.5 text-center font-extrabold">${timesShow} बार</td>
                         <td class="p-2.5 text-right font-bold text-slate-700">₹${cPaid}</td>
                         <td class="p-2.5 text-right font-bold text-indigo-700">₹${oPaid}</td>
                         <td class="p-2.5 text-right font-extrabold text-emerald-700 bg-emerald-50">₹${tot}</td>
@@ -2962,13 +3160,21 @@
                 `;
             });
 
-            document.getElementById('myCollectionSummaryStrip').innerHTML = `
-                <div class="bg-slate-100 p-2.5 rounded-xl border">💵 Total Cash: <span class="text-slate-900">₹${grandCash}</span></div>
-                <div class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200">📱 Total Online/UPI: <span class="text-indigo-800">₹${grandOnline}</span></div>
-                <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">🏦 Grand Total Received: <span class="text-emerald-700">₹${grandTotal}</span></div>
-                <div class="bg-red-50 p-2.5 rounded-xl border border-red-200">⚠️ Total Pending Due: <span class="text-red-600">₹${grandDue}</span></div>
+            if (shownCount === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500 font-bold">📭 इस फ़िल्टर में कोई पेमेंट रिकॉर्ड नहीं मिला।</td></tr>`;
+            }
+
+            const strip = document.getElementById('myCollectionSummaryStrip');
+            strip.className = "space-y-2 mb-3 text-xs font-extrabold";
+            strip.innerHTML = `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button type="button" onclick="setMyColMode('All')" class="${myColFilterMode==='All'?'bg-emerald-700 text-white ring-2 ring-amber-400':'bg-emerald-50 text-emerald-800 border border-emerald-200'} p-2.5 rounded-xl text-left cursor-pointer">🏦 All Received (${sorted.length})<br><span class="text-sm">₹${grandTotal}</span></button>
+                    <button type="button" onclick="setMyColMode('Cash')" class="${myColFilterMode==='Cash'?'bg-amber-600 text-white ring-2 ring-slate-900':'bg-slate-100 text-slate-900 border'} p-2.5 rounded-xl text-left cursor-pointer">💵 Cash (क्लिक करें)<br><span class="text-sm">₹${grandCash}</span></button>
+                    <button type="button" onclick="setMyColMode('Online')" class="${myColFilterMode==='Online'?'bg-indigo-700 text-white ring-2 ring-amber-400':'bg-indigo-50 text-indigo-800 border border-indigo-200'} p-2.5 rounded-xl text-left cursor-pointer">📱 Online / UPI (क्लिक करें)<br><span class="text-sm">₹${grandOnline}</span></button>
+                    <div class="bg-red-50 p-2.5 rounded-xl border border-red-200 text-red-700 text-left">⚠️ Pending Due<br><span class="text-sm">₹${grandDue}</span></div>
+                </div>
+                <input type="text" id="myColInnerSearch" value="${myColSearchQuery.replace(/"/g, '&quot;')}" oninput="onMyColSearch(this.value)" placeholder="🔍 ID, छात्र का नाम या मोबाइल नंबर से खोजें..." class="w-full border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-50">
             `;
-            document.getElementById('myCollectionModal').classList.remove('hidden');
         }
 
         function calculateStudentTenure(admDateStr) {
@@ -3008,7 +3214,7 @@
             const fullZoomAvatar = s.photoFull || thumbAvatar;
             const history = s.paymentHistory || [];
             const totalPaid = history.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
-            const cashCount = history.filter(r => r.mode === 'Cash').length;
+            const cashCount = history.filter(r => String(r.mode || '').toLowerCase().includes('cash')).length;
             const onlineCount = history.length - cashCount;
             const tenureStr = calculateStudentTenure(s.admissionDate);
             const rem = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
@@ -3267,7 +3473,7 @@
             document.getElementById('seatNo').value = cleanResNum(s.seatNo);
             document.getElementById('chairNo').value = cleanResNum(s.chairNo);
             document.getElementById('lockerNo').value = cleanResNum(s.lockerNo);
-            document.getElementById('keyNo').value = cleanResNum(s.keyNo);
+            document.getElementById('keyNo').value = cleanKeyVal(s.keyNo);
 
             document.getElementById('studyCourse').value = s.studyCourse || 'General Competition';
             document.getElementById('shiftPlan').value = s.shiftPlan;
@@ -3329,6 +3535,18 @@
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
+            // Collection (Nov) और Collection (Oct) शॉर्ट महीने का नाम सेट करना
+            const colThisCard = document.getElementById('colThisMonth');
+            if (colThisCard && colThisCard.parentElement) {
+                const spanLbl = colThisCard.parentElement.querySelector('p span:first-child');
+                if (spanLbl) spanLbl.innerText = `📅 Collection (${getShortMonthNameOnly(now.getMonth())})`;
+            }
+            const colLastCard = document.getElementById('colLastMonth');
+            if (colLastCard && colLastCard.parentElement) {
+                const spanLbl = colLastCard.parentElement.querySelector('p span:first-child');
+                if (spanLbl) spanLbl.innerText = `⏮️ Collection (${getShortMonthNameOnly(lastMonthDate.getMonth())})`;
+            }
+
             let activeCount = 0, expiredCount = 0, expiring7Count = 0;
             let colToday = 0, colThisMonth = 0, colLastMonth = 0, colThisYear = 0, totalDues = 0;
             let countToday = 0, countThisMonth = 0, countLastMonth = 0, countThisYear = 0;
@@ -3382,7 +3600,7 @@
             document.getElementById('colLastMonthCount').innerText = `${countLastMonth} Paid ➔`;
             document.getElementById('colThisYearCount').innerText = `${countThisYear} Paid ➔`;
 
-            const promiseCount = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0).length;
+            const promiseCount = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0 || (s.promiseDate && s.promiseDate.trim() !== '')).length;
             const pBadge = document.getElementById('promiseCountBadge');
             pBadge.innerText = promiseCount;
             pBadge.classList.toggle('hidden', promiseCount === 0);
@@ -3397,7 +3615,7 @@
         function setTab(tab, shouldScroll) {
             currentTab = tab;
             selectedGenderCorner = 'All';
-            updateCornerGenderBtns();
+            sectionInnerSearch = '';
             displayLimit = 50;
             document.getElementById('searchInput').value = '';
             document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
@@ -3954,7 +4172,6 @@
             fetchPersonalLedgerFromFirebase();
         }
 
-        // Complete JSON Backup (Students + Personal Income + Expense sab ek saath)
         function exportDriveBackup() {
             const fullPayload = {
                 students: students,
@@ -4006,7 +4223,7 @@
             let csv = "Serial,Unique ID,Full Name,Gender,Mobile,Guardian Mobile,Address,Shift,Seat,Chair,Locker,Key,Locker Security Paid,Admission Date,Cycle Start Date,Valid Upto,Remaining Due,Promise Date,Status,OUT Date,Re-IN Date,Reminders Sent\n";
             students.forEach((s, idx) => {
                 const r = s.reminderStats || { wa: 0, sms: 0, mail: 0 };
-                csv += `${idx + 1},${s.uniId},"${s.fullName}",${s.gender || 'Male'},${s.mobile},${s.guardianMobile || ''},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanResNum(s.keyNo)},${s.lockerSecurityPaid || 0},${formatDisplayDate(s.admissionDate || '')},${formatDisplayDate(s.cycleStartDate || '')},${formatDisplayDate(s.validUpto)},${s.remainingDue || 0},${formatDisplayDate(s.promiseDate || '')},${s.isOut ? 'OUT' : 'Active'},${formatDisplayDate(s.outDate || '')},${formatDisplayDate(s.reInDate || '')},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
+                csv += `${idx + 1},${s.uniId},"${s.fullName}",${s.gender || 'Male'},${s.mobile},${s.guardianMobile || ''},"${s.address || ''}","${cleanShiftName(s.shiftPlan)}",S-${cleanResNum(s.seatNo)},C-${cleanResNum(s.chairNo)},L-${cleanResNum(s.lockerNo)},K-${cleanKeyVal(s.keyNo).replace(/^K-/i,'')},${s.lockerSecurityPaid || 0},${formatDisplayDate(s.admissionDate || '')},${formatDisplayDate(s.cycleStartDate || '')},${formatDisplayDate(s.validUpto)},${s.remainingDue || 0},${formatDisplayDate(s.promiseDate || '')},${s.isOut ? 'OUT' : 'Active'},${formatDisplayDate(s.outDate || '')},${formatDisplayDate(s.reInDate || '')},WA:${r.wa||0}/SMS:${r.sms||0}/Mail:${r.mail||0}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
@@ -4014,267 +4231,6 @@
             a.download = `Buddha_Library_Members_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
         }
-    </script>
-    <!-- Auto Income Sync, Collection Edit & Promise Date Fix -->
-    <script>
-        // 1. स्टूडेंट के नए या एडिट किए गए पेमेंट को Personal Income में अपने आप जोड़ना/अपडेट करना
-        function syncStudentPaymentToPersonalIncome(s, p) {
-            if (!s || !p) return;
-            const amt = parseFloat(p.amount) || 0;
-            if (amt <= 0) return;
-            const invKey = p.invNo || ('PAY-' + s.uniId + '-' + (p.date || ''));
-            p.invNo = invKey;
-
-            const entryObj = {
-                linkedInvNo: invKey,
-                source: `ID:${s.uniId} - ${s.fullName}`,
-                desc: `Library Fee (${p.type || 'Fee'})`,
-                amount: amt,
-                mode: p.mode || 'Cash',
-                date: p.date || new Date().toISOString().split('T')[0]
-            };
-
-            const existingIdx = personalIncomes.findIndex(x => x.linkedInvNo === invKey);
-            if (existingIdx !== -1) {
-                personalIncomes[existingIdx] = entryObj;
-            } else {
-                personalIncomes.push(entryObj);
-            }
-            localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
-            if (typeof syncPersonalLedgerToFirebase === 'function') syncPersonalLedgerToFirebase();
-        }
-
-        // 2. एडमिशन, रिन्यूअल और बकाया वसूली पर ऑटो-सिंक जोड़ना
-        const _baseSaveStudent = saveStudentRecord;
-        saveStudentRecord = function(e) {
-            const editIdx = document.getElementById('editIndex').value;
-            const manualPromise = document.getElementById('promiseDate').value;
-            const prevLen = students.length;
-            _baseSaveStudent(e);
-
-            // यदि नया एडमिशन सेव हुआ है तो उसका पेमेंट Personal Income में भेजें
-            if (editIdx === "" && students.length > prevLen) {
-                const newSt = students[students.length - 1];
-                if (manualPromise && !newSt.promiseDate) {
-                    newSt.promiseDate = manualPromise;
-                    syncAndSaveData();
-                }
-                if (newSt.paymentHistory && newSt.paymentHistory.length > 0) {
-                    syncStudentPaymentToPersonalIncome(newSt, newSt.paymentHistory[newSt.paymentHistory.length - 1]);
-                }
-            } else if (editIdx !== "" && students[editIdx] && manualPromise) {
-                students[editIdx].promiseDate = manualPromise;
-                syncAndSaveData();
-                renderStudentList();
-            }
-        };
-
-        const _baseConfirmRenew = confirmRenewalSubmit;
-        confirmRenewalSubmit = function() {
-            const idx = document.getElementById('renewStudentIdx').value;
-            const promiseVal = document.getElementById('renewPromiseDate').value;
-            _baseConfirmRenew();
-            const s = students[idx];
-            if (s) {
-                if (promiseVal && !s.promiseDate) {
-                    s.promiseDate = promiseVal;
-                    syncAndSaveData();
-                }
-                if (s.paymentHistory && s.paymentHistory.length > 0) {
-                    syncStudentPaymentToPersonalIncome(s, s.paymentHistory[s.paymentHistory.length - 1]);
-                }
-            }
-        };
-
-        const _basePromisePrompt = openPromiseUpdatePrompt;
-        openPromiseUpdatePrompt = function(index) {
-            const s = students[index];
-            const prevPayCount = (s && s.paymentHistory) ? s.paymentHistory.length : 0;
-            _basePromisePrompt(index);
-            if (s && s.paymentHistory && s.paymentHistory.length > prevPayCount) {
-                syncStudentPaymentToPersonalIncome(s, s.paymentHistory[s.paymentHistory.length - 1]);
-            }
-            updateDashboardStats();
-        };
-
-        // 3. Today / Monthly Collection में Edit बटन जोड़ना (बिल और Personal Income दोनों अपडेट होंगे)
-        let _lastBreakdownPeriod = 'today';
-        const _baseOpenColBreakdown = openCollectionBreakdownModal;
-        openCollectionBreakdownModal = function(periodType) {
-            _lastBreakdownPeriod = periodType;
-            _baseOpenColBreakdown(periodType);
-            const tbody = document.getElementById('colBreakdownTableBody');
-            if (!tbody) return;
-            tbody.querySelectorAll('button[onclick^="showInvoiceDetails("]').forEach(btn => {
-                if (btn.parentElement.querySelector('.edit-col-pay-btn')) return;
-                const match = btn.getAttribute('onclick').match(/showInvoiceDetails\((\d+),\s*(\d+)\)/);
-                if (match) {
-                    const editBtn = document.createElement('button');
-                    editBtn.type = 'button';
-                    editBtn.className = 'edit-col-pay-btn bg-amber-400 hover:bg-amber-300 text-black px-2 py-1 rounded text-[10px] font-extrabold ml-1';
-                    editBtn.innerText = '✏️ Edit';
-                    editBtn.onclick = () => editCollectionPaymentRecord(parseInt(match[1], 10), parseInt(match[2], 10));
-                    btn.parentElement.appendChild(editBtn);
-                }
-            });
-        };
-
-        function editCollectionPaymentRecord(sIdx, pIdx) {
-            const s = students[sIdx];
-            if (!s || !s.paymentHistory || !s.paymentHistory[pIdx]) return;
-            const p = s.paymentHistory[pIdx];
-
-            const newDate = prompt(`📅 नई बिल तारीख (YYYY-MM-DD) दर्ज करें:\n(छात्र: ${s.fullName}, ID: ${s.uniId})`, p.date || '');
-            if (newDate === null) return;
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate.trim())) {
-                alert("❌ गलत तारीख फॉर्मेट! कृपया YYYY-MM-DD (जैसे 2026-11-24) लिखें।");
-                return;
-            }
-
-            const newAmtStr = prompt(`💵 सही जमा राशि (₹) दर्ज करें:`, p.amount);
-            if (newAmtStr === null) return;
-            const newAmt = parseFloat(newAmtStr);
-            if (isNaN(newAmt) || newAmt < 0) {
-                alert("❌ कृपया सही राशि दर्ज करें!");
-                return;
-            }
-
-            const isCash = confirm(`💳 पेमेंट माध्यम चुनें:\n• Cash (नकद) के लिए OK दबाएँ\n• Online / UPI के लिए Cancel दबाएँ`);
-            p.date = newDate.trim();
-            p.amount = newAmt;
-            p.mode = isCash ? 'Cash' : 'Online / UPI';
-
-            syncStudentPaymentToPersonalIncome(s, p);
-            syncAndSaveData();
-            renderStudentList();
-            openCollectionBreakdownModal(_lastBreakdownPeriod);
-            alert("✅ पेमेंट, GST बिल और Personal Income तीनों जगह अपडेट हो गया!");
-        }
-
-        // 4. Promise Date को हर छात्र के कार्ड और Promise लिस्ट में पक्का दिखाना (भले ही पुराना Due 0 हो)
-        const _baseRenderStudentList = renderStudentList;
-        renderStudentList = function() {
-            _baseRenderStudentList();
-            const container = document.getElementById('studentListContainer');
-            if (!container) return;
-            container.querySelectorAll('h3[onclick^="openProfileModal("]').forEach(h3 => {
-                const m = h3.getAttribute('onclick').match(/openProfileModal\((\d+)\)/);
-                if (!m) return;
-                const s = students[parseInt(m[1], 10)];
-                if (s && s.promiseDate && !h3.parentElement.querySelector('.promise-top-badge')) {
-                    const badge = document.createElement('span');
-                    badge.className = 'promise-top-badge bg-rose-100 text-rose-900 border border-rose-300 text-[10px] font-extrabold px-2 py-0.5 rounded-md';
-                    badge.innerText = `📅 Promise: ${formatDisplayDate(s.promiseDate)}`;
-                    h3.parentElement.appendChild(badge);
-                }
-            });
-        };
-
-        const _baseUpdateStats = updateDashboardStats;
-        updateDashboardStats = function() {
-            _baseUpdateStats();
-            const promiseCount = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0 || (s.promiseDate && s.promiseDate.trim() !== '')).length;
-            const pBadge = document.getElementById('promiseCountBadge');
-            if (pBadge) {
-                pBadge.innerText = promiseCount;
-                pBadge.classList.toggle('hidden', promiseCount === 0);
-            }
-        };
-
-        const _baseOpenPromiseModal = openPromiseDefaulterModal;
-        openPromiseDefaulterModal = function() {
-            const container = document.getElementById('promiseDefaulterListContainer');
-            const todayStr = new Date().toISOString().split('T')[0];
-
-            let allDueMembers = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0 || (s.promiseDate && s.promiseDate.trim() !== ''));
-            let bCount = 0, bDue = 0, gCount = 0, gDue = 0, defCount = 0;
-
-            allDueMembers.forEach(s => {
-                const expInfo = getExpiredDailyDuesInfo(s, todayStr);
-                const dueAmt = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
-                let rate = 300;
-                if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
-                if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
-                if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
-
-                if (s.gender === 'Female') { gCount++; gDue += dueAmt; }
-                else { bCount++; bDue += dueAmt; }
-                if (s.isOut || dueAmt >= (rate * 3)) defCount++;
-            });
-
-            document.getElementById('trackBoysCount').innerText = bCount;
-            document.getElementById('trackBoysDue').innerText = bDue;
-            document.getElementById('trackGirlsCount').innerText = gCount;
-            document.getElementById('trackGirlsDue').innerText = gDue;
-            document.getElementById('trackTotalCount').innerText = allDueMembers.length;
-            document.getElementById('trackTotalDue').innerText = bDue + gDue;
-            document.getElementById('trackDefaulterCount').innerText = defCount + " Students";
-
-            let filteredMembers = allDueMembers;
-            if (currentPromiseFilter === 'Boys') filteredMembers = allDueMembers.filter(s => s.gender !== 'Female');
-            else if (currentPromiseFilter === 'Girls') filteredMembers = allDueMembers.filter(s => s.gender === 'Female');
-            else if (currentPromiseFilter === 'Defaulters') {
-                filteredMembers = allDueMembers.filter(s => {
-                    const expInfo = getExpiredDailyDuesInfo(s, todayStr);
-                    const dueAmt = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
-                    let rate = 300;
-                    if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
-                    if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
-                    if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
-                    return s.isOut || (dueAmt >= (rate * 3));
-                });
-            }
-
-            filteredMembers.sort((a, b) => {
-                const pA = a.promiseDate || '9999-99-99';
-                const pB = b.promiseDate || '9999-99-99';
-                return pA.localeCompare(pB);
-            });
-
-            if (filteredMembers.length === 0) {
-                container.innerHTML = '<div class="text-center p-8 text-emerald-700 font-extrabold bg-white rounded-xl shadow-sm border border-emerald-200">🎉 बधाई हो! इस कैटेगरी में किसी का भी बकाया/प्रॉमिस नहीं है।</div>';
-            } else {
-                container.innerHTML = filteredMembers.map(s => {
-                    const originalIdx = students.indexOf(s);
-                    const expInfo = getExpiredDailyDuesInfo(s, todayStr);
-                    const showDue = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
-                    const fails = s.promiseHistory ? s.promiseHistory.length : 0;
-                    const isUrgent = s.promiseDate && s.promiseDate <= todayStr;
-                    const isGirl = s.gender === 'Female';
-                    const failAlert = fails > 0 ? `<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded ml-2 border border-rose-300 text-[9px] shadow-sm">⚠️ ${fails} बार वादा तोड़ा</span>` : '';
-                    const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
-
-                    return `
-                        <div class="bg-white rounded-xl border-2 ${isUrgent ? 'border-red-500' : (isGirl ? 'border-pink-300' : 'border-blue-300')} shadow-sm overflow-hidden flex flex-col">
-                            <div class="p-3 sm:p-4 flex gap-3">
-                                <div class="shrink-0">
-                                    <img src="${avatar}" class="w-16 h-16 rounded-xl face-focus-thumb shadow-md bg-slate-100 border">
-                                </div>
-                                <div class="flex-1 pr-2 border-r border-slate-100">
-                                    <h4 class="font-extrabold text-sm ${isGirl ? 'text-pink-800' : 'text-blue-900'} uppercase flex flex-wrap gap-1 items-center">
-                                        ${isGirl ? '👧' : '👦'} ${s.fullName}
-                                        <span class="text-[10px] text-slate-500 font-bold bg-slate-100 px-1 rounded">(ID: ${s.uniId})</span>
-                                    </h4>
-                                    <p class="text-xs font-bold mt-1 text-slate-700">
-                                        बकाया: <span class="text-red-600 font-extrabold text-sm">₹${showDue}</span>
-                                        ${failAlert}
-                                    </p>
-                                    <p class="text-[11px] font-bold text-slate-600 mt-1">
-                                        📅 प्रॉमिस डेट: <u class="${isUrgent ? 'text-red-600' : 'text-emerald-700'} font-extrabold">${s.promiseDate ? formatDisplayDate(s.promiseDate) : 'तय नहीं'}</u>
-                                        | <a href="tel:${s.mobile}" class="text-blue-700 underline">📞 ${s.mobile}</a>
-                                    </p>
-                                </div>
-                                <div class="flex flex-col gap-1.5 w-24 shrink-0 pl-1">
-                                    <button onclick="document.getElementById('promiseDefaulterModal').classList.add('hidden'); openPromiseUpdatePrompt(${originalIdx});" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg shadow-md transition">💰 वसूली / Date</button>
-                                    <button onclick="document.getElementById('promiseDefaulterModal').classList.add('hidden'); openReminderModal(${originalIdx});" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg shadow-md transition">🔔 रिमाइंडर</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            document.getElementById('promiseDefaulterModal').classList.remove('hidden');
-        };
     </script>
 </body>
 </html>
