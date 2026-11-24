@@ -4015,5 +4015,266 @@
             a.click();
         }
     </script>
+    <!-- Auto Income Sync, Collection Edit & Promise Date Fix -->
+    <script>
+        // 1. स्टूडेंट के नए या एडिट किए गए पेमेंट को Personal Income में अपने आप जोड़ना/अपडेट करना
+        function syncStudentPaymentToPersonalIncome(s, p) {
+            if (!s || !p) return;
+            const amt = parseFloat(p.amount) || 0;
+            if (amt <= 0) return;
+            const invKey = p.invNo || ('PAY-' + s.uniId + '-' + (p.date || ''));
+            p.invNo = invKey;
+
+            const entryObj = {
+                linkedInvNo: invKey,
+                source: `ID:${s.uniId} - ${s.fullName}`,
+                desc: `Library Fee (${p.type || 'Fee'})`,
+                amount: amt,
+                mode: p.mode || 'Cash',
+                date: p.date || new Date().toISOString().split('T')[0]
+            };
+
+            const existingIdx = personalIncomes.findIndex(x => x.linkedInvNo === invKey);
+            if (existingIdx !== -1) {
+                personalIncomes[existingIdx] = entryObj;
+            } else {
+                personalIncomes.push(entryObj);
+            }
+            localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+            if (typeof syncPersonalLedgerToFirebase === 'function') syncPersonalLedgerToFirebase();
+        }
+
+        // 2. एडमिशन, रिन्यूअल और बकाया वसूली पर ऑटो-सिंक जोड़ना
+        const _baseSaveStudent = saveStudentRecord;
+        saveStudentRecord = function(e) {
+            const editIdx = document.getElementById('editIndex').value;
+            const manualPromise = document.getElementById('promiseDate').value;
+            const prevLen = students.length;
+            _baseSaveStudent(e);
+
+            // यदि नया एडमिशन सेव हुआ है तो उसका पेमेंट Personal Income में भेजें
+            if (editIdx === "" && students.length > prevLen) {
+                const newSt = students[students.length - 1];
+                if (manualPromise && !newSt.promiseDate) {
+                    newSt.promiseDate = manualPromise;
+                    syncAndSaveData();
+                }
+                if (newSt.paymentHistory && newSt.paymentHistory.length > 0) {
+                    syncStudentPaymentToPersonalIncome(newSt, newSt.paymentHistory[newSt.paymentHistory.length - 1]);
+                }
+            } else if (editIdx !== "" && students[editIdx] && manualPromise) {
+                students[editIdx].promiseDate = manualPromise;
+                syncAndSaveData();
+                renderStudentList();
+            }
+        };
+
+        const _baseConfirmRenew = confirmRenewalSubmit;
+        confirmRenewalSubmit = function() {
+            const idx = document.getElementById('renewStudentIdx').value;
+            const promiseVal = document.getElementById('renewPromiseDate').value;
+            _baseConfirmRenew();
+            const s = students[idx];
+            if (s) {
+                if (promiseVal && !s.promiseDate) {
+                    s.promiseDate = promiseVal;
+                    syncAndSaveData();
+                }
+                if (s.paymentHistory && s.paymentHistory.length > 0) {
+                    syncStudentPaymentToPersonalIncome(s, s.paymentHistory[s.paymentHistory.length - 1]);
+                }
+            }
+        };
+
+        const _basePromisePrompt = openPromiseUpdatePrompt;
+        openPromiseUpdatePrompt = function(index) {
+            const s = students[index];
+            const prevPayCount = (s && s.paymentHistory) ? s.paymentHistory.length : 0;
+            _basePromisePrompt(index);
+            if (s && s.paymentHistory && s.paymentHistory.length > prevPayCount) {
+                syncStudentPaymentToPersonalIncome(s, s.paymentHistory[s.paymentHistory.length - 1]);
+            }
+            updateDashboardStats();
+        };
+
+        // 3. Today / Monthly Collection में Edit बटन जोड़ना (बिल और Personal Income दोनों अपडेट होंगे)
+        let _lastBreakdownPeriod = 'today';
+        const _baseOpenColBreakdown = openCollectionBreakdownModal;
+        openCollectionBreakdownModal = function(periodType) {
+            _lastBreakdownPeriod = periodType;
+            _baseOpenColBreakdown(periodType);
+            const tbody = document.getElementById('colBreakdownTableBody');
+            if (!tbody) return;
+            tbody.querySelectorAll('button[onclick^="showInvoiceDetails("]').forEach(btn => {
+                if (btn.parentElement.querySelector('.edit-col-pay-btn')) return;
+                const match = btn.getAttribute('onclick').match(/showInvoiceDetails\((\d+),\s*(\d+)\)/);
+                if (match) {
+                    const editBtn = document.createElement('button');
+                    editBtn.type = 'button';
+                    editBtn.className = 'edit-col-pay-btn bg-amber-400 hover:bg-amber-300 text-black px-2 py-1 rounded text-[10px] font-extrabold ml-1';
+                    editBtn.innerText = '✏️ Edit';
+                    editBtn.onclick = () => editCollectionPaymentRecord(parseInt(match[1], 10), parseInt(match[2], 10));
+                    btn.parentElement.appendChild(editBtn);
+                }
+            });
+        };
+
+        function editCollectionPaymentRecord(sIdx, pIdx) {
+            const s = students[sIdx];
+            if (!s || !s.paymentHistory || !s.paymentHistory[pIdx]) return;
+            const p = s.paymentHistory[pIdx];
+
+            const newDate = prompt(`📅 नई बिल तारीख (YYYY-MM-DD) दर्ज करें:\n(छात्र: ${s.fullName}, ID: ${s.uniId})`, p.date || '');
+            if (newDate === null) return;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate.trim())) {
+                alert("❌ गलत तारीख फॉर्मेट! कृपया YYYY-MM-DD (जैसे 2026-11-24) लिखें।");
+                return;
+            }
+
+            const newAmtStr = prompt(`💵 सही जमा राशि (₹) दर्ज करें:`, p.amount);
+            if (newAmtStr === null) return;
+            const newAmt = parseFloat(newAmtStr);
+            if (isNaN(newAmt) || newAmt < 0) {
+                alert("❌ कृपया सही राशि दर्ज करें!");
+                return;
+            }
+
+            const isCash = confirm(`💳 पेमेंट माध्यम चुनें:\n• Cash (नकद) के लिए OK दबाएँ\n• Online / UPI के लिए Cancel दबाएँ`);
+            p.date = newDate.trim();
+            p.amount = newAmt;
+            p.mode = isCash ? 'Cash' : 'Online / UPI';
+
+            syncStudentPaymentToPersonalIncome(s, p);
+            syncAndSaveData();
+            renderStudentList();
+            openCollectionBreakdownModal(_lastBreakdownPeriod);
+            alert("✅ पेमेंट, GST बिल और Personal Income तीनों जगह अपडेट हो गया!");
+        }
+
+        // 4. Promise Date को हर छात्र के कार्ड और Promise लिस्ट में पक्का दिखाना (भले ही पुराना Due 0 हो)
+        const _baseRenderStudentList = renderStudentList;
+        renderStudentList = function() {
+            _baseRenderStudentList();
+            const container = document.getElementById('studentListContainer');
+            if (!container) return;
+            container.querySelectorAll('h3[onclick^="openProfileModal("]').forEach(h3 => {
+                const m = h3.getAttribute('onclick').match(/openProfileModal\((\d+)\)/);
+                if (!m) return;
+                const s = students[parseInt(m[1], 10)];
+                if (s && s.promiseDate && !h3.parentElement.querySelector('.promise-top-badge')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'promise-top-badge bg-rose-100 text-rose-900 border border-rose-300 text-[10px] font-extrabold px-2 py-0.5 rounded-md';
+                    badge.innerText = `📅 Promise: ${formatDisplayDate(s.promiseDate)}`;
+                    h3.parentElement.appendChild(badge);
+                }
+            });
+        };
+
+        const _baseUpdateStats = updateDashboardStats;
+        updateDashboardStats = function() {
+            _baseUpdateStats();
+            const promiseCount = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0 || (s.promiseDate && s.promiseDate.trim() !== '')).length;
+            const pBadge = document.getElementById('promiseCountBadge');
+            if (pBadge) {
+                pBadge.innerText = promiseCount;
+                pBadge.classList.toggle('hidden', promiseCount === 0);
+            }
+        };
+
+        const _baseOpenPromiseModal = openPromiseDefaulterModal;
+        openPromiseDefaulterModal = function() {
+            const container = document.getElementById('promiseDefaulterListContainer');
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            let allDueMembers = students.filter(s => (parseFloat(s.remainingDue) || 0) > 0 || (s.promiseDate && s.promiseDate.trim() !== ''));
+            let bCount = 0, bDue = 0, gCount = 0, gDue = 0, defCount = 0;
+
+            allDueMembers.forEach(s => {
+                const expInfo = getExpiredDailyDuesInfo(s, todayStr);
+                const dueAmt = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
+                let rate = 300;
+                if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
+                if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
+                if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
+
+                if (s.gender === 'Female') { gCount++; gDue += dueAmt; }
+                else { bCount++; bDue += dueAmt; }
+                if (s.isOut || dueAmt >= (rate * 3)) defCount++;
+            });
+
+            document.getElementById('trackBoysCount').innerText = bCount;
+            document.getElementById('trackBoysDue').innerText = bDue;
+            document.getElementById('trackGirlsCount').innerText = gCount;
+            document.getElementById('trackGirlsDue').innerText = gDue;
+            document.getElementById('trackTotalCount').innerText = allDueMembers.length;
+            document.getElementById('trackTotalDue').innerText = bDue + gDue;
+            document.getElementById('trackDefaulterCount').innerText = defCount + " Students";
+
+            let filteredMembers = allDueMembers;
+            if (currentPromiseFilter === 'Boys') filteredMembers = allDueMembers.filter(s => s.gender !== 'Female');
+            else if (currentPromiseFilter === 'Girls') filteredMembers = allDueMembers.filter(s => s.gender === 'Female');
+            else if (currentPromiseFilter === 'Defaulters') {
+                filteredMembers = allDueMembers.filter(s => {
+                    const expInfo = getExpiredDailyDuesInfo(s, todayStr);
+                    const dueAmt = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
+                    let rate = 300;
+                    if(s.shiftPlan && s.shiftPlan.includes('400')) rate = 400;
+                    if(s.shiftPlan && s.shiftPlan.includes('500')) rate = 500;
+                    if(s.shiftPlan && s.shiftPlan.includes('800')) rate = 800;
+                    return s.isOut || (dueAmt >= (rate * 3));
+                });
+            }
+
+            filteredMembers.sort((a, b) => {
+                const pA = a.promiseDate || '9999-99-99';
+                const pB = b.promiseDate || '9999-99-99';
+                return pA.localeCompare(pB);
+            });
+
+            if (filteredMembers.length === 0) {
+                container.innerHTML = '<div class="text-center p-8 text-emerald-700 font-extrabold bg-white rounded-xl shadow-sm border border-emerald-200">🎉 बधाई हो! इस कैटेगरी में किसी का भी बकाया/प्रॉमिस नहीं है।</div>';
+            } else {
+                container.innerHTML = filteredMembers.map(s => {
+                    const originalIdx = students.indexOf(s);
+                    const expInfo = getExpiredDailyDuesInfo(s, todayStr);
+                    const showDue = Math.max(parseFloat(s.remainingDue) || 0, expInfo.totalEstimatedDue || 0);
+                    const fails = s.promiseHistory ? s.promiseHistory.length : 0;
+                    const isUrgent = s.promiseDate && s.promiseDate <= todayStr;
+                    const isGirl = s.gender === 'Female';
+                    const failAlert = fails > 0 ? `<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded ml-2 border border-rose-300 text-[9px] shadow-sm">⚠️ ${fails} बार वादा तोड़ा</span>` : '';
+                    const avatar = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+
+                    return `
+                        <div class="bg-white rounded-xl border-2 ${isUrgent ? 'border-red-500' : (isGirl ? 'border-pink-300' : 'border-blue-300')} shadow-sm overflow-hidden flex flex-col">
+                            <div class="p-3 sm:p-4 flex gap-3">
+                                <div class="shrink-0">
+                                    <img src="${avatar}" class="w-16 h-16 rounded-xl face-focus-thumb shadow-md bg-slate-100 border">
+                                </div>
+                                <div class="flex-1 pr-2 border-r border-slate-100">
+                                    <h4 class="font-extrabold text-sm ${isGirl ? 'text-pink-800' : 'text-blue-900'} uppercase flex flex-wrap gap-1 items-center">
+                                        ${isGirl ? '👧' : '👦'} ${s.fullName}
+                                        <span class="text-[10px] text-slate-500 font-bold bg-slate-100 px-1 rounded">(ID: ${s.uniId})</span>
+                                    </h4>
+                                    <p class="text-xs font-bold mt-1 text-slate-700">
+                                        बकाया: <span class="text-red-600 font-extrabold text-sm">₹${showDue}</span>
+                                        ${failAlert}
+                                    </p>
+                                    <p class="text-[11px] font-bold text-slate-600 mt-1">
+                                        📅 प्रॉमिस डेट: <u class="${isUrgent ? 'text-red-600' : 'text-emerald-700'} font-extrabold">${s.promiseDate ? formatDisplayDate(s.promiseDate) : 'तय नहीं'}</u>
+                                        | <a href="tel:${s.mobile}" class="text-blue-700 underline">📞 ${s.mobile}</a>
+                                    </p>
+                                </div>
+                                <div class="flex flex-col gap-1.5 w-24 shrink-0 pl-1">
+                                    <button onclick="document.getElementById('promiseDefaulterModal').classList.add('hidden'); openPromiseUpdatePrompt(${originalIdx});" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg shadow-md transition">💰 वसूली / Date</button>
+                                    <button onclick="document.getElementById('promiseDefaulterModal').classList.add('hidden'); openReminderModal(${originalIdx});" class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg shadow-md transition">🔔 रिमाइंडर</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            document.getElementById('promiseDefaulterModal').classList.remove('hidden');
+        };
+    </script>
 </body>
 </html>
