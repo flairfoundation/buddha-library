@@ -1023,7 +1023,18 @@
         try { expenses = JSON.parse(localStorage.getItem('buddha_library_expenses') || '[]'); } catch(e) { expenses = []; }
         try { personalIncomes = JSON.parse(localStorage.getItem('buddha_library_personal_incomes') || '[]'); } catch(e) { personalIncomes = []; }
 
-        // 2000+ बच्चों के फोटो और दस्तावेज़ सुरक्षित रखने के लिए बड़ी IndexedDB मेमोरी
+        // Sateek 28-din prati maah (UTC math - mahina 28, 29, 30 ya 31 din ka ho, theek 28 din judega)
+        function addExact28DayMonths(startDateStr, monthsCount) {
+            if (!startDateStr) return '';
+            const parts = String(startDateStr).trim().split('-');
+            if (parts.length !== 3) return startDateStr;
+            const d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
+            const totalDaysToAdd = (parseInt(monthsCount, 10) || 1) * 28;
+            d.setUTCDate(d.getUTCDate() + totalDaysToAdd);
+            return d.toISOString().split('T')[0];
+        }
+
+        // IndexedDB for 2000+ students photos & docs
         function openBuddhaBigDB() {
             return new Promise((resolve, reject) => {
                 if (!window.indexedDB) { reject('No IDB'); return; }
@@ -1047,13 +1058,48 @@
             } catch (err) {}
         }
 
+        // Smart Merge: Kabhi bhi purane ya khali photo/data se naya data overwrite nahi hoga
+        function mergeStudentArrays(localArr, remoteArr) {
+            if (!Array.isArray(remoteArr) || remoteArr.length === 0) return localArr;
+            if (!Array.isArray(localArr) || localArr.length === 0) return remoteArr;
+            const map = new Map();
+            localArr.forEach(s => map.set(String(s.uniId), s));
+            remoteArr.forEach(s => {
+                const key = String(s.uniId);
+                const existing = map.get(key);
+                if (!existing) {
+                    map.set(key, s);
+                } else {
+                    map.set(key, {
+                        ...existing,
+                        ...s,
+                        photo: (s.photo && s.photo.length > 30) ? s.photo : (existing.photo || ''),
+                        photoFull: (s.photoFull && s.photoFull.length > 30) ? s.photoFull : (existing.photoFull || existing.photo || ''),
+                        aadhaarFront: (s.aadhaarFront && s.aadhaarFront.length > 30) ? s.aadhaarFront : (existing.aadhaarFront || ''),
+                        aadhaarBack: (s.aadhaarBack && s.aadhaarBack.length > 30) ? s.aadhaarBack : (existing.aadhaarBack || '')
+                    });
+                }
+            });
+            return Array.from(map.values()).sort((a, b) => (parseInt(a.uniId, 10) || 99999) - (parseInt(b.uniId, 10) || 99999));
+        }
+
+        function mergeLedgerArrays(localArr, remoteArr, keyField) {
+            if (!Array.isArray(remoteArr) || remoteArr.length === 0) return localArr;
+            if (!Array.isArray(localArr) || localArr.length === 0) return remoteArr;
+            const map = new Map();
+            const makeKey = (item) => `${item.date || ''}|${item[keyField] || ''}|${item.amount || 0}|${item.mode || ''}|${item.desc || ''}`;
+            localArr.forEach(item => map.set(makeKey(item), item));
+            remoteArr.forEach(item => map.set(makeKey(item), item));
+            return Array.from(map.values());
+        }
+
         function loadStudentsFromBigDBInBackground() {
             openBuddhaBigDB().then(db => {
                 const tx = db.transaction('store', 'readonly');
                 const req = tx.objectStore('store').get('students_list');
                 req.onsuccess = () => {
                     if (req.result && Array.isArray(req.result) && req.result.length > 0) {
-                        students = req.result;
+                        students = mergeStudentArrays(req.result, students);
                         normalizeStudentDates();
                         renderStudentList();
                         updateDashboardStats();
@@ -1083,7 +1129,6 @@
             return String(val).replace(/^[A-Za-z-]+/, '').trim();
         }
 
-        // सभी तारीखों को DD-MM-YYYY में दिखाने का फंक्शन
         function formatDisplayDate(dateStr) {
             if(!dateStr || dateStr === '-') return '-';
             const parts = String(dateStr).trim().split('-');
@@ -1093,7 +1138,6 @@
             return dateStr;
         }
 
-        // भारतीय वित्तीय वर्ष (1 अप्रैल से 31 मार्च) निकालने वाला फंक्शन
         function getFinancialYearLabel(dateStr) {
             if (!dateStr || dateStr.length < 7) return 'FY 2026-27';
             const parts = dateStr.split('-');
@@ -1110,7 +1154,6 @@
             return getFinancialYearLabel(todayStr);
         }
 
-        // बच्चे के सिलेक्टेड शिफ्ट प्लान (Rate ÷ 28 × Expired Days, अधिकतम 84 दिन) के अनुसार बकाया निकालना
         function getExpiredDailyDuesInfo(s, todayStr) {
             const oldDue = parseFloat(s.remainingDue) || 0;
             if (!s.validUpto || s.validUpto >= todayStr) {
@@ -1119,7 +1162,7 @@
             const dValid = new Date(s.validUpto + 'T00:00:00');
             const dToday = new Date(todayStr + 'T00:00:00');
             const expiredDays = Math.max(0, Math.round((dToday - dValid) / (1000 * 60 * 60 * 24)));
-            const cappedDays = Math.min(84, expiredDays); // अधिकतम 3 महीने (84 दिन) पर ऑटो-स्टॉप
+            const cappedDays = Math.min(84, expiredDays);
 
             const sh = (s.shiftPlan || '').toLowerCase();
             let monthlyRate = 300;
@@ -1128,7 +1171,7 @@
             else if (sh.includes('afternoon') || sh.includes('night') || sh.includes('400') || sh.includes('399')) monthlyRate = 400;
             else if (sh.includes('morning') || sh.includes('300') || sh.includes('299')) monthlyRate = 300;
 
-            if (cleanResNum(s.lockerNo) !== '') monthlyRate += 50; // लॉकर चार्ज शामिल
+            if (cleanResNum(s.lockerNo) !== '') monthlyRate += 50;
 
             const accruedFee = Math.round((monthlyRate / 28) * cappedDays);
             return {
@@ -1300,8 +1343,8 @@
                 if(!s.cycleStartDate) {
                     if(s.admissionDate) s.cycleStartDate = s.admissionDate;
                     else if(s.validUpto) {
-                        let d = new Date(s.validUpto);
-                        d.setDate(d.getDate() - 28);
+                        let d = new Date(s.validUpto + 'T00:00:00Z');
+                        d.setUTCDate(d.getUTCDate() - 28);
                         s.cycleStartDate = d.toISOString().split('T')[0];
                         s.admissionDate = s.cycleStartDate;
                     } else {
@@ -1315,7 +1358,6 @@
             });
         }
 
-        // Row 3 के Expense Tracker बॉक्स की जगह My Personal Income सेट करना (बाकी लेआउट बिना छेड़े)
         function setupPersonalIncomeBoxLabel() {
             const expCard = document.querySelector('div[onclick="openExpenseModal()"]');
             if (expCard) {
@@ -1333,7 +1375,8 @@
             document.getElementById('admissionDateInput').value = today;
             document.getElementById('cycleStartDate').value = today;
             document.getElementById('manualBillDate').value = today;
-            document.getElementById('expDate').value = today;
+            const expDateEl = document.getElementById('expDate');
+            if(expDateEl) expDateEl.value = today;
             if(libraryLogo) applyLogoToUi(libraryLogo);
             if(founderPhoto) applyFounderPhotoToUi(founderPhoto);
             update28DayValidity();
@@ -1368,10 +1411,8 @@
         function update28DayValidity() {
             const startVal = document.getElementById('cycleStartDate').value;
             if(!startVal) return;
-            const startObj = new Date(startVal);
-            const months = parseInt(document.getElementById('durationMonths').value) || 1;
-            startObj.setDate(startObj.getDate() + (28 * months));
-            document.getElementById('validUpto').value = startObj.toISOString().split('T')[0];
+            const months = parseInt(document.getElementById('durationMonths').value, 10) || 1;
+            document.getElementById('validUpto').value = addExact28DayMonths(startVal, months);
             recalcAdmissionBill();
         }
 
@@ -1379,7 +1420,7 @@
             const shiftSel = document.getElementById('shiftPlan');
             const opt = shiftSel.options[shiftSel.selectedIndex];
             let rate = parseFloat(opt.getAttribute('data-rate')) || 300;
-            const months = parseInt(document.getElementById('durationMonths').value) || 1;
+            const months = parseInt(document.getElementById('durationMonths').value, 10) || 1;
             let shiftTotal = rate * months;
 
             if(months === 3) shiftTotal = Math.round(shiftTotal * 0.95);
@@ -1418,7 +1459,7 @@
         }
 
         function getNextAvailableId() {
-            let used = new Set(students.map(s => parseInt(s.uniId)));
+            let used = new Set(students.map(s => parseInt(s.uniId, 10)));
             for(let i = 1; i <= 5000; i++) {
                 if(!used.has(i)) return i;
             }
@@ -1685,7 +1726,7 @@
         function saveStudentRecord(e) {
             e.preventDefault();
             const editIdx = document.getElementById('editIndex').value;
-            const uniId = parseInt(document.getElementById('uniId').value);
+            const uniId = parseInt(document.getElementById('uniId').value, 10);
             const fullName = toTitleCaseWords(document.getElementById('fullName').value.trim());
             const gender = document.getElementById('gender').value;
             const mobile = document.getElementById('mobile').value.trim();
@@ -1703,10 +1744,10 @@
             if(studyCourse === 'Other') studyCourse = toTitleCaseWords(document.getElementById('otherCourseInput').value.trim()) || 'Other';
 
             const shiftPlan = document.getElementById('shiftPlan').value;
-            const durationMonths = parseInt(document.getElementById('durationMonths').value) || 1;
+            const durationMonths = parseInt(document.getElementById('durationMonths').value, 10) || 1;
             const admissionDate = document.getElementById('admissionDateInput').value;
             const cycleStartDate = document.getElementById('cycleStartDate').value;
-            const validUpto = document.getElementById('validUpto').value;
+            const validUpto = document.getElementById('validUpto').value || addExact28DayMonths(cycleStartDate, durationMonths);
             const billDate = document.getElementById('manualBillDate').value || new Date().toISOString().split('T')[0];
 
             const isGst = document.getElementById('applyGstCheck').checked;
@@ -1734,8 +1775,8 @@
             }
 
             for(let i = 0; i < students.length; i++) {
-                if(editIdx !== "" && parseInt(editIdx) === i) continue;
-                if(parseInt(students[i].uniId) === uniId) {
+                if(editIdx !== "" && parseInt(editIdx, 10) === i) continue;
+                if(parseInt(students[i].uniId, 10) === uniId) {
                     alert(`❌ Duplicate ID! ID: ${uniId} पहले से "${students[i].fullName}" के नाम पर दर्ज है।`);
                     return;
                 }
@@ -1802,7 +1843,7 @@
                         months: durationMonths,
                         shiftAtTime: shiftPlan,
                         mode: paymentMode,
-                        period: `${formatDisplayDate(cycleStartDate)} to ${formatDisplayDate(validUpto)} (${durationMonths}M)`,
+                        period: `${formatDisplayDate(cycleStartDate)} to ${formatDisplayDate(validUpto)} (${durationMonths * 28} Days)`,
                         type: 'Admission'
                     }]
                 };
@@ -1839,21 +1880,6 @@
             return s.replace('12 Hrs: ', '');
         }
 
-        function openTotalMembersOnly() {
-            selectedGenderCorner = 'All';
-            updateCornerGenderBtns();
-            const wrap = document.getElementById('memberListMainWrapper');
-            if (wrap) wrap.classList.remove('hidden');
-            setTab('all', true);
-        }
-
-        function closeTotalMembersOnly() {
-            const wrap = document.getElementById('memberListMainWrapper');
-            if (wrap) wrap.classList.add('hidden');
-            document.getElementById('searchInput').value = '';
-            document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
-        }
-
         function filterTotalByGender(g) {
             selectedGenderCorner = g;
             updateCornerGenderBtns();
@@ -1862,14 +1888,6 @@
         }
 
         function updateCornerGenderBtns() {
-            const bAll = document.getElementById('gBtn-All') || document.getElementById('gFilter-All');
-            const bMale = document.getElementById('gBtn-Male') || document.getElementById('gFilter-Male');
-            const bFemale = document.getElementById('gBtn-Female') || document.getElementById('gFilter-Female');
-            if (bAll) {
-                bAll.className = (selectedGenderCorner === 'All') ? "bg-slate-800 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md";
-                bMale.className = (selectedGenderCorner === 'Male') ? "bg-blue-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 rounded-md";
-                bFemale.className = (selectedGenderCorner === 'Female') ? "bg-pink-700 text-white px-2 py-0.5 rounded-md ring-2 ring-amber-400" : "bg-pink-100 text-pink-900 border border-pink-300 px-2 py-0.5 rounded-md";
-            }
             const ebAll = document.getElementById('expCornerBtn-All');
             const ebMale = document.getElementById('expCornerBtn-Male');
             const ebFemale = document.getElementById('expCornerBtn-Female');
@@ -1888,19 +1906,12 @@
             }
         }
 
-        function setGenderFilter(g) { filterTotalByGender(g); }
-        function openMemberListSection(tab) { openTotalMembersOnly(); }
-        function closeMemberListSection() { closeTotalMembersOnly(); }
-
         function onSearchInputChanged() {
             const rawQuery = document.getElementById('searchInput').value.trim();
             const dashWrap = document.getElementById('dashboardCardsWrapper');
-            const listWrap = document.getElementById('memberListMainWrapper');
-            if(rawQuery.length > 0) {
-                if(dashWrap) dashWrap.classList.add('hidden');
-                if(listWrap) listWrap.classList.remove('hidden');
-            } else {
-                if(dashWrap) dashWrap.classList.remove('hidden');
+            if(dashWrap) {
+                if(rawQuery.length > 0) dashWrap.classList.add('hidden');
+                else dashWrap.classList.remove('hidden');
             }
             displayLimit = 50;
             renderStudentList();
@@ -1944,16 +1955,6 @@
             const qLower = rawQuery.toLowerCase();
             container.innerHTML = '';
 
-            let boysTotal = 0, girlsTotal = 0;
-            students.forEach(s => {
-                if ((s.gender || 'Male') === 'Female') girlsTotal++;
-                else boysTotal++;
-            });
-            const bEl = document.getElementById('cornerBoysCount') || document.getElementById('listBoysCount');
-            const gEl = document.getElementById('cornerGirlsCount') || document.getElementById('listGirlsCount');
-            if (bEl) bEl.innerText = boysTotal;
-            if (gEl) gEl.innerText = girlsTotal;
-
             const today = new Date().toISOString().split('T')[0];
 
             const anchorEl = document.getElementById('listSectionAnchor');
@@ -1972,21 +1973,11 @@
                         const info = getExpiredDailyDuesInfo(st, today);
                         const lockedOrCalcDue = (st.outDueAmount !== undefined && st.outDueAmount !== null) ? parseFloat(st.outDueAmount) : info.totalEstimatedDue;
                         if (st.isOut) {
-                            if ((st.gender || 'Male') === 'Female') {
-                                oGirls++;
-                                oGirlsDue += lockedOrCalcDue;
-                            } else {
-                                oBoys++;
-                                oBoysDue += lockedOrCalcDue;
-                            }
+                            if ((st.gender || 'Male') === 'Female') { oGirls++; oGirlsDue += lockedOrCalcDue; }
+                            else { oBoys++; oBoysDue += lockedOrCalcDue; }
                         } else if (st.validUpto && st.validUpto < today) {
-                            if ((st.gender || 'Male') === 'Female') {
-                                eGirls++;
-                                eGirlsDue += info.totalEstimatedDue;
-                            } else {
-                                eBoys++;
-                                eBoysDue += info.totalEstimatedDue;
-                            }
+                            if ((st.gender || 'Male') === 'Female') { eGirls++; eGirlsDue += info.totalEstimatedDue; }
+                            else { eBoys++; eBoysDue += info.totalEstimatedDue; }
                         }
                     });
 
@@ -2030,7 +2021,7 @@
             } else if(currentSortOrder === 'latest') {
                 workingList.sort((a, b) => b.originalIdx - a.originalIdx);
             } else {
-                workingList.sort((a, b) => (parseInt(a.item.uniId) || 99999) - (parseInt(b.item.uniId) || 99999));
+                workingList.sort((a, b) => (parseInt(a.item.uniId, 10) || 99999) - (parseInt(b.item.uniId, 10) || 99999));
             }
 
             let filtered = workingList.filter(({ item: s }) => {
@@ -2056,8 +2047,8 @@
                 }
 
                 if(/^\d+$/.test(rawQuery)) {
-                    if(parseInt(rawQuery) >= 1 && parseInt(rawQuery) <= 5000 && rawQuery.length <= 4) {
-                        return parseInt(s.uniId) === parseInt(rawQuery);
+                    if(parseInt(rawQuery, 10) >= 1 && parseInt(rawQuery, 10) <= 5000 && rawQuery.length <= 4) {
+                        return parseInt(s.uniId, 10) === parseInt(rawQuery, 10);
                     }
                     return (s.mobile && s.mobile.includes(rawQuery)) || (s.guardianMobile && s.guardianMobile.includes(rawQuery));
                 }
@@ -2516,7 +2507,7 @@
 
             let occupiedMap = {};
             students.forEach(s => {
-                let num = parseInt(cleanResNum(s[field]));
+                let num = parseInt(cleanResNum(s[field]), 10);
                 if(num && num >= 1 && num <= maxCount) {
                     occupiedMap[num] = s;
                 }
@@ -2543,7 +2534,7 @@
             }
         }
 
-        // ID Card पर भेजने के दिन (आज की तारीख) तक का पूरा बकाया तारीख के साथ दिखाना
+        // ID Card par bhejne ke din tak ka poora bakaya tarikh ke saath
         function openIdCardModal(index) {
             const s = students[index];
             const today = new Date().toISOString().split('T')[0];
@@ -2685,17 +2676,15 @@
         function recalcRenewalDates() {
             const startStr = document.getElementById('renewStartDate').value;
             if(!startStr) return;
-            const months = parseInt(document.getElementById('renewMonths').value) || 1;
-            let d = new Date(startStr);
-            d.setDate(d.getDate() + (28 * months));
-            document.getElementById('renewNewValid').value = d.toISOString().split('T')[0];
+            const months = parseInt(document.getElementById('renewMonths').value, 10) || 1;
+            document.getElementById('renewNewValid').value = addExact28DayMonths(startStr, months);
         }
 
         function recalcRenewalBill() {
             const shiftSel = document.getElementById('renewShiftSelect');
             const opt = shiftSel.options[shiftSel.selectedIndex];
             const rate = parseFloat(opt.getAttribute('data-rate')) || 300;
-            const months = parseInt(document.getElementById('renewMonths').value) || 1;
+            const months = parseInt(document.getElementById('renewMonths').value, 10) || 1;
 
             let shiftSub = rate * months;
             if(months === 3) shiftSub = Math.round(shiftSub * 0.95);
@@ -2729,9 +2718,9 @@
             const newLocker = hasLockerMonth ? cleanResNum(document.getElementById('renewLockerNo').value) : '';
             const newKey = hasLockerMonth ? cleanResNum(document.getElementById('renewKeyNo').value) : '';
             const startD = document.getElementById('renewStartDate').value;
-            const newValid = document.getElementById('renewNewValid').value;
+            const months = parseInt(document.getElementById('renewMonths').value, 10) || 1;
+            const newValid = document.getElementById('renewNewValid').value || addExact28DayMonths(startD, months);
             const billD = document.getElementById('renewBillDate').value || new Date().toISOString().split('T')[0];
-            const months = parseInt(document.getElementById('renewMonths').value) || 1;
             const isGst = document.getElementById('renewGstCheck').checked;
             const hasSec = document.getElementById('renewLockerSecCheck').checked;
             const lockerRentAmt = hasLockerMonth ? (LOCKER_MONTHLY_FEE * months) : 0;
@@ -2937,7 +2926,7 @@
         }
 
         function openMyCollectionModal() {
-            let sorted = [...students].sort((a, b) => (parseInt(a.uniId) || 99999) - (parseInt(b.uniId) || 99999));
+            let sorted = [...students].sort((a, b) => (parseInt(a.uniId, 10) || 99999) - (parseInt(b.uniId, 10) || 99999));
             let grandCash = 0, grandOnline = 0, grandTotal = 0, grandDue = 0;
             const tbody = document.getElementById('myCollectionTableBody');
             tbody.innerHTML = '';
@@ -3008,11 +2997,9 @@
 
         function autoCalcProfileValidDate() {
             const cyc = document.getElementById('profEditCycleStart').value;
-            const m = parseInt(document.getElementById('profQuickMonths').value) || 1;
+            const m = parseInt(document.getElementById('profQuickMonths').value, 10) || 1;
             if(!cyc) return;
-            let d = new Date(cyc);
-            d.setDate(d.getDate() + (28 * m));
-            document.getElementById('profEditValidUpto').value = d.toISOString().split('T')[0];
+            document.getElementById('profEditValidUpto').value = addExact28DayMonths(cyc, m);
         }
 
         function openProfileModal(index) {
@@ -3356,11 +3343,11 @@
 
                 totalDues += (parseFloat(s.remainingDue) || 0);
 
-                let sNum = parseInt(cleanResNum(s.seatNo));
+                let sNum = parseInt(cleanResNum(s.seatNo), 10);
                 if(sNum >= 1 && sNum <= TOTAL_SEATS) usedSeats.add(sNum);
-                let cNum = parseInt(cleanResNum(s.chairNo));
+                let cNum = parseInt(cleanResNum(s.chairNo), 10);
                 if(cNum >= 1 && cNum <= TOTAL_CHAIRS) usedChairs.add(cNum);
-                let lNum = parseInt(cleanResNum(s.lockerNo));
+                let lNum = parseInt(cleanResNum(s.lockerNo), 10);
                 if(lNum >= 1 && lNum <= TOTAL_LOCKERS) usedLockers.add(lNum);
 
                 (s.paymentHistory || []).forEach(p => {
@@ -3414,11 +3401,6 @@
             displayLimit = 50;
             document.getElementById('searchInput').value = '';
             document.getElementById('dashboardCardsWrapper').classList.remove('hidden');
-
-            const listWrap = document.getElementById('memberListMainWrapper');
-            if (listWrap && tab !== 'all') {
-                listWrap.classList.remove('hidden');
-            }
 
             ['all', 'active', 'expired', 'expiring7', 'promise'].forEach(t => {
                 const card = document.getElementById(`cardTab-${t}`);
@@ -3487,15 +3469,60 @@
             document.getElementById('headerFounderEmoji').classList.add('hidden');
         }
 
-        // ================= My Personal Income & Expense Ledger (Financial Year Wise, Search, PIN Lock) =================
-        let ledgerActiveTab = 'income'; // 'income' या 'expense'
+        // ================= My Personal Income & Expense Ledger (Integrated Firebase Sync) =================
+        let ledgerActiveTab = 'income';
         let secIncFyFilter = 'All';
         let secIncModeFilter = 'All';
-        let secIncPeriodFilter = 'All'; // 'All', 'Today', 'Month'
+        let secIncPeriodFilter = 'All';
         let secIncSearchQuery = '';
 
         function isSecretIncomeLoggedIn() {
             return localStorage.getItem('buddha_personal_income_logged_in') === 'true';
+        }
+
+        function syncPersonalLedgerToFirebase() {
+            if (!firebaseDbUrl) return;
+            const base = firebaseDbUrl.endsWith('/') ? firebaseDbUrl : firebaseDbUrl + '/';
+            fetch(base + 'personal_incomes.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(personalIncomes)
+            }).catch(() => {});
+            fetch(base + 'expenses.json', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(expenses)
+            }).catch(() => {});
+        }
+
+        function fetchPersonalLedgerFromFirebase() {
+            if (!firebaseDbUrl) return;
+            const base = firebaseDbUrl.endsWith('/') ? firebaseDbUrl : firebaseDbUrl + '/';
+            fetch(base + 'personal_incomes.json').then(r => r.json()).then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    const prevLen = personalIncomes.length;
+                    personalIncomes = mergeLedgerArrays(personalIncomes, data, 'source');
+                    localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+                    if (personalIncomes.length > data.length || prevLen > data.length) syncPersonalLedgerToFirebase();
+                    const m = document.getElementById('expenseModal');
+                    if (m && !m.classList.contains('hidden')) renderPersonalIncomeLedger();
+                } else if (personalIncomes.length > 0) {
+                    syncPersonalLedgerToFirebase();
+                }
+            }).catch(() => {});
+
+            fetch(base + 'expenses.json').then(r => r.json()).then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    const prevLen = expenses.length;
+                    expenses = mergeLedgerArrays(expenses, data, 'title');
+                    localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
+                    if (expenses.length > data.length || prevLen > data.length) syncPersonalLedgerToFirebase();
+                    const m = document.getElementById('expenseModal');
+                    if (m && !m.classList.contains('hidden')) renderPersonalIncomeLedger();
+                } else if (expenses.length > 0) {
+                    syncPersonalLedgerToFirebase();
+                }
+            }).catch(() => {});
         }
 
         function openExpenseModal() {
@@ -3515,6 +3542,7 @@
             secIncPeriodFilter = 'All';
             secIncSearchQuery = '';
             buildAndShowPersonalIncomeModal();
+            fetchPersonalLedgerFromFirebase();
         }
 
         function logoutPersonalIncomeLedger() {
@@ -3653,6 +3681,7 @@
                 else expenses.push(exEntry);
                 localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
             }
+            syncPersonalLedgerToFirebase();
             resetPersonalLedgerForm();
             renderPersonalIncomeLedger();
         }
@@ -3722,6 +3751,7 @@
                     personalIncomes.splice(origIdx, 1);
                     localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
                 }
+                syncPersonalLedgerToFirebase();
                 renderPersonalIncomeLedger();
             } else if (code !== null) {
                 alert("❌ राशि मैच नहीं हुई! आपका रिकॉर्ड सुरक्षित है।");
@@ -3895,7 +3925,11 @@
             updateDashboardStats();
             if(firebaseDbUrl) {
                 const url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
-                fetch(url, { method: 'PUT', body: JSON.stringify(students) }).catch(() => {});
+                fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(students)
+                }).catch(() => {});
             }
         }
 
@@ -3903,21 +3937,35 @@
             if(!firebaseDbUrl) return;
             const url = firebaseDbUrl.endsWith('/') ? firebaseDbUrl + 'library_data.json' : firebaseDbUrl + '/library_data.json';
             fetch(url).then(r => r.json()).then(data => {
-                if(data && Array.isArray(data)) {
-                    students = data;
+                if(data && Array.isArray(data) && data.length > 0) {
+                    const prevCount = students.length;
+                    students = mergeStudentArrays(students, data);
                     normalizeStudentDates();
                     saveStudentsToBigDB(students);
                     renderStudentList();
                     updateDashboardStats();
+                    if (students.length > data.length || prevCount > data.length) {
+                        syncAndSaveData();
+                    }
+                } else if (students.length > 0) {
+                    syncAndSaveData();
                 }
             }).catch(() => {});
+            fetchPersonalLedgerFromFirebase();
         }
 
+        // Complete JSON Backup (Students + Personal Income + Expense sab ek saath)
         function exportDriveBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(students));
+            const fullPayload = {
+                students: students,
+                personalIncomes: personalIncomes,
+                expenses: expenses,
+                exportedAt: new Date().toISOString()
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullPayload));
             const a = document.createElement('a');
             a.href = dataStr;
-            a.download = `buddha_library_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `buddha_library_full_backup_${new Date().toISOString().split('T')[0]}.json`;
             a.click();
         }
 
@@ -3929,11 +3977,25 @@
                 reader.readAsText(e.target.files[0], 'UTF-8');
                 reader.onload = ev => {
                     try {
-                        students = JSON.parse(ev.target.result);
+                        const parsed = JSON.parse(ev.target.result);
+                        if (Array.isArray(parsed)) {
+                            students = mergeStudentArrays(students, parsed);
+                        } else if (parsed && typeof parsed === 'object') {
+                            if (Array.isArray(parsed.students)) students = mergeStudentArrays(students, parsed.students);
+                            if (Array.isArray(parsed.personalIncomes)) {
+                                personalIncomes = mergeLedgerArrays(personalIncomes, parsed.personalIncomes, 'source');
+                                localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
+                            }
+                            if (Array.isArray(parsed.expenses)) {
+                                expenses = mergeLedgerArrays(expenses, parsed.expenses, 'title');
+                                localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
+                            }
+                        }
                         normalizeStudentDates();
                         syncAndSaveData();
+                        syncPersonalLedgerToFirebase();
                         renderStudentList();
-                        alert("✅ बैकअप सफलतापूर्वक रीस्टोर हो गया!");
+                        alert("✅ पूरा बैकअप (Students + Income + Expense) सफलतापूर्वक रीस्टोर हो गया!");
                     } catch(err) { alert("❌ अमान्य बैकअप फाइल!"); }
                 };
             };
@@ -3952,69 +4014,6 @@
             a.download = `Buddha_Library_Members_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
         }
-    </script>
-    <!-- Personal Income & Expense Firebase Cloud Sync Patch -->
-    <script>
-        function syncPersonalLedgerToFirebase() {
-            if (!firebaseDbUrl) return;
-            const base = firebaseDbUrl.endsWith('/') ? firebaseDbUrl : firebaseDbUrl + '/';
-            fetch(base + 'personal_incomes.json', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(personalIncomes)
-            }).catch(() => {});
-            fetch(base + 'expenses.json', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(expenses)
-            }).catch(() => {});
-        }
-
-        function fetchPersonalLedgerFromFirebase() {
-            if (!firebaseDbUrl) return;
-            const base = firebaseDbUrl.endsWith('/') ? firebaseDbUrl : firebaseDbUrl + '/';
-            fetch(base + 'personal_incomes.json').then(r => r.json()).then(data => {
-                if (Array.isArray(data)) {
-                    personalIncomes = data;
-                    localStorage.setItem('buddha_library_personal_incomes', JSON.stringify(personalIncomes));
-                    const m = document.getElementById('expenseModal');
-                    if (m && !m.classList.contains('hidden')) renderPersonalIncomeLedger();
-                }
-            }).catch(() => {});
-
-            fetch(base + 'expenses.json').then(r => r.json()).then(data => {
-                if (Array.isArray(data)) {
-                    expenses = data;
-                    localStorage.setItem('buddha_library_expenses', JSON.stringify(expenses));
-                    const m = document.getElementById('expenseModal');
-                    if (m && !m.classList.contains('hidden')) renderPersonalIncomeLedger();
-                }
-            }).catch(() => {});
-        }
-
-        const _origSavePersonalLedgerEntry = savePersonalLedgerEntry;
-        savePersonalLedgerEntry = function(e) {
-            _origSavePersonalLedgerEntry(e);
-            syncPersonalLedgerToFirebase();
-        };
-
-        const _origDeletePersonalLedgerEntry = deletePersonalLedgerEntry;
-        deletePersonalLedgerEntry = function(origIdx) {
-            _origDeletePersonalLedgerEntry(origIdx);
-            syncPersonalLedgerToFirebase();
-        };
-
-        const _origOpenExpenseModal = openExpenseModal;
-        openExpenseModal = function() {
-            _origOpenExpenseModal();
-            fetchPersonalLedgerFromFirebase();
-        };
-
-        const _origFetchFromFirebase = fetchFromFirebase;
-        fetchFromFirebase = function() {
-            _origFetchFromFirebase();
-            fetchPersonalLedgerFromFirebase();
-        };
     </script>
 </body>
 </html>
