@@ -4232,10 +4232,12 @@
             a.click();
         }
     </script>
-    <!-- Speed Boost, Personal Income Search & Collection Cash/Online Filter -->
+    <!-- Final All-in-One Fix: Fast Speed, Uncropped WhatsApp Bill, Edit Bill, Search & Filters -->
     <script>
-        // 1. ऐप को तुरंत खोलने के लिए (window.onload का इंतज़ार किए बिना)
+        // 1. ऐप की स्पीड तेज़ करना (शुरू में 20 कार्ड, लोगो दोबारा प्रोसेस न होना, और तुरंत खुलना)
+        displayLimit = 20;
         let _buddhaFastInitDone = false;
+
         const _origInitSystem = initSystem;
         initSystem = function() {
             if (_buddhaFastInitDone) return;
@@ -4243,17 +4245,163 @@
             _origInitSystem();
         };
 
+        // window.onload पर हर बार लोगो को 512x512 पर दोबारा प्रोसेस होने से रोकना
+        window.onload = function() {
+            if (libraryLogo) applyLogoToUi(libraryLogo);
+            initCropCanvasEvents();
+            if (localStorage.getItem('buddha_library_logged_in') === 'true') {
+                const mainAppEl = document.getElementById('mainApp');
+                if (mainAppEl && mainAppEl.classList.contains('hidden')) unlockDashboard();
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
             if (libraryLogo) applyLogoToUi(libraryLogo);
             if (localStorage.getItem('buddha_library_logged_in') === 'true') {
                 const mainAppEl = document.getElementById('mainApp');
-                if (mainAppEl && mainAppEl.classList.contains('hidden')) {
-                    unlockDashboard();
-                }
+                if (mainAppEl && mainAppEl.classList.contains('hidden')) unlockDashboard();
             }
         });
 
-        // 2. Personal Income & Expense सर्च फिक्स (कीबोर्ड/फोकस नहीं हटेगा और आधा नंबर/नाम भी खोजेगा)
+        // PDF.js पर defer होने के कारण अपलोड के समय worker सही से सेट करना
+        const _origOpenMediaAdjuster = openMediaAdjuster;
+        openMediaAdjuster = async function(input, targetType) {
+            if (window.pdfjsLib && !window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
+            return _origOpenMediaAdjuster(input, targetType);
+        };
+
+        // फोटो पर lazy loading लगाना ताकि लिस्ट तेज़ी से खुले
+        const _origRenderListSpeed = renderStudentList;
+        renderStudentList = function() {
+            _origRenderListSpeed();
+            const container = document.getElementById('studentListContainer');
+            if (container) {
+                container.querySelectorAll('img').forEach(img => { img.loading = 'lazy'; });
+            }
+        };
+
+        // 2. WhatsApp पर बिल की फोटो बिना कटे और बिना रिसाइज़ हुए HD में भेजना
+        shareInvoiceAsImage = async function() {
+            const origBox = document.getElementById('invoiceCaptureBox');
+            if (!origBox || typeof html2canvas === 'undefined') {
+                alert("⏳ कृपया 2 सेकंड रुकें और फिर से क्लिक करें।");
+                return;
+            }
+
+            // स्क्रीन के बाहर एक साफ़ 760px कॉपी बनाकर फोटो खींचना (ताकि मोबाइल स्क्रीन पर कभी न कटे)
+            const ghostWrap = document.createElement('div');
+            ghostWrap.style.cssText = 'position:fixed; left:-9999px; top:0; width:760px; background:#ffffff; padding:18px; z-index:-1;';
+            const cloneBox = origBox.cloneNode(true);
+            cloneBox.style.width = '724px';
+            cloneBox.style.maxWidth = '724px';
+            cloneBox.style.margin = '0 auto';
+            ghostWrap.appendChild(cloneBox);
+            document.body.appendChild(ghostWrap);
+
+            try {
+                const canvas = await html2canvas(ghostWrap, {
+                    scale: 2.2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    width: 760,
+                    windowWidth: 800
+                });
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], `Buddha_Library_Bill.png`, { type: 'image/png' });
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try { await navigator.share({ files: [file] }); } catch (e) {}
+                    } else {
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `Buddha_Library_Bill.png`;
+                        a.click();
+                    }
+                }, 'image/png', 1.0);
+            } catch (err) {
+                alert("❌ बिल की फोटो बनाने में समस्या आई।");
+            } finally {
+                document.body.removeChild(ghostWrap);
+            }
+        };
+
+        // 3. बिल (PDF/Invoice) के अंदर ही "✏️ Edit Bill" बटन जोड़ना (बदलने पर हर जगह अपडेट होगा)
+        let _activeInvStudentIdx = -1;
+        let _activeInvPayIdx = -1;
+
+        const _origShowInvoiceDetails = showInvoiceDetails;
+        showInvoiceDetails = function(studentIdx, payIdx) {
+            _activeInvStudentIdx = studentIdx;
+            _activeInvPayIdx = payIdx;
+            _origShowInvoiceDetails(studentIdx, payIdx);
+
+            const modal = document.getElementById('invoiceModal');
+            const btnBar = modal ? modal.querySelector('.no-print') : null;
+            if (btnBar && !document.getElementById('editInvoiceInsideBtn')) {
+                const editBtn = document.createElement('button');
+                editBtn.id = 'editInvoiceInsideBtn';
+                editBtn.type = 'button';
+                editBtn.className = 'bg-amber-400 hover:bg-amber-300 text-black px-5 py-2.5 rounded-xl text-xs font-extrabold shadow-lg';
+                editBtn.innerText = '✏️ Edit Bill';
+                editBtn.onclick = editActiveInvoiceFromModal;
+                btnBar.insertBefore(editBtn, btnBar.firstChild);
+            }
+        };
+
+        function editActiveInvoiceFromModal() {
+            const s = students[_activeInvStudentIdx];
+            if (!s || !s.paymentHistory || !s.paymentHistory[_activeInvPayIdx]) return;
+            const p = s.paymentHistory[_activeInvPayIdx];
+
+            const newDate = prompt(`📅 नई बिल तारीख (YYYY-MM-DD) दर्ज करें:\n(छात्र: ${s.fullName}, ID: ${s.uniId})`, p.date || '');
+            if (newDate === null) return;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate.trim())) {
+                alert("❌ गलत तारीख फॉर्मेट! कृपया YYYY-MM-DD (जैसे 2026-11-25) लिखें।");
+                return;
+            }
+
+            const newTotalStr = prompt(`💵 कुल बिल राशि (Total Bill ₹) दर्ज करें:`, p.totalBill || p.amount || 0);
+            if (newTotalStr === null) return;
+            const newTotal = parseFloat(newTotalStr);
+            if (isNaN(newTotal) || newTotal < 0) { alert("❌ सही कुल बिल राशि दर्ज करें!"); return; }
+
+            const newPaidStr = prompt(`✅ जमा राशि (Amount Paid ₹) दर्ज करें:`, p.amount || 0);
+            if (newPaidStr === null) return;
+            const newPaid = parseFloat(newPaidStr);
+            if (isNaN(newPaid) || newPaid < 0) { alert("❌ सही जमा राशि दर्ज करें!"); return; }
+
+            const isCash = confirm(`💳 पेमेंट माध्यम चुनें:\n• Cash (नकद) के लिए OK दबाएँ\n• Online / UPI के लिए Cancel दबाएँ`);
+            const newStart = prompt(`▶️ प्लान शुरू होने की तारीख (Start Date YYYY-MM-DD):`, p.startDate || s.cycleStartDate || '') || (p.startDate || s.cycleStartDate);
+            const newEnd = prompt(`⏳ प्लान खत्म होने की तारीख (Valid Upto YYYY-MM-DD):`, p.endDate || s.validUpto || '') || (p.endDate || s.validUpto);
+
+            const newDue = Math.max(0, newTotal - newPaid);
+            p.date = newDate.trim();
+            p.totalBill = newTotal;
+            p.amount = newPaid;
+            p.dueAfter = newDue;
+            p.mode = isCash ? 'Cash' : 'Online / UPI';
+            if (/^\d{4}-\d{2}-\d{2}$/.test(newStart.trim())) p.startDate = newStart.trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(newEnd.trim())) p.endDate = newEnd.trim();
+            p.period = `${formatDisplayDate(p.startDate)} to ${formatDisplayDate(p.endDate)}`;
+
+            // यदि यह सबसे आखिरी बिल है तो छात्र की प्रोफ़ाइल, वैधता और बकाया भी अपडेट करें
+            if (_activeInvPayIdx === s.paymentHistory.length - 1) {
+                s.totalBill = newTotal;
+                s.paidNow = newPaid;
+                s.remainingDue = newDue;
+                if (p.startDate) s.cycleStartDate = p.startDate;
+                if (p.endDate) s.validUpto = p.endDate;
+            }
+
+            syncStudentPaymentToPersonalIncome(s, p);
+            syncAndSaveData();
+            renderStudentList();
+            showInvoiceDetails(_activeInvStudentIdx, _activeInvPayIdx);
+            alert("✅ बिल, छात्र की प्रोफ़ाइल, कलेक्शन और Personal Income सभी जगह अपडेट हो गया!");
+        }
+
+        // 4. Personal Income & Expense सर्च फिक्स (फ़िल्टर के साथ सही काम करेगा और कीबोर्ड नहीं हटेगा)
         const _origRenderPersonalLedger = renderPersonalIncomeLedger;
         renderPersonalIncomeLedger = function() {
             const activeEl = document.activeElement;
@@ -4267,13 +4415,22 @@
             if (tbody && q) {
                 const isExp = (ledgerActiveTab === 'expense');
                 const arr = isExp ? expenses : personalIncomes;
+                const todayStr = new Date().toISOString().split('T')[0];
+                const thisMonthPrefix = todayStr.slice(0, 7);
+
                 const filtered = arr.map((item, idx) => ({ item, idx })).filter(({ item }) => {
                     if (secIncFyFilter !== 'All' && getFinancialYearLabel(item.date) !== secIncFyFilter) return false;
+                    if (secIncPeriodFilter === 'Today' && item.date !== todayStr) return false;
+                    if (secIncPeriodFilter === 'Month' && !(item.date && item.date.startsWith(thisMonthPrefix))) return false;
+                    const mTxt = String(item.mode || '').toLowerCase();
+                    if (secIncModeFilter === 'Cash' && !mTxt.includes('cash')) return false;
+                    if (secIncModeFilter === 'Online' && (mTxt.includes('cash') || mTxt.includes('bank'))) return false;
+                    if (secIncModeFilter === 'Bank' && !mTxt.includes('bank')) return false;
+
                     const pTxt = String(isExp ? item.title : item.source || '').toLowerCase();
                     const dTxt = String(item.desc || '').toLowerCase();
                     const dtTxt = formatDisplayDate(item.date).toLowerCase();
                     const amtTxt = String(item.amount || '');
-                    const mTxt = String(item.mode || '').toLowerCase();
                     return pTxt.includes(q) || dTxt.includes(q) || dtTxt.includes(q) || amtTxt.includes(q) || mTxt.includes(q);
                 }).sort((a, b) => (b.item.date || '').localeCompare(a.item.date || ''));
 
@@ -4307,16 +4464,15 @@
             }
         };
 
-        // 3. Today / This Month / Last Month / Year Collection में Cash और Online फ़िल्टर + सर्च
+        // 5. Today / This Month / Last Month / Year Collection में Cash & Online फ़िल्टर + सर्च
         let _colModalMode = 'All';
         let _colModalSearch = '';
         let _colModalRows = [];
 
-        const _origOpenColModal = openCollectionBreakdownModal;
         openCollectionBreakdownModal = function(periodType) {
+            lastBreakdownPeriod = periodType;
             _colModalMode = 'All';
             _colModalSearch = '';
-            _origOpenColModal(periodType);
 
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
@@ -4324,6 +4480,14 @@
             const thisYearPrefix = todayStr.slice(0, 4);
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+            const titles = {
+                today: `💵 Today's Collection (${formatDisplayDate(todayStr)})`,
+                thisMonth: `📅 Collection (${getShortMonthNameOnly(now.getMonth())} ${now.getFullYear()})`,
+                lastMonth: `⏮️ Collection (${getShortMonthNameOnly(lastMonthDate.getMonth())} ${lastMonthDate.getFullYear()})`,
+                thisYear: `🏦 Annual Collection (${thisYearPrefix})`
+            };
+            document.getElementById('colBreakdownHeading').innerText = titles[periodType] || "💵 Collection List";
 
             _colModalRows = [];
             students.forEach((s, sIdx) => {
@@ -4341,6 +4505,7 @@
             });
             _colModalRows.sort((a, b) => (b.p.date || '').localeCompare(a.p.date || ''));
             renderFilteredCollectionBreakdown();
+            document.getElementById('collectionBreakdownModal').classList.remove('hidden');
         };
 
         function setColModalMode(mode) {
