@@ -4582,5 +4582,47 @@
             }
         }
     </script>
+    <!-- RAM & Speed Optimization (HD Photo Quality Safe) -->
+    <script>
+        // 1. फोटो पर क्लिक करने पर सीधा मेमोरी से पूरा HD फोटो खोलना (कार्ड का HTML हल्का रहेगा)
+        function zoomStudentPhotoByIdx(idx) {
+            const s = students[idx];
+            if (!s) return;
+            const thumb = s.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.fullName)}&background=5c061c&color=fff&bold=true`;
+            const fullSrc = s.photoFull || thumb;
+            zoomHdImage(fullSrc, `${s.fullName} (ID: ${s.uniId})`);
+        }
+
+        const _origRenderForRam = renderStudentList;
+        renderStudentList = function() {
+            _origRenderForRam();
+            const container = document.getElementById('studentListContainer');
+            if (!container) return;
+            container.querySelectorAll('h3[onclick^="openProfileModal("]').forEach(h3 => {
+                const m = h3.getAttribute('onclick').match(/openProfileModal\((\d+)\)/);
+                if (!m) return;
+                const idx = parseInt(m[1], 10);
+                const card = h3.closest('div.bg-white');
+                const img = card ? card.querySelector('img') : null;
+                if (img) {
+                    img.removeAttribute('onclick');
+                    img.loading = 'lazy';
+                    img.decoding = 'async';
+                    img.onclick = () => zoomStudentPhotoByIdx(idx);
+                }
+            });
+        };
+
+        // 2. भारी डेटा को केवल बड़ी मेमोरी (IndexedDB) में सेव करना, ताकि 5MB वाले localStorage से फोन जाम न हो
+        saveStudentsToBigDB = function(dataArray) {
+            openBuddhaBigDB().then(db => {
+                const tx = db.transaction('store', 'readwrite');
+                tx.objectStore('store').put(dataArray, 'students_list');
+            }).catch(() => {});
+            if (Array.isArray(dataArray) && dataArray.length <= 10) {
+                try { localStorage.setItem('buddha_library_students', JSON.stringify(dataArray)); } catch (err) {}
+            }
+        };
+    </script>
 </body>
 </html>
